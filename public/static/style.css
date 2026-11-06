@@ -657,3 +657,11 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 .play .s5 .waChat{animation:slideUp .5s 3.6s var(--ease) forwards}
 .play .s5 .waMsg{animation:pop .4s 4.3s var(--ease) both}
 .sendOpts .o{text-align:center;white-space:nowrap;font-size:.7rem}
+
+/* How it works 6: the split goes to the group chat, in the app's real message format */
+.s5 .waChat{height:66%;gap:6px;padding:10px 12px 12px}
+.waGroup{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.7);border-radius:12px;padding:6px 8px;text-align:left}
+.waGroup .avatar{width:28px;height:28px;font-size:.75rem;background:#D9FDD3;color:#0B6B4F}
+.waGroup b{display:block;font-size:.82rem;line-height:1.2}
+.waGroup small{display:block;color:var(--muted);font-size:.66rem}
+.s5 .waMsg{margin-top:auto;font-size:.74rem;line-height:1.35;padding:8px 44px 8px 12px}
