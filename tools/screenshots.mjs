@@ -190,6 +190,14 @@ try {
   if (!noSplitwise) throw new Error("Splitwise text or the mic tip is still there");
   await run(`document.getElementById("shareWa").scrollIntoView({ block: "center" })`);
   await shot("11-split-share.jpg");
+  // Share the split: the same Send to sheet as the tour
+  await run(`document.getElementById("shareWa").click()`);
+  await waitFor(`!document.getElementById("shareTo").hidden`);
+  await sleep(600);
+  console.log("send to:", await run(`[...document.querySelectorAll("#shareTo .shareOpts button")].map((b) => b.textContent.trim()).join(", ")`));
+  await shot("11-split-send-to.jpg");
+  await run(`document.getElementById("stCancel").click()`);
+  await waitFor(`document.getElementById("shareTo").hidden`);
   await run(`closeCard(); document.getElementById("typed").value = ""`);
   await sleep(500);
 
@@ -267,6 +275,25 @@ try {
   await sleep(800);
   console.log("groups tab:", await run(`[...document.querySelectorAll("#groupIdeas .chip")].map((b) => b.textContent).join(", ") + " | tips shown: " + !document.getElementById("groupsTips").hidden`));
   await shot("17-groups.jpg");
+  // A new group: tap friends to add them, or add someone new by number (who also becomes a friend)
+  await run(`[...document.querySelectorAll("#groupIdeas .chip")].find((b) => b.textContent.includes("Goa trip")).click()`);
+  await waitFor(`!document.getElementById("view-group").hidden`);
+  await sleep(600);
+  const chips = await run(`[...document.querySelectorAll("#gFriendChips .chip")].map((b) => b.textContent)`);
+  console.log("friend chips in new group:", chips.join(", "));
+  await run(`[...document.querySelectorAll("#gFriendChips .chip")].find((b) => b.textContent.includes("Meena")).click()`);
+  await sleep(300);
+  await run(`document.getElementById("gByNumber").click()`);
+  await waitFor(`!document.getElementById("addPerson").hidden`);
+  await run(`document.getElementById("apName").value = "priya"; document.getElementById("apPhone").value = "99999 99997"; document.getElementById("addPersonForm").requestSubmit()`);
+  await waitFor(`document.getElementById("addPerson").hidden`);
+  await sleep(600);
+  const goa = await run(`(() => { const s = JSON.parse(localStorage.getItem("voice-split-v2")); const g = s.groups.find((x) => x.name === "Goa trip"); return { people: g.people, priyaIsFriend: s.friends.includes("Priya"), priyaPhone: s.phones.Priya }; })()`);
+  console.log("Goa trip:", JSON.stringify(goa));
+  if (goa.people.join() !== "You,Meena,Priya" || !goa.priyaIsFriend || goa.priyaPhone !== "99999 99997") throw new Error("Adding people to the group failed");
+  await run(`document.getElementById("gPeople").scrollIntoView({ block: "start" })`);
+  await sleep(2600); // let the "Added" note fade
+  await shot("17-group-people.jpg");
   await run(`document.querySelector('.tabs [data-go=account]').click()`);
   await sleep(600);
   const account = await run(`({ name: document.getElementById("pName").value, hasLanguageRow: document.body.innerText.includes("Speaking language") })`);

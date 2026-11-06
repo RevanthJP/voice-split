@@ -665,3 +665,17 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 .waGroup b{display:block;font-size:.82rem;line-height:1.2}
 .waGroup small{display:block;color:var(--muted);font-size:.66rem}
 .s5 .waMsg{margin-top:auto;font-size:.74rem;line-height:1.35;padding:8px 44px 8px 12px}
+
+/* Share the split: Send to sheet, like the tour */
+.shareWa{gap:10px}
+.shareSheet{z-index:13}
+.shareTo-open .shareSheet{transform:none}
+.shareOpts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.shareOpts .o{display:grid;justify-items:center;gap:8px;padding:16px 6px;border:0;border-radius:16px;background:var(--gray);font-weight:600;font-size:.88rem;color:var(--ink)}
+.shareOpts svg{width:30px;height:30px;fill:currentColor}
+.shareOpts .wa svg{color:var(--green)} .shareOpts .sms svg{color:var(--blue)} .shareOpts .other svg{color:var(--muted)}
+.cancelWide{width:100%;padding:14px;border:0;border-radius:14px;background:var(--gray);font-weight:600}
+/* Group people: tap a friend to add */
+.addLabel{margin:14px 0 6px;color:var(--muted);font-size:.85rem}
+.addChip{background:var(--blue-soft);color:var(--blue-deep);font-weight:600}
+.gAddBtns{margin-top:10px}

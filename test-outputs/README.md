@@ -32,7 +32,8 @@ Every tour screen after Welcome has a back arrow at the top left, and you can sw
 |---|---|
 | `09-contacts-ask.jpg` | "Now give your contacts access", shown once after the tour |
 | `10-home.jpg` | Home for a new user: greeting, balance card (₹0 shortcuts don't open Friends), type box and empty charts |
-| `11-split-share.jpg` | A real AI-read split ("Dinner yesterday ₹1,500 split with Arun and Ravi") with Share on WhatsApp |
+| `11-split-share.jpg` | A real AI-read split ("Dinner yesterday ₹1,500 split with Arun and Ravi") with Share the split |
+| `11-split-send-to.jpg` | Share the split: the Send to sheet with WhatsApp, SMS and Other apps, as in the tour |
 | `12-friends.jpg` | Friends for a new user: two equal add buttons, search, a placeholder chart and "How friends work" |
 | `13-friends-from-contacts.jpg` | From contacts: the privacy note before the phone's contact list opens, with Not now |
 | `14-friends-by-number.jpg` | By number: name and mobile number, number required |
@@ -40,6 +41,7 @@ Every tour screen after Welcome has a back arrow at the top left, and you can sw
 | `15-friends-list.jpg` | Meena with an SMS icon (how she was last reached), and Ravi, known only by name, with "Add number" |
 | `16-friends-search.jpg` | Search with no match, offering to add that name by number |
 | `17-groups.jpg` | Groups for a new user: one-tap group ideas and "How groups work" |
+| `17-group-people.jpg` | A new Goa trip: Meena added by tapping her chip, Priya added by number (she also becomes a friend) |
 | `18-account.jpg` | Account |
 
 The same run also checks: a stray word from silence ("E aí") doesn't open the expense sheet; no Splitwise text and no example under the mic; a spoken "Meena" is matched to the contact "Meena Sharma" in the browser with nothing written to storage; search finds people by name or by part of their number; sending by SMS is remembered on that friend; "Add number" saves a number for someone known only by name and refuses a made-up one like 987xxxxxxx; sample friends saved by an older version are removed; replaying the tour (`/#welcome`) never pre-fills the name.

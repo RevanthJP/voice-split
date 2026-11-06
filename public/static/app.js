@@ -261,7 +261,7 @@ function closeCard() {
   document.body.classList.remove("sheet-open");
   setTimeout(() => { $("scrim").hidden = true; $("card").hidden = true; }, 260);
 }
-$("scrim").addEventListener("click", () => { if (!$("addPerson").hidden) closeAddPerson(); else if (!$("contactsAsk").hidden) closeContactsAsk(); else if (!$("remind").hidden) closeRemind(); else closeCard(); });
+$("scrim").addEventListener("click", () => { if (!$("shareTo").hidden) closeShareTo(); else if (!$("addPerson").hidden) closeAddPerson(); else if (!$("contactsAsk").hidden) closeContactsAsk(); else if (!$("remind").hidden) closeRemind(); else closeCard(); });
 $("discard").addEventListener("click", closeCard);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && draft) closeCard(); });
 
@@ -337,7 +337,6 @@ function paintCard(res) {
   }
   $("save").disabled = !res.owed;
   $("shareWa").disabled = !res.owed;
-  $("shareOther").hidden = !res.owed;
   lastOwed = res.owed || null;
 }
 let checkTimer = null;
@@ -592,6 +591,14 @@ async function renderGroup() {
     }
     return li;
   }));
+  // Friends not in this group yet, one tap to add
+  const others = allPeople().filter((n) => n !== ME && !g.people.includes(n)).sort((a, b) => a.localeCompare(b));
+  $("gFriendChips").replaceChildren(...others.map((n) => {
+    const b = el("button", "chip addChip", "+ " + n); b.type = "button";
+    b.onclick = () => { joinGroup(g.id, [n]); persist(); renderGroup(); renderGroups(); toast(`Added ${n} to ${g.name}`); };
+    return b;
+  }));
+  $("gFriendChips").hidden = !others.length;
   renderGroupShare(g);
   const settle = $("gSettle");
   settle.replaceChildren();
@@ -615,16 +622,16 @@ async function renderGroup() {
   } catch (e) { settle.append(el("li", "problem", e.message)); }
 }
 $("gAdd").addEventListener("click", () => newBlankCard(openGroupId));
-$("gAddPerson").addEventListener("submit", (e) => {
-  e.preventDefault();
-  const g = group(openGroupId);
-  const raw = $("gNewPerson").value.trim().replace(/\s+/g, " ");
-  $("gNewPerson").value = "";
-  if (!raw || !g) return;
-  const name = allPeople().find((p) => p.toLowerCase() === raw.toLowerCase()) || raw[0].toUpperCase() + raw.slice(1);
-  if (name.toLowerCase() === "you" || g.people.includes(name)) return;
-  g.people.push(name); persist(); renderGroup(); toast(`Added ${name} to ${g.name}`);
-});
+let addToGroup = null; // a group the next added friend should also join
+function joinGroup(gid, names) {
+  const g = group(gid);
+  if (!g) return 0;
+  const fresh = names.filter((n) => n && n !== ME && !g.people.includes(n));
+  g.people.push(...fresh);
+  return fresh.length;
+}
+$("gFromContacts").addEventListener("click", () => { addToGroup = openGroupId; openContactsAsk("friends"); });
+$("gByNumber").addEventListener("click", () => { addToGroup = openGroupId; openAddPerson(); });
 $("gDelete").addEventListener("click", () => {
   const g = group(openGroupId);
   if (!g) return;
@@ -652,6 +659,7 @@ function openAddPerson(name, editing) {
   setTimeout(() => $($("apName").value ? "apPhone" : "apName").focus(), 320);
 }
 function closeAddPerson() {
+  setTimeout(() => { addToGroup = null; }, 0);
   document.body.classList.remove("addPerson-open");
   setTimeout(() => { $("addPerson").hidden = true; if ($("card").hidden && $("remind").hidden && $("contactsAsk").hidden) $("scrim").hidden = true; }, 300);
 }
@@ -672,7 +680,10 @@ $("addPersonForm").addEventListener("submit", (e) => {
   state.friends = [...(state.friends || []), name];
   state.phones = state.phones || {}; state.phones[name] = raw;
   $("friendSearch").value = "";
-  persist(); closeAddPerson(); renderAll(); toast(`Added ${name}`);
+  const g = addToGroup && group(addToGroup);
+  if (g) joinGroup(g.id, [name]);
+  addToGroup = null;
+  persist(); closeAddPerson(); renderAll(); toast(g ? `Added ${name} to ${g.name}` : `Added ${name}`);
 });
 function createGroup(name) {
   if (state.groups.some((g) => g.name.toLowerCase() === name.toLowerCase())) { toast(`You already have ${name}`); return; }
@@ -1162,6 +1173,7 @@ function closeContactsAsk() {
 }
 const NO_PICKER = "This browser can't share contacts with Kitty. It works in Chrome on Android and in the Android app. You can still add friends by name in Friends, or just say their names.";
 $("contactsLater").addEventListener("click", () => {
+  addToGroup = null;
   closeContactsAsk();
 });
 $("contactsAllow").addEventListener("click", async () => {
@@ -1182,8 +1194,11 @@ $("contactsAllow").addEventListener("click", async () => {
       state.friends = [...(state.friends || []), ...add.map((c) => c.name)];
       state.phones = state.phones || {};
       for (const c of add) if (c.tel) state.phones[c.name] = c.tel;
+      const g = addToGroup && group(addToGroup);
+      const joined = g ? joinGroup(g.id, got.map((c) => allPeople().find((n) => n.toLowerCase() === c.name.toLowerCase()) || c.name)) : 0;
+      addToGroup = null;
       persist(); renderAll();
-      toast(add.length ? `Added ${add.length} friend${add.length > 1 ? "s" : ""}` : "They're already your friends");
+      toast(g ? `Added ${joined} to ${g.name}` : add.length ? `Added ${add.length} friend${add.length > 1 ? "s" : ""}` : "They're already your friends");
     } else toast(`${got.length} contact${got.length > 1 ? "s" : ""} ready to match`);
   } catch (_) { toast("Couldn't open your contacts"); }
 });
@@ -1230,15 +1245,27 @@ function splitMessage() {
   if (draft.payer === ME && /^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(upi)) msg += `\nPay me at UPI ID: ${upi}`;
   return msg;
 }
-$("shareOther").addEventListener("click", async () => {
-  if (!draft || !lastOwed) return;
-  const text = splitMessage();
-  if (navigator.share) { try { await navigator.share({ text }); return; } catch (e) { if (e.name === "AbortError") return; } }
-  try { await navigator.clipboard.writeText(text); toast("Split copied. Paste it in any app."); } catch (_) { toast("Couldn't share. Try WhatsApp instead."); }
-});
 $("shareWa").addEventListener("click", () => {
   if (!draft || !lastOwed) return;
-  // No number in the link, so WhatsApp opens its own chat list to pick who gets it.
+  $("shareTo").hidden = false;
+  requestAnimationFrame(() => document.body.classList.add("shareTo-open"));
+});
+function closeShareTo() {
+  document.body.classList.remove("shareTo-open");
+  setTimeout(() => { $("shareTo").hidden = true; }, 300);
+}
+$("stCancel").addEventListener("click", closeShareTo);
+// No number in either link, so WhatsApp or Messages lets you pick the chat, usually the group's.
+$("stWa").addEventListener("click", () => {
   window.open(`https://wa.me/?text=${encodeURIComponent(splitMessage())}`, "_blank", "noopener");
-  toast("Opening WhatsApp. Remember to save the expense too.");
+  closeShareTo(); toast("Opening WhatsApp. Remember to save the expense too.");
+});
+$("stSms").addEventListener("click", () => {
+  location.href = `sms:?&body=${encodeURIComponent(splitMessage())}`;
+  closeShareTo(); toast("Opening Messages. Remember to save the expense too.");
+});
+$("stOther").addEventListener("click", async () => {
+  const text = splitMessage();
+  if (navigator.share) { try { await navigator.share({ text }); closeShareTo(); return; } catch (e) { if (e.name === "AbortError") return; } }
+  try { await navigator.clipboard.writeText(text); closeShareTo(); toast("Split copied. Paste it in any app."); } catch (_) { toast("Couldn't share. Try WhatsApp instead."); }
 });
