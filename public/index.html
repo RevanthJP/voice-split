@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Voice Split</title>
+<meta name="description" content="Say an expense in Tamil, Hindi, English or a mix, and it is split for you.">
+<meta name="theme-color" content="#f6f4ef">
+<link rel="stylesheet" href="/static/style.css?v=2">
+</head>
+<body>
+<main>
+  <header class="top">
+    <h1>Voice Split</h1>
+    <p class="lede">Say the expense the way you'd tell a friend, in Tamil, Hindi, English or a mix. We work out who owes what.</p>
+  </header>
+
+  <section class="say" aria-label="Add an expense">
+    <button id="mic" class="mic" type="button" aria-label="Tap to speak">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-2.07A7 7 0 0 0 19 12h-2Z"/></svg>
+    </button>
+    <p id="micHint" class="hint">Tap and speak. Tap again when you're done.</p>
+    <div class="langs" role="radiogroup" aria-label="Language you'll speak">
+      <span>Speaking in</span>
+      <button type="button" role="radio" data-lang="" aria-checked="true" class="on">Auto</button>
+      <button type="button" role="radio" data-lang="ta" aria-checked="false" lang="ta">தமிழ்</button>
+      <button type="button" role="radio" data-lang="hi" aria-checked="false" lang="hi">हिंदी</button>
+      <button type="button" role="radio" data-lang="en" aria-checked="false">English</button>
+    </div>
+    <form id="typeForm" class="type">
+      <input id="typed" type="text" autocomplete="off" maxlength="1000" placeholder="Or type: Petrol-ku naan 1,200 kuduthen, Arun Ravi kooda split pannu">
+      <button type="submit">Read</button>
+    </form>
+    <div class="examples" id="examples">
+      <span>Try:</span>
+      <button type="button">Petrol-ku naan 1,200 kuduthen, Arun Ravi kooda split pannu</button>
+      <button type="button">Maine dinner ke 900 diye, Arun aur Ravi ke saath split karo</button>
+      <button type="button">Dinner was 1500, I paid, split with Arun and Ravi, but Arun didn't have drinks, that was 300</button>
+    </div>
+    <p id="error" class="error" role="alert" hidden></p>
+  </section>
+
+  <section id="card" class="card" hidden aria-live="polite">
+    <p class="heard" id="heard" hidden></p>
+    <div class="row">
+      <input id="desc" class="desc" aria-label="What it was for" maxlength="60">
+      <label class="amount">₹<input id="total" type="number" inputmode="decimal" min="0" step="0.01" aria-label="Amount"></label>
+    </div>
+    <label class="field">Paid by <select id="payer"></select></label>
+    <div class="field">Shared by
+      <div id="sharers" class="chips"></div>
+    </div>
+    <p id="modeNote" class="note" hidden></p>
+    <ul id="items" class="items"></ul>
+    <ul id="owed" class="owed"></ul>
+    <p id="problem" class="problem" hidden></p>
+    <div class="actions">
+      <button id="save" class="primary" type="button">Save</button>
+      <button id="discard" type="button">Discard</button>
+    </div>
+    <details class="sw">
+      <summary>Splitwise format</summary>
+      <p>The same expense as paid and owed shares, the way Splitwise's own API records it.</p>
+      <pre id="swJson"></pre>
+    </details>
+  </section>
+
+  <section class="group" aria-label="Your group">
+    <div class="sectionHead">
+      <h2>Balances</h2>
+      <button id="reset" class="quiet" type="button">Start over</button>
+    </div>
+    <ul id="settle" class="settle"></ul>
+    <p id="settleEmpty" class="muted">No expenses yet. Add one above.</p>
+    <h2>Expenses</h2>
+    <ul id="expenses" class="expenses"></ul>
+    <h2>People</h2>
+    <div id="people" class="chips"></div>
+    <form id="addPerson" class="type small">
+      <input id="newPerson" maxlength="30" placeholder="Add a name">
+      <button type="submit">Add</button>
+    </form>
+    <label class="field upi">Your UPI ID, to include in payment requests
+      <input id="upi" maxlength="60" placeholder="name@bank" autocomplete="off">
+    </label>
+  </section>
+
+  <footer>
+    <p>Your group stays on this phone. Speech and text are sent to Groq's AI to be read. This app does not store them. The AI reads the expense, and plain code does the maths, so shares always add up exactly. Check each card before saving.</p>
+  </footer>
+</main>
+<script src="/static/app.js?v=2"></script>
+</body>
+</html>

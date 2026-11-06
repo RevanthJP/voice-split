@@ -1,0 +1,243 @@
+[
+ {
+  "id": "en-equal",
+  "lang": "en",
+  "text": "I paid 1200 for petrol, split with Arun and Ravi",
+  "owed": {
+   "You": 400,
+   "Arun": 400,
+   "Ravi": 400
+  }
+ },
+ {
+  "id": "tg-digits",
+  "lang": "tanglish",
+  "text": "Petrol-ku naan 1,200 kuduthen, Arun Ravi kooda split pannu",
+  "owed": {
+   "You": 400,
+   "Arun": 400,
+   "Ravi": 400
+  }
+ },
+ {
+  "id": "tg-words",
+  "lang": "tanglish",
+  "text": "Naan aayiram roobai saapaduku spend panninen, adha Prathi kooda split pannu",
+  "owed": {
+   "You": 500,
+   "Prathi": 500
+  }
+ },
+ {
+  "id": "ta-script",
+  "lang": "tamil",
+  "people": [
+   "Prathi"
+  ],
+  "text": "நான் சாப்பாட்டுக்கு ஆயிரம் ரூபாய் கொடுத்தேன், பிரதி கூட பிரிச்சுக்கோ",
+  "owed": {
+   "You": 500,
+   "Prathi": 500
+  }
+ },
+ {
+  "id": "hg-equal",
+  "lang": "hinglish",
+  "text": "Maine dinner ke 900 diye, Arun aur Ravi ke saath split karo",
+  "owed": {
+   "You": 300,
+   "Arun": 300,
+   "Ravi": 300
+  }
+ },
+ {
+  "id": "hi-script",
+  "lang": "hindi",
+  "people": [
+   "Arun"
+  ],
+  "text": "मैंने ऑटो के लिए तीन सौ रुपये दिए, अरुण के साथ बाँट दो",
+  "owed": {
+   "You": 150,
+   "Arun": 150
+  }
+ },
+ {
+  "id": "en-other-payer",
+  "lang": "en",
+  "text": "Arun paid 600 for movie tickets for me, him and Ravi",
+  "payer": "Arun",
+  "owed": {
+   "You": 200,
+   "Arun": 200,
+   "Ravi": 200
+  }
+ },
+ {
+  "id": "en-treat",
+  "lang": "en",
+  "text": "I paid 500 for Arun and Ravi's lunch, I didn't eat",
+  "owed": {
+   "Arun": 250,
+   "Ravi": 250
+  }
+ },
+ {
+  "id": "en-drinks",
+  "lang": "en",
+  "text": "Dinner was 1500, I paid, split with Arun and Ravi, but Arun didn't have drinks, that was 300",
+  "owed": {
+   "You": 550,
+   "Arun": 400,
+   "Ravi": 550
+  }
+ },
+ {
+  "id": "tg-drinks",
+  "lang": "tanglish",
+  "text": "Dinner 1500 naan pay pannen, Arun Ravi kooda, aana Arun drinks edukala, adhu 300",
+  "owed": {
+   "You": 550,
+   "Arun": 400,
+   "Ravi": 550
+  }
+ },
+ {
+  "id": "en-own-shopping",
+  "lang": "en",
+  "people": [
+   "Arun",
+   "Ravi"
+  ],
+  "text": "Ravi paid 2000 for groceries for me, Arun and himself, but 500 of it was his own shopping",
+  "payer": "Ravi",
+  "owed": {
+   "You": 500,
+   "Arun": 500,
+   "Ravi": 1000
+  }
+ },
+ {
+  "id": "en-shares",
+  "lang": "en",
+  "text": "Hotel was 6000, I paid, count me as two shares because my wife came, Arun is one share",
+  "owed": {
+   "You": 4000,
+   "Arun": 2000
+  }
+ },
+ {
+  "id": "en-percent",
+  "lang": "en",
+  "text": "Rent 20000, I paid, I take 60 percent and Arun takes 40 percent",
+  "owed": {
+   "You": 12000,
+   "Arun": 8000
+  }
+ },
+ {
+  "id": "en-exact",
+  "lang": "en",
+  "text": "Shopping 900, I paid, my part was 600 and Ravi's part was 300",
+  "owed": {
+   "You": 600,
+   "Ravi": 300
+  }
+ },
+ {
+  "id": "en-no-amount",
+  "lang": "en",
+  "text": "I paid for petrol, split with Arun",
+  "missing": "amount"
+ },
+ {
+  "id": "tg-no-amount",
+  "lang": "tanglish",
+  "text": "Auto-ku naan kuduthen, Kavya kooda split pannu",
+  "missing": "amount"
+ },
+ {
+  "id": "tg-750",
+  "lang": "tanglish",
+  "text": "Auto-ku ezhunooru aimbadhu naan kuduthen, Kavya kooda split",
+  "owed": {
+   "You": 375,
+   "Kavya": 375
+  }
+ },
+ {
+  "id": "tg-other-payer",
+  "lang": "tanglish",
+  "text": "Hotel-ku rendaayiram Prathi kuduthaa, naanum avalum share pannanum",
+  "payer": "Prathi",
+  "owed": {
+   "You": 1000,
+   "Prathi": 1000
+  }
+ },
+ {
+  "id": "hg-dedh",
+  "lang": "hinglish",
+  "text": "Dedh hazaar ka cab Ravi ne pay kiya, main aur Ravi split karenge",
+  "payer": "Ravi",
+  "owed": {
+   "You": 750,
+   "Ravi": 750
+  }
+ },
+ {
+  "id": "en-1.2k",
+  "lang": "en",
+  "text": "Paid 1.2k for snacks, split between me, Arun, Ravi and Kavya",
+  "owed": {
+   "You": 300,
+   "Arun": 300,
+   "Ravi": 300,
+   "Kavya": 300
+  }
+ },
+ {
+  "id": "en-known-case",
+  "lang": "en",
+  "people": [
+   "Prathi"
+  ],
+  "text": "paid 800 for pizza with prathi",
+  "owed": {
+   "You": 400,
+   "Prathi": 400
+  }
+ },
+ {
+  "id": "ta-script-payer",
+  "lang": "tamil",
+  "people": [
+   "Arun"
+  ],
+  "text": "அருண் டீக்கு 400 ரூபாய் கொடுத்தான், நானும் அவனும் பிரிச்சுக்கணும்",
+  "payer": "Arun",
+  "owed": {
+   "You": 200,
+   "Arun": 200
+  }
+ },
+ {
+  "id": "ta-two-names",
+  "lang": "tamil",
+  "text": "petrol-க்கு ஆயிரத்து இரண்ணூறு ரூபாய் கொடுத்தேன், Arun Ravi கூட split பண்ணு.",
+  "owed": {
+   "You": 400,
+   "Arun": 400,
+   "Ravi": 400
+  }
+ },
+ {
+  "id": "en-full-name",
+  "lang": "en",
+  "text": "I paid 600 for lunch with Arun Kumar",
+  "owed": {
+   "You": 300,
+   "Arun Kumar": 300
+  }
+ }
+]

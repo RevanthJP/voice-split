@@ -1,0 +1,10 @@
+[
+ {"id": "h-tg-cab", "lang": "tanglish", "text": "Cab-ku Kavya 900 pay panna, naan Arun Kavya moonu perum share", "payer": "Kavya", "owed": {"You": 300, "Arun": 300, "Kavya": 300}},
+ {"id": "h-tg-ainooru", "lang": "tanglish", "text": "Movie tickets-ku naan ainooru kuduthen, Ravi kooda split", "owed": {"You": 250, "Ravi": 250}},
+ {"id": "h-hg-hazaar", "lang": "hinglish", "text": "Do hazaar ka grocery maine liya, Arun aur Kavya ke saath barabar baanto", "owed": {"You": 666.67, "Arun": 666.67, "Kavya": 666.66}},
+ {"id": "h-en-kids", "lang": "en", "text": "Lunch 1600, Ravi paid, Ravi had his two kids with him so count him as three, and me as one", "payer": "Ravi", "owed": {"You": 400, "Ravi": 1200}},
+ {"id": "h-en-dessert", "lang": "en", "text": "I paid 2400 for dinner with Arun, Ravi and Kavya, Kavya skipped dessert which was 400", "owed": {"You": 633.33, "Arun": 633.33, "Ravi": 633.34, "Kavya": 500}},
+ {"id": "h-ta-script", "lang": "tamil", "people": ["Kavya"], "text": "காவ்யா பெட்ரோலுக்கு ஐநூறு ரூபாய் போட்டா, நானும் அவளும்", "payer": "Kavya", "owed": {"You": 250, "Kavya": 250}},
+ {"id": "h-hi-script", "lang": "hindi", "people": ["Ravi"], "text": "रवि ने चाय के लिए दो सौ रुपये दिए, मेरे और रवि के बीच", "payer": "Ravi", "owed": {"You": 100, "Ravi": 100}},
+ {"id": "h-en-no-people", "lang": "en", "text": "Paid 450 for the parking", "owed": {"You": 450}}
+]
