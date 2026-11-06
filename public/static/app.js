@@ -938,13 +938,18 @@ async function renderGroupChart() {
 // ---------- first-run walkthrough ----------
 // Welcome -> How it works (6 illustrated steps) -> Let's set you up -> the app.
 const TOUR_VERSION = 6;
+// A screen that's being hidden finishes fading first; showing it again cancels that,
+// so a quick Back never ends on a blank screen.
+const stageTimers = {};
 function showStage(id) {
+  clearTimeout(stageTimers[id]);
   $(id).hidden = false;
   requestAnimationFrame(() => document.body.classList.add(id + "-open"));
 }
 function hideStage(id) {
+  clearTimeout(stageTimers[id]);
   document.body.classList.remove(id + "-open");
-  setTimeout(() => { $(id).hidden = true; }, 350);
+  stageTimers[id] = setTimeout(() => { $(id).hidden = true; }, 350);
 }
 function openIntro() {
   hideStage("setup"); hideStage("how");
@@ -991,7 +996,7 @@ $("setupDone").addEventListener("click", () => {
 // Its numbers come from the app's own split maths (splits.py).
 const HOW = [
   { title: "Just say it", text: "Tap the mic and say the expense the way you'd tell a friend, in English, Tamil, Hindi or a mix." },
-  { title: "Find your friends", text: "Allow contacts once, and Kitty matches the names you say to people on your phone. They never leave it." },
+  { title: "Find your friends", text: "Pick them from your contacts, or add someone by name and WhatsApp number. Everything stays on your phone." },
   { title: "Kitty finds the people", text: "The names you said show up, ready to check. Tap Next when it looks right." },
   { title: "Check it, then save", text: "Akash skipped drinks, so he pays only for food. Fix anything with a tap, then save." },
   { title: "Groups keep the tally", text: "Make a group for a trip or your flat. Every expense adds up, and Kitty works out who pays whom in the fewest payments." },
@@ -1034,6 +1039,14 @@ function showHow(i) {
   const g = $("howGroupName");
   g.textContent = "";
   if (i === 0) howTimer = setTimeout(() => typeSayings(0), 700);
+  $("howFfName").textContent = ""; $("howFfPhone").textContent = "";
+  if (i === 1) {
+    // After the contacts, one friend is added by hand: name, then number
+    const typeInto = (box, text, then) => { const c = [...text]; let n = 0;
+      const type = () => { box.textContent = c.slice(0, ++n).join(""); if (n < c.length) howTimer = setTimeout(type, 90); else if (then) howTimer = setTimeout(then, 250); };
+      type(); };
+    howTimer = setTimeout(() => typeInto($("howFfName"), "Priya", () => typeInto($("howFfPhone"), "99999 99999")), 5700);
+  }
   if (i === 4) {
     const chars = [..."Goa trip"];
     let n = 0;
@@ -1043,6 +1056,9 @@ function showHow(i) {
 }
 $("howNext").addEventListener("click", () => { if (howAt < HOW.length - 1) showHow(howAt + 1); else openSetup(); });
 $("howSkip").addEventListener("click", openSetup);
+// Back: to the previous step, from the first step to Welcome, and from set up to the last step
+$("howBack").addEventListener("click", () => { if (howAt > 0) showHow(howAt - 1); else { stopHow(); showStage("intro"); hideStage("how"); } });
+$("setupBack").addEventListener("click", () => { showStage("how"); showHow(HOW.length - 1); hideStage("setup"); });
 // The tour shows once per tour version, so a changed tour reaches people who saw an older one.
 // Opening the app at /#welcome always shows it, which is handy for demos.
 if (state.onboarded !== TOUR_VERSION || ASKED_FOR_TOUR) openIntro();

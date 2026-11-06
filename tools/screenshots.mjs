@@ -69,6 +69,12 @@ try {
   // Order: Welcome -> How it works (6 steps) -> Set up -> app
   await run(`document.getElementById("introNext").click()`);
   await waitFor(`!document.getElementById("how").hidden && document.getElementById("howTitle").textContent === "Just say it"`);
+  // Back from the first step returns to Welcome
+  await run(`document.getElementById("howBack").click()`);
+  await waitFor(`!document.getElementById("intro").hidden && document.getElementById("how").hidden`);
+  console.log("back from step 1 goes to Welcome: true");
+  await run(`document.getElementById("introNext").click()`);
+  await waitFor(`!document.getElementById("how").hidden && document.getElementById("howTitle").textContent === "Just say it"`);
   // Step 1 types all five languages, then stops on the English dinner
   await waitFor(`document.getElementById("howLang").textContent === "English" && document.getElementById("howTyping").textContent.endsWith("Arun")`, 30000);
   await sleep(600);
@@ -81,11 +87,16 @@ try {
   await send("Emulation.setDeviceMetricsOverride", { width: 375, height: 812, deviceScaleFactor: 2, mobile: true });
   await sleep(600);
   await run(`document.getElementById("howNext").click()`);
-  const howShots = ["03-how-2-friends.jpg", "04-how-3-names.jpg", "05-how-4-check.jpg", "06-how-5-group-tally.jpg", "07-how-6-share.jpg"];
+  const howShots = ["03-how-2-friends-3-added.jpg", "04-how-3-names.jpg", "05-how-4-check.jpg", "06-how-5-group-tally.jpg", "07-how-6-share.jpg"];
   for (let k = 0; k < howShots.length; k++) {
     const i = k + 1;
     if (i === 4) { await sleep(3000); await shot("06-how-5-group-make.jpg"); await sleep(5600); } // making the group, then its tally
-    else await sleep(i === 1 ? 5000 : 3600); // let each step's animation finish
+    else if (i === 1) { // contacts first, then one friend added by number
+      await sleep(3500); await shot("03-how-2-friends-1-contacts.jpg");
+      await sleep(2300); await shot("03-how-2-friends-2-by-number.jpg");
+      await sleep(3200);
+    }
+    else await sleep(3600); // let each step's animation finish
     console.log("how step", i, await run(`document.getElementById("howTitle").textContent`));
     await shot(howShots[k]);
     await run(`document.getElementById("howNext").click()`);
@@ -94,7 +105,15 @@ try {
   console.log("old tour slides and Find friends screen removed:", findFriendsGone);
   if (!findFriendsGone) throw new Error("Old screens are still there");
 
-  // Set up comes after How it works
+  // Set up comes after How it works, and Back from it returns to the last step
+  await waitFor(`!document.getElementById("setup").hidden && document.getElementById("how").hidden`);
+  await run(`document.getElementById("setupBack").click()`);
+  await waitFor(`!document.getElementById("how").hidden && document.getElementById("howTitle").textContent === "Split and share"`);
+  await run(`document.getElementById("howBack").click()`);
+  const backOne = await run(`document.getElementById("howTitle").textContent`);
+  console.log("back from set up, then back again:", backOne);
+  if (backOne !== "Groups keep the tally") throw new Error("Back didn't go to the previous step");
+  await run(`document.getElementById("howNext").click(); document.getElementById("howNext").click()`);
   await waitFor(`!document.getElementById("setup").hidden && document.getElementById("how").hidden`);
   await sleep(700);
   await shot("08-setup.jpg");

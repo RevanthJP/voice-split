@@ -13,7 +13,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Kitty">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="/static/style.css?v=21">
+<link rel="stylesheet" href="/static/style.css?v=22">
 </head>
 <body>
 <div class="app">
@@ -269,7 +269,13 @@
         <!-- Step 2: find your friends (contacts, matched on the phone) -->
         <div class="scene s1">
           <div class="perm"><span class="permIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5 6h10c0-2.2-2.5-4-5-4s-5 1.8-5 4Z"/></svg></span><b>Allow Kitty to see your contacts?</b><small>Names stay on your phone</small><span class="permBtns"><i>Don't allow</i><i class="allow">Allow</i></span></div>
-          <ul class="ctList ffList"><li><span class="avatar">R</span><span class="ffName">Ravi</span><span class="ffChip"><i class="add">Add</i><i class="added">✓ Added</i></span></li><li><span class="avatar">S</span><span class="ffName">Suresh</span><span class="ffChip"><i class="add">Add</i><i class="added">✓ Added</i></span></li><li><span class="avatar">A</span><span class="ffName">Akash</span><span class="ffChip"><i class="add">Add</i><i class="added">✓ Added</i></span></li><li><span class="avatar">A</span><span class="ffName">Arun</span><span class="ffChip"><i class="add">Add</i><i class="added">✓ Added</i></span></li></ul>
+          <ul class="ctList ffList"><li><span class="avatar">R</span><span class="ffName">Ravi</span><span class="ffChip"><i class="add">Add</i><i class="added">✓ Added</i></span></li><li><span class="avatar">S</span><span class="ffName">Suresh</span><span class="ffChip"><i class="add">Add</i><i class="added">✓ Added</i></span></li><li><span class="avatar">A</span><span class="ffName">Akash</span><span class="ffChip"><i class="add">Add</i><i class="added">✓ Added</i></span></li><li><span class="avatar">A</span><span class="ffName">Arun</span><span class="ffChip"><i class="add">Add</i><i class="added">✓ Added</i></span></li><li class="ffNew"><span class="avatar">P</span><span class="ffName">Priya</span><span class="ffChip"><i class="added">✓ Added</i></span></li></ul>
+          <div class="ffSheet">
+            <b>Add by number</b>
+            <small>Name</small><p class="ffField"><span id="howFfName"></span></p>
+            <small>WhatsApp number</small><p class="ffField"><span id="howFfPhone"></span></p>
+            <span class="ffAdd">Add friend</span>
+          </div>
         </div>
         <!-- Step 3: names appear -->
         <div class="scene s2">
@@ -327,7 +333,7 @@
     </div>
     <div class="introFoot">
       <div class="dots" id="howDots" aria-hidden="true"></div>
-      <button id="howNext" class="primaryBtn" type="button">Next</button>
+      <div class="footBtns"><button id="howBack" class="primaryBtn ghost" type="button">Back</button><button id="howNext" class="primaryBtn" type="button">Next</button></div>
     </div>
   </section>
 
@@ -343,7 +349,7 @@
         </div>
         <p id="oError" class="error" hidden>Please add your name.</p>
           </div>
-    <div class="introFoot"><button id="setupDone" class="primaryBtn" type="button">Start using Kitty</button></div>
+    <div class="introFoot"><div class="footBtns"><button id="setupBack" class="primaryBtn ghost" type="button">Back</button><button id="setupDone" class="primaryBtn" type="button">Start using Kitty</button></div></div>
   </section>
 
   <!-- Contacts prompt in the main app -->
@@ -391,6 +397,6 @@
   <div id="toast" class="toast" role="status" hidden></div>
 </div>
 <div id="print" class="print" aria-hidden="true"></div>
-<script src="/static/app.js?v=22"></script>
+<script src="/static/app.js?v=23"></script>
 </body>
 </html>
