@@ -141,7 +141,7 @@ const WAVE = 34;
     const mid = 1 - Math.abs(i - (WAVE - 1) / 2) / ((WAVE - 1) / 2);
     b.style.setProperty("--h", (0.12 + 0.5 * mid * (0.6 + 0.4 * Math.sin(i * 1.7) ** 2)).toFixed(3));
     b.style.setProperty("--v", (0.6 + 1.6 * mid).toFixed(2));
-    b.style.setProperty("--c", i / WAVE < 0.55 ? "#0071E3" : "#B9500C");
+    b.style.setProperty("--c", i / WAVE < 0.55 ? "#2F7CF6" : "#B9500C");
     w.append(b);
   }
 })();
@@ -250,7 +250,7 @@ function closeCard() {
   document.body.classList.remove("sheet-open");
   setTimeout(() => { $("scrim").hidden = true; $("card").hidden = true; }, 260);
 }
-$("scrim").addEventListener("click", closeCard);
+$("scrim").addEventListener("click", () => { if (!$("remind").hidden) closeRemind(); else closeCard(); });
 $("discard").addEventListener("click", closeCard);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && draft) closeCard(); });
 
@@ -371,17 +371,60 @@ async function friendBalances() {
   if (!exps.length) return {};
   return (await post("/api/friends", { expenses: exps.map(plainExpense) })).friends;
 }
-function remindLink(name, amount) {
-  const me = state.profile.name ? ` – ${state.profile.name}` : "";
-  let msg = `Hi ${name}, a quick reminder: you owe me ${rupees(amount)} for our shared expenses${me}.`;
+function remindMessage(name, amount) {
+  const me = state.profile.name ? ` – ${state.profile.name.split(" ")[0]}` : "";
+  let msg = `Hi ${name}, a quick reminder: you owe me ${rupees(amount)} for our shared expenses on Kitty.`;
   const upi = (state.profile.upi || "").trim();
-  // WhatsApp only makes web links tappable, so the UPI ID is given as text to pay from any UPI app.
-  if (/^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(upi)) msg += ` You can pay to my UPI ID: ${upi}`;
-  const a = el("a", "wa", "Remind on WhatsApp");
-  a.href = "https://wa.me/?text=" + encodeURIComponent(msg);
-  a.target = "_blank"; a.rel = "noopener";
-  return a;
+  if (/^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(upi)) msg += ` You can pay to my UPI ID: ${upi}.`;
+  return msg + me;
 }
+function remindLink(name, amount) {
+  const b = el("button", "wa", "Send reminder on WhatsApp");
+  b.type = "button";
+  b.onclick = () => openRemind(name, amount);
+  return b;
+}
+let remindFor = null;
+function openRemind(name, amount) {
+  remindFor = name;
+  $("remindTitle").textContent = `Remind ${name} about ${rupees(amount)}`;
+  $("remindText").value = remindMessage(name, amount);
+  $("remindPhone").value = (state.phones || {})[name] || "";
+  $("remindPhone").dispatchEvent(new Event("input"));
+  $("scrim").hidden = false; $("remind").hidden = false;
+  requestAnimationFrame(() => document.body.classList.add("remind-open"));
+}
+function closeRemind() {
+  document.body.classList.remove("remind-open");
+  setTimeout(() => { $("remind").hidden = true; if ($("card").hidden) $("scrim").hidden = true; }, 300);
+}
+// Indian numbers: keep the digits, and add the 91 country code to a 10-digit number.
+function waNumber(raw) {
+  const d = (raw || "").replace(/\D/g, "").replace(/^0+/, "");
+  return d.length === 10 ? "91" + d : d.length >= 11 && d.length <= 15 ? d : "";
+}
+$("remindCancel").addEventListener("click", closeRemind);
+$("remindPhone").addEventListener("input", () => {
+  const raw = $("remindPhone").value.trim();
+  $("remindNote").textContent = !raw ? "Without a number, WhatsApp opens and you pick the chat."
+    : waNumber(raw) ? "Opens a chat with this number." : "That number doesn't look right. Use 10 digits, or add the country code.";
+});
+$("remindSend").addEventListener("click", () => {
+  const raw = $("remindPhone").value.trim();
+  const num = waNumber(raw);
+  if (raw && !num) { $("remindPhone").focus(); return; }
+  state.phones = state.phones || {};
+  if (num) state.phones[remindFor] = raw; else delete state.phones[remindFor];
+  persist();
+  window.open(`https://wa.me/${num}?text=${encodeURIComponent($("remindText").value)}`, "_blank", "noopener");
+  closeRemind();
+  toast("Opening WhatsApp");
+});
+$("remindOther").addEventListener("click", async () => {
+  const text = $("remindText").value;
+  if (navigator.share) { try { await navigator.share({ text }); closeRemind(); return; } catch (e) { if (e.name === "AbortError") return; } }
+  try { await navigator.clipboard.writeText(text); toast("Message copied"); closeRemind(); } catch (_) { toast("Couldn't share. Copy the message instead."); }
+});
 
 async function renderHome(friends) {
   const first = (state.profile.name || "").split(" ")[0];
@@ -838,21 +881,47 @@ function paintDots() {
   const last = slideAt === slides().length - 1;
   $("introNext").textContent = last ? "Start using Kitty" : "Next";
   $("introSkip").hidden = last;
-  // Replay the typing animation each time its slide comes into view.
-  document.querySelectorAll(".typing").forEach((t) => {
-    clearInterval(t._timer);
-    t.textContent = "";
-    t.closest(".art").classList.remove("done");
-    if (!slides()[slideAt].contains(t)) return;
-    const text = t.dataset.text;
-    let i = 0;
-    t._timer = setInterval(() => {
-      t.textContent = text.slice(0, ++i);
-      if (i >= text.length) { clearInterval(t._timer); t.closest(".art").classList.add("done"); }
-    }, 38);
-  });
+  runSayDemo(slides()[slideAt].contains($("typing")));
 }
+
+const SAY = [
+  { lang: "Tanglish", text: "Petrol-ku naan 1,200 kuduthen, Arun Ravi kooda split pannu", what: "Petrol", amt: "₹1,200", split: "You, Arun, Ravi · ₹400 each" },
+  { lang: "Hinglish", text: "Maine dinner ke 900 diye, Arun aur Ravi ke saath split karo", what: "Dinner", amt: "₹900", split: "You, Arun, Ravi · ₹300 each" },
+  { lang: "தமிழ்", text: "நான் சாப்பாட்டுக்கு ஆயிரம் ரூபாய் கொடுத்தேன், பிரதி கூட பிரிச்சுக்கோ", what: "Food", amt: "₹1,000", split: "You, Prathi · ₹500 each" },
+  { lang: "हिंदी", text: "मैंने ऑटो के लिए तीन सौ रुपये दिए, अरुण के साथ बाँट दो", what: "Auto", amt: "₹300", split: "You, Arun · ₹150 each" },
+  { lang: "English", text: "Movie tickets 750, Kavya paid, split with me and Arun", what: "Movie tickets", amt: "₹750", split: "Paid by Kavya · ₹250 each" },
+];
+let sayTimer = null;
+function runSayDemo(active) {
+  clearTimeout(sayTimer);
+  const art = document.querySelector(".artSay");
+  const t = $("typing");
+  if (!active) { t.textContent = ""; art.classList.remove("done"); return; }
+  let n = 0;
+  const step = () => {
+    const ex = SAY[n % SAY.length];
+    // Fade the last result out first, then swap in the next example and type it.
+    art.classList.remove("done");
+    sayTimer = setTimeout(() => {
+      $("langTag").textContent = ex.lang;
+      $("sayWhat").textContent = ex.what; $("sayAmt").textContent = ex.amt; $("saySplit").textContent = ex.split;
+      t.textContent = "";
+      let i = 0;
+      const chars = [...ex.text];
+      const type = () => {
+        t.textContent = chars.slice(0, ++i).join("");
+        if (i < chars.length) { sayTimer = setTimeout(type, 34); return; }
+        art.classList.add("done");
+        sayTimer = setTimeout(() => { n++; step(); }, 2200);
+      };
+      type();
+    }, n ? 500 : 0);
+  };
+  step();
+}
+let settleAfter = 0; // ignore scroll events while a button-driven slide change is animating
 function showSlide(i) {
+  settleAfter = Date.now() + 700;
   slideAt = Math.max(0, Math.min(i, slides().length - 1));
   $("slides").scrollTo({ left: slideAt * $("slides").clientWidth, behavior: "smooth" });
   paintDots();
@@ -861,6 +930,7 @@ let scrollTimer = null;
 $("slides").addEventListener("scroll", () => {
   clearTimeout(scrollTimer);
   scrollTimer = setTimeout(() => {
+    if (Date.now() < settleAfter) return;
     const i = Math.round($("slides").scrollLeft / $("slides").clientWidth);
     if (i !== slideAt) { slideAt = i; paintDots(); }
   }, 80);
@@ -877,6 +947,7 @@ function finishIntro() {
   state.onboarded = true;
   persist();
   document.body.classList.remove("intro-open");
+  runSayDemo(false);
   setTimeout(() => { $("intro").hidden = true; }, 350);
   renderAll();
 }
@@ -892,5 +963,4 @@ $("introNext").addEventListener("click", () => {
   toast(`Welcome, ${name.split(" ")[0]}`);
 });
 $("introSkip").addEventListener("click", () => showSlide(slides().length - 1));
-$("replayIntro").addEventListener("click", openIntro);
 if (!state.onboarded) openIntro();

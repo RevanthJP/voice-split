@@ -13,7 +13,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Kitty">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="/static/style.css?v=8">
+<link rel="stylesheet" href="/static/style.css?v=9">
 </head>
 <body>
 <div class="app">
@@ -124,7 +124,7 @@
         <label>Phone<input id="pPhone" maxlength="15" placeholder="Optional" inputmode="tel" autocomplete="tel"></label>
         <label>UPI ID<input id="pUpi" maxlength="60" placeholder="name@bank" autocomplete="off"></label>
         <label>Speaking language
-          <select id="pLang"><option value="">Auto</option><option value="ta">தமிழ் Tamil</option><option value="hi">हिंदी Hindi</option><option value="en">English</option></select>
+          <select id="pLang"><option value="">Detect automatically</option><option value="ta">தமிழ் Tamil</option><option value="hi">हिंदी Hindi</option><option value="en">English</option></select>
         </label>
       </div>
 
@@ -157,11 +157,10 @@
         <li><span>Sync across your phones</span><em>Coming soon</em></li>
         <li><span>Scan a bill photo</span><em>Coming soon</em></li>
         <li><span>Monthly bills added for you, like rent or Wi-Fi</span><em>Coming soon</em></li>
-        <li><span>Payment reminders</span><em>Coming soon</em></li>
+        <li><span>Automatic payment reminders</span><em>Coming soon</em></li>
       </ul>
       <h2>About</h2>
       <p class="muted small">Your data stays on this phone. Speech and text are sent to Groq's AI to be read, and this app doesn't store them. The AI reads the expense, and plain code does the maths, so shares always add up exactly.</p>
-      <button id="replayIntro" class="primaryBtn ghost" type="button">Show the welcome tour again</button>
       <button id="reset" class="danger" type="button">Delete all my data</button>
     </section>
   </main>
@@ -235,37 +234,42 @@
       </article>
       <article class="slide">
         <div class="art artSay">
-          <div class="bubble"><span class="typing" data-text="Petrol-ku naan 1,200 kuduthen, Arun Ravi kooda split pannu"></span></div>
-          <div class="mini"><b>Petrol</b><span>₹1,200</span><small>You, Arun, Ravi · ₹400 each</small></div>
+          <span class="langTag" id="langTag">Tanglish</span>
+          <div class="bubble"><span class="typing" id="typing"></span></div>
+          <div class="mini" id="sayResult"><b id="sayWhat">Petrol</b><span id="sayAmt">₹1,200</span><small id="saySplit">You, Arun, Ravi · ₹400 each</small></div>
         </div>
         <h2 class="slideTitle">Say it like you'd tell a friend</h2>
-        <p class="slideText">Tap the mic in the middle of the bar at the bottom, and say who paid, how much, and who shares it.</p>
+        <p class="slideText">Tap the mic in the middle of the bar at the bottom. Speak in English, Tamil, Hindi, or a mix.</p>
       </article>
       <article class="slide">
         <div class="art artCheck">
-          <div class="mini big"><b>Dinner</b><span>₹1,500</span>
-            <div class="miniChips"><i class="on">You</i><i class="on">Arun</i><i class="on">Ravi</i></div>
-            <small>Arun skipped drinks (₹300)</small>
-            <div class="miniRows"><p><span>Your share</span><b>₹550</b></p><p><span>Arun</span><b>₹400</b></p><p><span>Ravi</span><b>₹550</b></p></div>
+          <div class="mini big">
+            <p class="said">“Dinner was 1,500. Arun didn't have drinks, those were 300.”</p>
+            <div class="miniHead"><b>Dinner</b><span>₹1,500</span></div>
+            <div class="parts">
+              <p><span>Food ₹1,200</span><em>shared by You, Arun, Ravi</em><b>₹400 each</b></p>
+              <p><span>Drinks ₹300</span><em>shared by You, Ravi</em><b>₹150 each</b></p>
+            </div>
+            <div class="miniRows"><p><span>You</span><b>₹550</b></p><p><span>Arun</span><b>₹400</b></p><p><span>Ravi</span><b>₹550</b></p></div>
           </div>
         </div>
         <h2 class="slideTitle">Check it, then save</h2>
-        <p class="slideText">You see exactly what Kitty understood. Fix anything with a tap. The maths is always exact.</p>
+        <p class="slideText">Kitty shows how it split the bill. Arun pays only for food, so he owes less. Fix anything with a tap before saving.</p>
       </article>
       <article class="slide">
         <div class="art artSettle">
-          <div class="mini"><p class="owesRow"><span>Arun owes you</span><b>₹1,800</b></p><div class="miniBar" style="--w:90%"></div><p class="owesRow"><span>Ravi owes you</span><b>₹550</b></p><div class="miniBar" style="--w:32%"></div><span class="miniWa">Remind on WhatsApp</span></div>
+          <div class="mini"><p class="owesRow"><span>Arun owes you</span><b>₹1,800</b></p><div class="miniBar" style="--w:90%"></div><p class="owesRow"><span>Ravi owes you</span><b>₹550</b></p><div class="miniBar" style="--w:32%"></div><span class="miniWa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.7 1.1 1.5 1.8 1 .9 1.9 1.2 2.2 1.3.3.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.6-.1 1.2Z"/></svg>Send on WhatsApp</span></div>
         </div>
         <h2 class="slideTitle">See who owes whom, and settle up</h2>
-        <p class="slideText">Send a friendly WhatsApp reminder with your UPI ID. Export a month as Excel or PDF any time.</p>
+        <p class="slideText">Check the message, add their number if you like, and send it on WhatsApp with your UPI ID. Export any month as Excel or PDF.</p>
       </article>
       <article class="slide setup">
         <h2 class="slideTitle">Let's set you up</h2>
         <p class="slideText">This stays on your phone. You can change it later in Account.</p>
         <div class="form">
-          <label>Your name<input id="oName" maxlength="40" placeholder="Revanth" autocomplete="name"></label>
+          <label>Your name<input id="oName" maxlength="40" placeholder="Your name" autocomplete="name"></label>
           <label>You'll speak in
-            <select id="oLang"><option value="">Any, Kitty works it out</option><option value="ta">தமிழ் / Tanglish</option><option value="hi">हिंदी / Hinglish</option><option value="en">English</option></select>
+            <select id="oLang"><option value="">Detect automatically</option><option value="ta">தமிழ் / Tanglish</option><option value="hi">हिंदी / Hinglish</option><option value="en">English</option></select>
           </label>
           <label>UPI ID<input id="oUpi" maxlength="60" placeholder="Optional" autocomplete="off"></label>
         </div>
@@ -278,9 +282,24 @@
     </div>
   </section>
 
+  <section id="remind" class="sheet remindSheet" hidden role="dialog" aria-modal="true" aria-label="Send a reminder">
+    <div class="grab" aria-hidden="true"></div>
+    <h3 class="sheetTitle" id="remindTitle">Remind</h3>
+    <label class="label">Message<textarea id="remindText" class="field" rows="4" maxlength="500"></textarea></label>
+    <label class="label">WhatsApp number <span class="muted">(optional, saved for next time)</span>
+      <input id="remindPhone" class="field" inputmode="tel" maxlength="15" placeholder="98765 43210" autocomplete="off">
+    </label>
+    <p class="note" id="remindNote">Without a number, WhatsApp opens and you pick the chat.</p>
+    <div class="actions three">
+      <button id="remindCancel" type="button">Cancel</button>
+      <button id="remindOther" type="button">Other apps</button>
+      <button id="remindSend" class="primary wa-btn" type="button">Send on WhatsApp</button>
+    </div>
+  </section>
+
   <div id="toast" class="toast" role="status" hidden></div>
 </div>
 <div id="print" class="print" aria-hidden="true"></div>
-<script src="/static/app.js?v=8"></script>
+<script src="/static/app.js?v=9"></script>
 </body>
 </html>
