@@ -23,7 +23,7 @@ Everything is stored only on your phone. No sign-up. Password, sign-in and sync 
 | Check | Result |
 |---|---|
 | Split maths (`python -m unittest`) | 35 tests pass, including random trips that always settle to zero, friend balances that match each person's total, and an Excel export opened and checked |
-| Written expenses, development set (`cases.json`) | 22/22 read correctly after tuning. The first run got 20/22 |
+| Written expenses, development set (`cases.json`) | 24/24 read correctly after tuning, including a real Tamil recording's transcript. The first run got 20/22 |
 | Written expenses, held-back set (`cases_heldout.json`) | 7/8. The first run got 5/8: one was an error in the test itself, and two led to fixes, so this set is no longer fully unseen |
 | Synthetic voice clips (macOS voices, Tamil, Hindi, English) | 5/5 after adding name matching and the language picker |
 | Real phone recordings | Not yet tested |
