@@ -12,15 +12,17 @@ A voice feature for expense-splitting apps like Splitwise, built as a working pr
 2. **Reading the expense:** one call to gpt-oss-20b on Groq returns structured JSON: who paid, the amount, who shares, and any parts only some people share ("Arun didn't have drinks, that was 300"). It turns Tamil and Hindi number words into digits (aayiram → 1000, dedh hazaar → 1500).
 3. **The maths is plain code, not AI:** `splits.py` works in paise, so shares always add up to the exact total. It supports equal, exact, shares and percent splits, items only some people share, and simplified settle-up.
 4. **You confirm:** nothing is saved until you check the card. You can change the amount, the payer or who shares.
-5. **Settle up:** balances are reduced to the fewest payments, with a WhatsApp message for each, including your UPI ID if you add one.
+5. **Settle up:** balances are reduced to the fewest payments, with a WhatsApp reminder for each, including your UPI ID if you add one.
 
-The group is stored only on your phone. No sign-up.
+**Screens:** Home (speak or type an expense, totals, recent expenses), Friends (each person's balance with you across all groups), Groups (separate groups such as a trip or a flat, each with its own settle-up), and Account (your details, Excel and PDF export by month or range, and features marked as coming soon). It can be installed from the browser as a phone app.
+
+Everything is stored only on your phone. No sign-up. Password, sign-in and sync are shown as coming soon, not built.
 
 ## Testing
 
 | Check | Result |
 |---|---|
-| Split maths (`python -m unittest`) | 20 tests pass, including 300 random trips that always settle to zero |
+| Split maths (`python -m unittest`) | 35 tests pass, including random trips that always settle to zero, friend balances that match each person's total, and an Excel export opened and checked |
 | Written expenses, development set (`cases.json`) | 22/22 read correctly after tuning. The first run got 20/22 |
 | Written expenses, held-back set (`cases_heldout.json`) | 7/8. The first run got 5/8: one was an error in the test itself, and two led to fixes, so this set is no longer fully unseen |
 | Synthetic voice clips (macOS voices, Tamil, Hindi, English) | 5/5 after adding name matching and the language picker |

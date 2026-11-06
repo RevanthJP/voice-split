@@ -1,6 +1,6 @@
 // Keeps the app shell available so it opens like an app. API calls always go to the network.
-const CACHE = "voice-split-v4";
-const SHELL = ["/", "/static/style.css?v=4", "/static/app.js?v=4", "/manifest.webmanifest", "/icons/icon-192.png"];
+const CACHE = "voice-split-v6";
+const SHELL = ["/", "/static/style.css?v=5", "/static/app.js?v=5", "/manifest.webmanifest", "/icons/icon-192.png"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", (e) => {
   e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))));

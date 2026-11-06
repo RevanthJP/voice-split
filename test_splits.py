@@ -2,7 +2,7 @@
 import random
 import unittest
 
-from splits import ME, Expense, Item, SplitError, balances, owed_shares, settle_up, splitwise_shares
+from splits import ME, Expense, Item, SplitError, balances, owed_shares, settle_up, splitwise_shares, with_person
 
 
 def rupees(owed):
@@ -128,6 +128,22 @@ class SettleUp(unittest.TestCase):
                 after[p["to"]] -= p["paise"]
             self.assertTrue(all(v == 0 for v in after.values()))
             self.assertLessEqual(len(pays), max(0, sum(1 for v in net.values() if v) - 1))
+
+
+class Friends(unittest.TestCase):
+    def test_direct_debts_only(self):
+        expenses = [Expense("Dinner", 1500, ME, [ME, "Arun", "Ravi"], items=[Item(300, "drinks", excluded=["Arun"])]),
+                    Expense("Cab", 1200, "Arun", [ME, "Arun"]),
+                    Expense("Snacks", 200, "Arun", ["Arun", "Ravi"])]  # doesn't involve me
+        self.assertEqual({k: v / 100 for k, v in with_person(expenses).items()}, {"Arun": -200, "Ravi": 550})
+
+    def test_matches_my_net(self):
+        rng = random.Random(3)
+        people = [ME, "Arun", "Ravi", "Kavya"]
+        for _ in range(200):
+            exps = [Expense("x", rng.randint(1, 300000) / 100, rng.choice(people), rng.sample(people, rng.randint(1, 4)))
+                    for _ in range(rng.randint(1, 6))]
+            self.assertEqual(sum(with_person(exps).values()), balances(exps).get(ME, 0))
 
 
 if __name__ == "__main__":

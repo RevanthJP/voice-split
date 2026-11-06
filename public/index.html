@@ -13,20 +13,24 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Voice Split">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="/static/style.css?v=4">
+<link rel="stylesheet" href="/static/style.css?v=5">
 </head>
 <body>
 <div class="app">
-  <header class="bar"><h1 id="title">Add expense</h1></header>
+  <header class="bar">
+    <button id="back" class="back" type="button" hidden aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 5.4 14 4l-8 8 8 8 1.4-1.4L8.8 12z"/></svg></button>
+    <h1 id="title">Home</h1>
+  </header>
 
   <main id="views">
-    <section class="view" id="view-add" data-title="Add expense">
+    <!-- Home -->
+    <section class="view" id="view-home" data-title="Home">
+      <label class="pill">Adding to <select id="homeGroup" aria-label="Group to add the expense to"></select></label>
       <div class="add">
-        <p class="lede">Say it the way you'd tell a friend.</p>
         <button id="mic" class="mic" type="button" aria-label="Tap to speak">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-2.07A7 7 0 0 0 19 12h-2Z"/></svg>
         </button>
-        <p id="micHint" class="hint">Tap to speak</p>
+        <p id="micHint" class="hint">Tap and say the expense</p>
         <div class="seg langs" role="radiogroup" aria-label="Language you'll speak">
           <button type="button" role="radio" data-lang="" aria-checked="true" class="on">Auto</button>
           <button type="button" role="radio" data-lang="ta" aria-checked="false" lang="ta">தமிழ்</button>
@@ -36,61 +40,120 @@
         <p id="error" class="error" role="alert" hidden></p>
       </div>
       <form id="typeForm" class="compose">
-        <input id="typed" type="text" autocomplete="off" maxlength="1000" placeholder="Or type an expense" enterkeyhint="go">
-        <button type="submit" aria-label="Read">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11h13.2l-5.6-5.6L13 4l8 8-8 8-1.4-1.4 5.6-5.6H4z"/></svg>
-        </button>
+        <input id="typed" type="text" autocomplete="off" maxlength="1000" placeholder="Or type: Petrol 1200, split with Arun and Ravi" enterkeyhint="go">
+        <button type="submit" aria-label="Read"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11h13.2l-5.6-5.6L13 4l8 8-8 8-1.4-1.4 5.6-5.6H4z"/></svg></button>
       </form>
-      <div class="examples" id="examples">
-        <p>Try one</p>
+
+      <div class="totals">
+        <button type="button" data-go="friends"><span>You get back</span><strong id="getBack">₹0</strong></button>
+        <button type="button" data-go="friends"><span>You owe</span><strong id="youOwe">₹0</strong></button>
+      </div>
+
+      <div class="sectionHead"><h2>Recent</h2><button type="button" class="link" data-go="groups">All groups</button></div>
+      <ul id="recent" class="list"></ul>
+      <div id="examples" class="examples">
+        <p>New here? Try one</p>
         <button type="button">Petrol-ku naan 1,200 kuduthen, Arun Ravi kooda split pannu</button>
         <button type="button">Maine dinner ke 900 diye, Arun aur Ravi ke saath split karo</button>
         <button type="button">Dinner was 1500, I paid, split with Arun and Ravi, but Arun didn't have drinks, that was 300</button>
       </div>
     </section>
 
-    <section class="view" id="view-balances" data-title="Balances" hidden>
-      <div class="totals">
-        <div><span>You get back</span><strong id="getBack" class="get">₹0</strong></div>
-        <div><span>You owe</span><strong id="youOwe" class="owe">₹0</strong></div>
+    <!-- Friends -->
+    <section class="view" id="view-friends" data-title="Friends" hidden>
+      <ul id="friends" class="list"></ul>
+      <div id="friendsEmpty" class="empty"><p>Friends appear here once you split an expense with them.</p><button type="button" class="link" data-go="home">Add an expense</button></div>
+    </section>
+
+    <!-- Groups -->
+    <section class="view" id="view-groups" data-title="Groups" hidden>
+      <ul id="groups" class="list"></ul>
+      <form id="newGroup" class="compose inline">
+        <input id="newGroupName" maxlength="40" placeholder="New group, like Goa trip or Flat" autocomplete="off" enterkeyhint="done">
+        <button type="submit" aria-label="Create group"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg></button>
+      </form>
+    </section>
+
+    <!-- One group -->
+    <section class="view" id="view-group" data-title="Group" hidden>
+      <div class="groupHead">
+        <div class="totals single"><div><span id="gBalLabel">Your balance</span><strong id="gBal">₹0</strong></div></div>
+        <button id="gAdd" class="primaryBtn" type="button">Add expense here</button>
       </div>
       <h2>Settle up</h2>
-      <ul id="settle" class="list"></ul>
-      <div id="settleEmpty" class="empty">
-        <p>No expenses yet.</p>
-        <button type="button" class="link" data-go="add">Add your first one</button>
-      </div>
-    </section>
-
-    <section class="view" id="view-history" data-title="History" hidden>
-      <ul id="expenses" class="list"></ul>
-      <div id="historyEmpty" class="empty">
-        <p>Expenses you save show up here.</p>
-        <button type="button" class="link" data-go="add">Add an expense</button>
-      </div>
-    </section>
-
-    <section class="view" id="view-group" data-title="Group" hidden>
+      <ul id="gSettle" class="list"></ul>
+      <p id="gSettleEmpty" class="muted small">Nothing to settle yet.</p>
+      <h2>Expenses</h2>
+      <ul id="gExpenses" class="list"></ul>
+      <p id="gExpensesEmpty" class="muted small">No expenses in this group yet.</p>
       <h2>People</h2>
-      <ul id="people" class="list"></ul>
-      <form id="addPerson" class="compose inline">
-        <input id="newPerson" maxlength="30" placeholder="Add a name" autocomplete="off" enterkeyhint="done">
+      <ul id="gPeople" class="list"></ul>
+      <form id="gAddPerson" class="compose inline">
+        <input id="gNewPerson" maxlength="30" placeholder="Add a name" autocomplete="off" enterkeyhint="done">
         <button type="submit" aria-label="Add person"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg></button>
       </form>
-      <h2>Your UPI ID</h2>
-      <p class="muted small">Added to the WhatsApp messages you send, so friends can pay you from any UPI app.</p>
-      <input id="upi" class="field" maxlength="60" placeholder="name@bank" autocomplete="off">
+      <button id="gDelete" class="danger" type="button">Delete this group</button>
+    </section>
+
+    <!-- Account -->
+    <section class="view" id="view-account" data-title="Account" hidden>
+      <div class="profile">
+        <span class="avatar big me" id="meAvatar">Y</span>
+        <div><strong id="meName">You</strong><span class="muted small" id="meSub">Saved on this phone</span></div>
+      </div>
+      <h2>Personal details</h2>
+      <div class="form">
+        <label>Name<input id="pName" maxlength="40" placeholder="Your name" autocomplete="name"></label>
+        <label>Phone<input id="pPhone" maxlength="15" placeholder="Optional" inputmode="tel" autocomplete="tel"></label>
+        <label>UPI ID<input id="pUpi" maxlength="60" placeholder="name@bank" autocomplete="off"></label>
+        <label>Usual language
+          <select id="pLang"><option value="">Auto</option><option value="ta">தமிழ் Tamil</option><option value="hi">हिंदी Hindi</option><option value="en">English</option></select>
+        </label>
+      </div>
+
+      <h2>Export</h2>
+      <div class="form">
+        <label>Period
+          <select id="xRange">
+            <option value="this">This month</option>
+            <option value="last" selected>Last month</option>
+            <option value="3">Last 3 months</option>
+            <option value="6">Last 6 months</option>
+            <option value="all">All time</option>
+          </select>
+        </label>
+        <label>Groups<select id="xGroup"></select></label>
+      </div>
+      <p id="xCount" class="muted small"></p>
+      <div class="twoBtns">
+        <button id="xExcel" type="button" class="primaryBtn">Excel</button>
+        <button id="xPdf" type="button" class="primaryBtn ghost">PDF</button>
+      </div>
+
+      <h2>Security</h2>
+      <ul class="list soon">
+        <li><span>Password and sign-in</span><em>Coming soon</em></li>
+        <li><span>App lock with Face ID or fingerprint</span><em>Coming soon</em></li>
+      </ul>
+      <h2>More on the way</h2>
+      <ul class="list soon">
+        <li><span>Sync across your phones</span><em>Coming soon</em></li>
+        <li><span>Add straight to Splitwise</span><em>Needs Splitwise Pro</em></li>
+        <li><span>Scan a bill photo</span><em>Coming soon</em></li>
+        <li><span>Repeating expenses, like rent</span><em>Coming soon</em></li>
+        <li><span>Payment reminders</span><em>Coming soon</em></li>
+      </ul>
       <h2>About</h2>
-      <p class="muted small">Your group stays on this phone. Speech and text are sent to Groq's AI to be read, and this app doesn't store them. The AI reads the expense, and plain code does the maths, so shares always add up exactly.</p>
-      <button id="reset" class="danger" type="button">Delete everything</button>
+      <p class="muted small">Your data stays on this phone. Speech and text are sent to Groq's AI to be read, and this app doesn't store them. The AI reads the expense, and plain code does the maths, so shares always add up exactly.</p>
+      <button id="reset" class="danger" type="button">Delete all my data</button>
     </section>
   </main>
 
   <nav class="tabs" aria-label="Sections">
-    <button type="button" data-go="add" class="on"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-2.07A7 7 0 0 0 19 12h-2Z"/></svg>Add</button>
-    <button type="button" data-go="balances"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 8v2h20V8L12 3Zm-7 9v6h2v-6H5Zm6 0v6h2v-6h-2Zm6 0v6h2v-6h-2ZM2 20v2h20v-2H2Z"/></svg>Balances<span id="badge" class="badge" hidden></span></button>
-    <button type="button" data-go="history"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3a9 9 0 0 0-9 9H1l4 4 4-4H6a7 7 0 1 1 2.05 4.95l-1.42 1.42A9 9 0 1 0 13 3Zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8H12Z"/></svg>History</button>
-    <button type="button" data-go="group"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13Zm8 0c-.29 0-.62.02-.97.05A4.22 4.22 0 0 1 17 16.5V19h6v-2.5c0-2.33-4.67-3.5-7-3.5Z"/></svg>Group</button>
+    <button type="button" data-go="home" class="on"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 10.5V21h6v-6h6v6h6V10.5z"/></svg>Home</button>
+    <button type="button" data-go="friends"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5Z"/></svg>Friends<span id="badge" class="badge" hidden></span></button>
+    <button type="button" data-go="groups"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13Zm8 0c-.29 0-.62.02-.97.05A4.22 4.22 0 0 1 17 16.5V19h6v-2.5c0-2.33-4.67-3.5-7-3.5Z"/></svg>Groups</button>
+    <button type="button" data-go="account"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 4a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Zm0 14a8 8 0 0 1-6.1-2.8C7 15.5 9.4 14.5 12 14.5s5 1 6.1 2.7A8 8 0 0 1 12 20Z"/></svg>Account</button>
   </nav>
 
   <div id="scrim" class="scrim" hidden></div>
@@ -101,6 +164,7 @@
       <input id="desc" class="desc" aria-label="What it was for" maxlength="60">
       <label class="amount">₹<input id="total" type="number" inputmode="decimal" min="0" step="0.01" aria-label="Amount"></label>
     </div>
+    <label class="label">Group <select id="sheetGroup" class="field"></select></label>
     <label class="label">Paid by <select id="payer" class="field"></select></label>
     <div class="label">Split between
       <div id="sharers" class="chips"></div>
@@ -126,6 +190,7 @@
 
   <div id="toast" class="toast" role="status" hidden></div>
 </div>
-<script src="/static/app.js?v=4"></script>
+<div id="print" class="print" aria-hidden="true"></div>
+<script src="/static/app.js?v=5"></script>
 </body>
 </html>

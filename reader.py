@@ -63,7 +63,7 @@ def _client():
     key = os.getenv("GROQ_API_KEY")
     if not key:
         raise RuntimeError("GROQ_API_KEY is not set")
-    return Groq(api_key=key, max_retries=2)
+    return Groq(api_key=key, max_retries=1, timeout=25)
 
 
 def _speech(audio, filename, language=None):

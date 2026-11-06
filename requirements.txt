@@ -3,3 +3,4 @@ uvicorn
 python-multipart
 groq
 python-dotenv
+openpyxl

@@ -4,12 +4,13 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 import reader as ai
-from splits import ME, Expense, Item, SplitError, balances, owed_shares, settle_up, splitwise_shares
+from export import build_xlsx
+from splits import ME, Expense, Item, SplitError, balances, owed_shares, settle_up, splitwise_shares, with_person
 
 DAILY_AI_CAP = 300  # protects the free Groq quota on a shared link
 MAX_AUDIO = 4 * 1024 * 1024  # Vercel rejects bodies over 4.5 MB
@@ -140,6 +141,41 @@ def group_balances(body: GroupIn):
         raise HTTPException(400, str(err))
     return {"net": {k: v / 100 for k, v in net.items()},
             "payments": [{"from": p["from"], "to": p["to"], "amount": p["paise"] / 100} for p in settle_up(net)]}
+
+
+class AllIn(BaseModel):
+    expenses: list[ExpenseIn] = Field(default_factory=list, max_length=3000)
+
+
+@app.post("/api/friends")
+def friends(body: AllIn):
+    """Each person's balance with you across every group."""
+    try:
+        pairs = with_person([_expense(e) for e in body.expenses])
+    except SplitError as err:
+        raise HTTPException(400, str(err))
+    return {"friends": {k: v / 100 for k, v in pairs.items() if v}}
+
+
+class ExportRow(BaseModel):
+    date: str = Field("", max_length=20)
+    group: str = Field("", max_length=60)
+    expense: ExpenseIn
+
+
+class ExportIn(BaseModel):
+    title: str = Field("Voice Split", max_length=80)
+    rows: list[ExportRow] = Field(default_factory=list, max_length=3000)
+
+
+@app.post("/api/export-xlsx")
+def export_xlsx(body: ExportIn):
+    try:
+        data = build_xlsx([(r.date, r.group, _expense(r.expense)) for r in body.rows], body.title)
+    except SplitError as err:
+        raise HTTPException(400, str(err))
+    return Response(data, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": 'attachment; filename="voice-split.xlsx"'})
 
 
 @app.get("/manifest.webmanifest")

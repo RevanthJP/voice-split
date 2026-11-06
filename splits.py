@@ -130,6 +130,21 @@ def balances(expenses):
     return net
 
 
+def with_person(expenses, me=ME):
+    """What each other person owes `me` directly (positive) or `me` owes them (negative), in paise.
+    Only debts between `me` and that person count, the way a friends list shows balances."""
+    out = {}
+    for e in expenses:
+        owed = owed_shares(e)
+        if e.payer == me:
+            for p, amount in owed.items():
+                if p != me:
+                    out[p] = out.get(p, 0) + amount
+        elif owed.get(me):
+            out[e.payer] = out.get(e.payer, 0) - owed[me]
+    return out
+
+
 def settle_up(net):
     """Fewest simple payments that clear the balances: largest debtor pays largest creditor."""
     debtors = sorted(((-v, p) for p, v in net.items() if v < 0), key=lambda x: (-x[0], x[1]))
