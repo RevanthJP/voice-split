@@ -142,6 +142,19 @@ def group_balances(body: GroupIn):
             "payments": [{"from": p["from"], "to": p["to"], "amount": p["paise"] / 100} for p in settle_up(net)]}
 
 
+@app.get("/manifest.webmanifest")
+def manifest():
+    return FileResponse(PUBLIC / "manifest.webmanifest", media_type="application/manifest+json")
+
+
+@app.get("/sw.js")
+def service_worker():
+    return FileResponse(PUBLIC / "sw.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
+
+
+app.mount("/icons", StaticFiles(directory=PUBLIC / "icons", check_dir=False), name="icons")
+
+
 @app.get("/")
 def index():
     return FileResponse(PUBLIC / "index.html")

@@ -194,6 +194,17 @@ function recheck() {
   }, 150);
 }
 ["desc", "total"].forEach((id) => $(id).addEventListener("input", recheck));
+$("addSharer").addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (!draft) return;
+  const raw = $("newSharer").value.trim().replace(/\s+/g, " ");
+  $("newSharer").value = "";
+  if (!raw) return;
+  const name = raw.toLowerCase() === "you" ? ME : (state.people.find((p) => p.toLowerCase() === raw.toLowerCase()) || raw[0].toUpperCase() + raw.slice(1));
+  if (!draft.participants.includes(name)) draft.participants = [...draft.participants, name];
+  if (draft.mode !== "equal") { draft.mode = "equal"; draft.values = {}; }
+  recheck();
+});
 $("payer").addEventListener("change", recheck);
 
 $("save").addEventListener("click", () => {
@@ -280,3 +291,6 @@ $("reset").addEventListener("click", () => {
 });
 
 render();
+
+// Lets the phone install this as an app from the browser's "Add to Home Screen".
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});

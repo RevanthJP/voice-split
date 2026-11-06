@@ -6,7 +6,14 @@
 <title>Voice Split</title>
 <meta name="description" content="Say an expense in Tamil, Hindi, English or a mix, and it is split for you.">
 <meta name="theme-color" content="#f6f4ef">
-<link rel="stylesheet" href="/static/style.css?v=2">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Voice Split">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="stylesheet" href="/static/style.css?v=3">
 </head>
 <body>
 <main>
@@ -49,6 +56,10 @@
     <label class="field">Paid by <select id="payer"></select></label>
     <div class="field">Shared by
       <div id="sharers" class="chips"></div>
+      <form id="addSharer" class="type small">
+        <input id="newSharer" maxlength="30" placeholder="Add someone who shares this" autocomplete="off">
+        <button type="submit">Add</button>
+      </form>
     </div>
     <p id="modeNote" class="note" hidden></p>
     <ul id="items" class="items"></ul>
@@ -89,6 +100,6 @@
     <p>Your group stays on this phone. Speech and text are sent to Groq's AI to be read. This app does not store them. The AI reads the expense, and plain code does the maths, so shares always add up exactly. Check each card before saving.</p>
   </footer>
 </main>
-<script src="/static/app.js?v=2"></script>
+<script src="/static/app.js?v=3"></script>
 </body>
 </html>
