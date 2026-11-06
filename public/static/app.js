@@ -468,12 +468,21 @@ async function renderHome(friends) {
   renderGroupChart();
 }
 
+let lastFriendBalances = {};
 function renderFriends(friends) {
+  lastFriendBalances = friends;
   // Everyone you know: people in your groups, friends you added, and anyone with a balance.
-  const names = [...new Set([...allPeople(), ...Object.keys(friends)])].filter((n) => n !== ME)
+  const all = [...new Set([...allPeople(), ...Object.keys(friends)])].filter((n) => n !== ME)
     .sort((a, b) => Math.abs(friends[b] || 0) - Math.abs(friends[a] || 0) || a.localeCompare(b));
-  $("friendsEmpty").hidden = names.length > 0;
-  let owingMe = 0;
+  // Search by name, or by any part of a saved number
+  const q = $("friendSearch").value.trim().toLowerCase();
+  const digits = q.replace(/\D/g, "");
+  const names = !q ? all : all.filter((n) => n.toLowerCase().includes(q) || (digits.length >= 3 && ((state.phones || {})[n] || "").replace(/\D/g, "").includes(digits)));
+  $("friendsEmpty").hidden = all.length > 0;
+  $("friendsNoMatch").hidden = !(all.length && q && !names.length);
+  $("noMatchText").textContent = `No one matches “${$("friendSearch").value.trim()}”`;
+  $("addSearched").hidden = !!digits && digits.length === q.length; // a number alone isn't a name
+  const owingMe = all.filter((n) => (friends[n] || 0) > 0).length;
   $("friends").replaceChildren(...names.map((n) => {
     const v = friends[n] || 0;
     const groups = state.groups.filter((g) => g.people.includes(n)).map((g) => g.name).join(", ");
@@ -481,7 +490,7 @@ function renderFriends(friends) {
     const amt = el("span", "amt " + (v > 0 ? "get" : v < 0 ? "owe" : "zero"));
     amt.append(el("small", null, v > 0 ? "owes you" : v < 0 ? "you owe" : "settled up"), el("strong", null, v ? rupees(Math.abs(v)) : ""));
     li.append(who(n, groups || ((state.phones || {})[n] ? "WhatsApp " + state.phones[n] : "Not in a group yet")), amt);
-    if (v > 0) { owingMe++; li.append(remindLink(n, v)); }
+    if (v > 0) li.append(remindLink(n, v));
     const used = state.groups.some((g) => g.expenses.some((e) => e.payer === n || e.participants.includes(n)));
     if (!used && (state.friends || []).includes(n)) {
       const x = el("button", "link removeFriend", "Remove"); x.type = "button";
@@ -491,7 +500,7 @@ function renderFriends(friends) {
     return li;
   }));
   $("badge").hidden = !owingMe; $("badge").textContent = owingMe;
-  $("friendsTips").hidden = names.length >= 3;
+  $("friendsTips").hidden = all.length >= 3;
   renderFriendsChart(friends);
 }
 
@@ -585,14 +594,16 @@ $("gDelete").addEventListener("click", () => {
   persist(); go("groups"); renderAll(); toast("Group deleted");
 });
 $("friendFromContacts").addEventListener("click", () => openContactsAsk("friends"));
-$("friendByNumber").addEventListener("click", openAddPerson);
+$("friendByNumber").addEventListener("click", () => openAddPerson());
+$("friendSearch").addEventListener("input", () => renderFriends(lastFriendBalances));
+$("addSearched").addEventListener("click", () => openAddPerson($("friendSearch").value));
 
 // Add a friend with their WhatsApp number, so Kitty can send them their share
-function openAddPerson() {
-  $("apName").value = ""; $("apPhone").value = ""; $("apError").hidden = true;
+function openAddPerson(name) {
+  $("apName").value = typeof name === "string" ? titleName(name) : ""; $("apPhone").value = ""; $("apError").hidden = true;
   $("scrim").hidden = false; $("addPerson").hidden = false;
   requestAnimationFrame(() => document.body.classList.add("addPerson-open"));
-  setTimeout(() => $("apName").focus(), 320);
+  setTimeout(() => $($("apName").value ? "apPhone" : "apName").focus(), 320);
 }
 function closeAddPerson() {
   document.body.classList.remove("addPerson-open");
@@ -610,6 +621,7 @@ $("addPersonForm").addEventListener("submit", (e) => {
   if (name.toLowerCase() === "you" || allPeople().some((p) => p.toLowerCase() === name.toLowerCase())) return bad(`${name} is already a friend.`, "apName");
   state.friends = [...(state.friends || []), name];
   state.phones = state.phones || {}; state.phones[name] = raw;
+  $("friendSearch").value = "";
   persist(); closeAddPerson(); renderAll(); toast(`Added ${name}`);
 });
 function createGroup(name) {
@@ -1070,7 +1082,7 @@ function closeContactsAsk() {
 const NO_PICKER = "This browser can't share contacts with Kitty. It works in Chrome on Android and in the Android app. You can still add friends by name in Friends, or just say their names.";
 $("contactsLater").addEventListener("click", () => {
   closeContactsAsk();
-  if (contactsMode === "friends") setTimeout(openAddPerson, 320);
+  if (contactsMode === "friends") setTimeout(() => openAddPerson(), 320);
 });
 $("contactsAllow").addEventListener("click", async () => {
   if (!canPickContacts()) {

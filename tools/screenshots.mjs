@@ -72,19 +72,19 @@ try {
   // Step 1 types all five languages, then stops on the English dinner
   await waitFor(`document.getElementById("howLang").textContent === "English" && document.getElementById("howTyping").textContent.endsWith("Arun")`, 30000);
   await sleep(600);
-  await shot("16-how-1-say.jpg");
+  await shot("02-how-1-say.jpg");
   // The same step on a taller screen, like a laptop browser: the phone frame grows instead of floating small
   await send("Emulation.setDeviceMetricsOverride", { width: 650, height: 1050, deviceScaleFactor: 1, mobile: false });
   await sleep(600);
   console.log("phone frame on a tall screen:", await run(`(() => { const r = document.getElementById("phone").getBoundingClientRect(); return Math.round(r.width) + "x" + Math.round(r.height); })()`));
-  await shot("16-how-1-say-tall-screen.jpg");
+  await shot("02-how-1-say-laptop-window.jpg");
   await send("Emulation.setDeviceMetricsOverride", { width: 375, height: 812, deviceScaleFactor: 2, mobile: true });
   await sleep(600);
   await run(`document.getElementById("howNext").click()`);
-  const howShots = ["16-how-2-friends.jpg", "16-how-3-names.jpg", "16-how-4-check.jpg", "16-how-5-group-tally.jpg", "16-how-6-share.jpg"];
+  const howShots = ["03-how-2-friends.jpg", "04-how-3-names.jpg", "05-how-4-check.jpg", "06-how-5-group-tally.jpg", "07-how-6-share.jpg"];
   for (let k = 0; k < howShots.length; k++) {
     const i = k + 1;
-    if (i === 4) { await sleep(3000); await shot("16-how-5-group-make.jpg"); await sleep(5600); } // making the group, then its tally
+    if (i === 4) { await sleep(3000); await shot("06-how-5-group-make.jpg"); await sleep(5600); } // making the group, then its tally
     else await sleep(i === 1 ? 5000 : 3600); // let each step's animation finish
     console.log("how step", i, await run(`document.getElementById("howTitle").textContent`));
     await shot(howShots[k]);
@@ -97,7 +97,7 @@ try {
   // Set up comes after How it works
   await waitFor(`!document.getElementById("setup").hidden && document.getElementById("how").hidden`);
   await sleep(700);
-  await shot("09-setup.jpg");
+  await shot("08-setup.jpg");
   await run(`document.getElementById("setupDone").click()`);
   const blocked = await run(`!document.getElementById("oError").hidden && !document.getElementById("setup").hidden`);
   console.log("empty name blocked:", blocked);
@@ -115,7 +115,7 @@ try {
   // The contacts prompt shows in the main app
   await waitFor(`!document.getElementById("contactsAsk").hidden`, 5000);
   await sleep(800);
-  await shot("20-contacts-ask.jpg");
+  await shot("09-contacts-ask.jpg");
   await run(`document.getElementById("contactsAllow").click()`); // desktop Chrome has no contact picker
   const note = await run(`document.getElementById("contactsNote").hidden ? "" : document.getElementById("contactsNote").textContent`);
   console.log("no-picker note:", note.slice(0, 60));
@@ -161,20 +161,20 @@ try {
   console.log("no Splitwise text, no tip under the mic:", noSplitwise);
   if (!noSplitwise) throw new Error("Splitwise text or the mic tip is still there");
   await run(`document.getElementById("shareWa").scrollIntoView({ block: "center" })`);
-  await shot("21-split-share.jpg");
+  await shot("11-split-share.jpg");
   await run(`closeCard(); document.getElementById("typed").value = ""`);
   await sleep(500);
 
   await run(`document.querySelector('.tabs [data-go=friends]').click()`);
   await sleep(700);
   console.log("friends empty:", await run(`({ chart: !document.getElementById("friendsCard").hidden, tips: !document.getElementById("friendsTips").hidden })`));
-  await shot("22-friends-after-tour.jpg");
+  await shot("12-friends.jpg");
   // Friends: two ways to add. From contacts shows the privacy note first.
   await run(`document.getElementById("friendFromContacts").click()`);
   await waitFor(`!document.getElementById("contactsAsk").hidden`);
   await sleep(700);
   console.log("from contacts opens:", await run(`document.getElementById("contactsTitle").textContent + " | " + document.getElementById("contactsLater").textContent`));
-  await shot("23-friends-add-contacts.jpg");
+  await shot("13-friends-from-contacts.jpg");
   await run(`document.getElementById("contactsLater").click()`); // "Add by number"
   await waitFor(`!document.getElementById("addPerson").hidden && document.getElementById("contactsAsk").hidden`);
   // A name alone isn't enough: the number is required
@@ -182,24 +182,38 @@ try {
   console.log("without number:", await run(`document.getElementById("apError").textContent`));
   await run(`document.getElementById("apPhone").value = "99999 99999"; document.getElementById("apPhone").dispatchEvent(new Event("input"))`);
   await sleep(600);
-  await shot("24-friends-add-number.jpg");
+  await shot("14-friends-by-number.jpg");
   await run(`document.getElementById("addPersonForm").requestSubmit()`);
   await waitFor(`document.getElementById("addPerson").hidden`);
   await sleep(600);
   const added = await run(`(() => { const s = JSON.parse(localStorage.getItem("voice-split-v2")); return { friends: s.friends, phone: (s.phones || {}).Meena, nameBox: !!document.getElementById("friendName") }; })()`);
   console.log("added by number:", JSON.stringify(added));
   if (added.friends.join() !== "Meena" || added.phone !== "99999 99999" || added.nameBox) throw new Error("Adding by number failed");
-  await shot("25-friends-list.jpg");
+  await shot("15-friends-list.jpg");
+
+  // Search: by name, by part of the number, and an offer to add someone who isn't there
+  const search = async (text) => { await run(`(() => { const i = document.getElementById("friendSearch"); i.value = ${JSON.stringify(text)}; i.dispatchEvent(new Event("input")); })()`); await sleep(300);
+    return run(`({ shown: [...document.querySelectorAll("#friends li .name")].map((x) => x.textContent), noMatch: !document.getElementById("friendsNoMatch").hidden })`); };
+  const byName = await search("mee"), byNumber = await search("9999"), nobody = await search("zara");
+  console.log("search:", JSON.stringify({ byName, byNumber, nobody }));
+  if (byName.shown.join() !== "Meena" || byNumber.shown.join() !== "Meena" || !nobody.noMatch) throw new Error("Search failed");
+  await shot("16-friends-search.jpg");
+  await run(`document.getElementById("addSearched").click()`);
+  await waitFor(`!document.getElementById("addPerson").hidden`);
+  console.log("add from search prefills:", await run(`document.getElementById("apName").value`));
+  await run(`document.getElementById("apCancel").click()`);
+  await waitFor(`document.getElementById("addPerson").hidden`);
+  await search("");
   await run(`document.querySelector('.tabs [data-go=groups]').click()`);
   await sleep(800);
   console.log("groups tab:", await run(`[...document.querySelectorAll("#groupIdeas .chip")].map((b) => b.textContent).join(", ") + " | tips shown: " + !document.getElementById("groupsTips").hidden`));
-  await shot("26-groups.jpg");
+  await shot("17-groups.jpg");
   await run(`document.querySelector('.tabs [data-go=account]').click()`);
   await sleep(600);
   const account = await run(`({ name: document.getElementById("pName").value, hasLanguageRow: document.body.innerText.includes("Speaking language") })`);
   console.log("account", JSON.stringify(account));
   if (account.name !== "Asha Kumar" || account.hasLanguageRow) throw new Error("Speaking language row is still there");
-  await shot("13-account.jpg");
+  await shot("18-account.jpg");
 
   // A returning user who replays the tour must type the name again; nothing is pre-filled
   await send("Page.navigate", { url: "about:blank" }); // leave the app so the next load is a full one
