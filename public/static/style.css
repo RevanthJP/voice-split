@@ -641,3 +641,19 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 .friendActions .link{font-size:.85rem}
 .friendActions .removeFriend{flex-basis:auto;color:var(--red)}
 .shareOther{display:block;margin:8px auto 0;font-size:.9rem}
+
+/* How it works 6: the send options, then WhatsApp opens */
+.sendSheet{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:18px 18px 0 0;padding:12px 14px 16px;text-align:left;box-shadow:0 -10px 24px -14px rgba(0,0,0,.35);transform:translateY(105%)}
+.sendSheet b{display:block;font-size:.9rem;margin-bottom:10px}
+.sendOpts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sendOpts .o{display:grid;justify-items:center;gap:6px;padding:10px 4px;border-radius:12px;background:var(--gray);font-size:.72rem;font-weight:600;color:var(--ink);opacity:0}
+.sendOpts svg{width:26px;height:26px;fill:currentColor}
+.sendOpts .wa svg{color:var(--green)} .sendOpts .sms svg{color:var(--blue)} .sendOpts .other svg{color:var(--muted)}
+.play .s5 .sendSheet{animation:slideUp .45s 1s var(--ease) forwards,sheetOut .4s 3.3s var(--ease) forwards}
+.play .s5 .sendOpts .o{animation:pop .35s var(--ease) both}
+.play .s5 .sendOpts .wa{animation-delay:1.4s}.play .s5 .sendOpts .sms{animation-delay:1.6s}.play .s5 .sendOpts .other{animation-delay:1.8s}
+.play .s5 .sendOpts .wa{animation:pop .35s 1.4s var(--ease) both,tapWa .6s 2.6s var(--ease)}
+@keyframes tapWa{50%{transform:scale(.9);background:var(--green-soft)}}
+.play .s5 .waChat{animation:slideUp .5s 3.6s var(--ease) forwards}
+.play .s5 .waMsg{animation:pop .4s 4.3s var(--ease) both}
+.sendOpts .o{text-align:center;white-space:nowrap;font-size:.7rem}

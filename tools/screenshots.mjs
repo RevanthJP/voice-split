@@ -96,6 +96,7 @@ try {
       await sleep(2300); await shot("03-how-2-friends-2-by-number.jpg");
       await sleep(3200);
     }
+    else if (i === 5) { await sleep(1700); await shot("07-how-6-share-options.jpg"); await sleep(2800); } // the send options, then WhatsApp
     else await sleep(3600); // let each step's animation finish
     console.log("how step", i, await run(`document.getElementById("howTitle").textContent`));
     await shot(howShots[k]);

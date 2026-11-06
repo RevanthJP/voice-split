@@ -1050,7 +1050,7 @@ const HOW = [
   { title: "Kitty finds the people", text: "The names you said show up, ready to check. Tap Next when it looks right." },
   { title: "Check it, then save", text: "Akash skipped drinks, so he pays only for food. Fix anything with a tap, then save." },
   { title: "Groups keep the tally", text: "Make a group for a trip or your flat. Every expense adds up, and Kitty works out who pays whom in the fewest payments." },
-  { title: "Split and share", text: "Kitty opens WhatsApp, or SMS for anyone not on it, with everyone's share ready to send." },
+  { title: "Split and share", text: "Send everyone's share on WhatsApp, by SMS for anyone not on it, or through any other app." },
 ];
 const SAY = [
   { lang: "Tanglish", text: "Petrol-ku naan 1,200 kuduthen, Arun Ravi kooda split pannu" },

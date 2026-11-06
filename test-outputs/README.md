@@ -22,7 +22,8 @@ Every tour screen after Welcome has a back arrow at the top left, and you can sw
 | `05-how-4-check.jpg` | 4 Check it, then save: food ₹7,500 for all 5, drinks ₹2,500 without Akash; Akash ₹1,500, everyone else ₹2,125 |
 | `06-how-5-group-make.jpg` | 5 Groups keep the tally, first half: making "Goa trip" |
 | `06-how-5-group-tally.jpg` | 5, second half on the same screen: dinner, hotel and cab, settled in 4 payments |
-| `07-how-6-share.jpg` | 6 Split and share: everyone's share, and WhatsApp opens with the message ready |
+| `07-how-6-share-options.jpg` | 6 Split and share: the shares, then a Send to sheet with WhatsApp, SMS and Other apps |
+| `07-how-6-share.jpg` | 6, end: WhatsApp is tapped and opens with the message ready |
 | `08-setup.jpg` | Let's set you up: name and UPI ID. An empty name is blocked, and names are saved with capitals |
 
 ### The app
