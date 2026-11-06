@@ -361,3 +361,21 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 /* App name in one colour */
 .home .bar h1,.brand{background:none;-webkit-background-clip:border-box;background-clip:border-box;color:var(--blue)}
 .wa{font-weight:600;font-size:.92rem}
+
+/* Tour: centre each step in the screen so there is no large empty gap */
+.slide{justify-content:safe center;padding:28px 28px 12px}
+.slide.setup{justify-content:safe center;padding-top:28px}
+.art{min-height:0}
+.artLogo{padding:10px 0 6px}
+.logoMic{width:168px;height:168px;border-radius:48px}
+.logoMic svg{width:78px;height:78px}
+.logoMic.small{width:96px;height:96px;border-radius:30px;animation:none}
+.logoMic.small svg{width:46px;height:46px}
+.logoMic.small::before{inset:-10px;border-radius:38px}
+.artSetup{padding:6px 0}
+.slideTitle{font-size:1.9rem;margin:1.8rem 0 .7rem}
+.slideText{font-size:1.05rem;max-width:330px}
+.bubble{font-size:1.02rem}
+.mini{width:290px}
+.form input{color:var(--ink)}
+.form input::placeholder{color:#A1A1A6}

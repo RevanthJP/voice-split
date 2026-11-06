@@ -938,8 +938,8 @@ $("slides").addEventListener("scroll", () => {
   }, 80);
 });
 function openIntro() {
-  $("oName").value = state.profile.name || "";
-  $("oUpi").value = state.profile.upi || "";
+  $("oName").value = "";
+  $("oUpi").value = "";
   $("oError").hidden = true;
   $("intro").hidden = false;
   requestAnimationFrame(() => { document.body.classList.add("intro-open"); $("slides").scrollLeft = 0; slideAt = 0; paintDots(); });
@@ -954,10 +954,11 @@ function finishIntro() {
 }
 $("introNext").addEventListener("click", () => {
   if (slideAt < slides().length - 1) { showSlide(slideAt + 1); return; }
-  const name = $("oName").value.trim().replace(/\s+/g, " ");
+  // Someone who already set a name can leave it empty here and keep the old one.
+  const name = $("oName").value.trim().replace(/\s+/g, " ") || state.profile.name;
   if (!name) { $("oError").hidden = false; $("oName").focus(); return; }
   state.profile.name = name;
-  state.profile.upi = $("oUpi").value.trim();
+  if ($("oUpi").value.trim()) state.profile.upi = $("oUpi").value.trim();
   paintLangs();
   finishIntro();
   toast(`Welcome, ${name.split(" ")[0]}`);

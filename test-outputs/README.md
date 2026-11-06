@@ -20,6 +20,8 @@ Taken on 6 November 2026 in a browser set to phone size (375 × 812). They show 
 
 Not covered by these screenshots: recording with a real microphone, opening WhatsApp, and installing on a phone. Those need a real phone.
 
+`01-welcome.jpg`, `02-tour-tanglish.jpg` and `09-setup.jpg` are made by `node tools/screenshots.mjs`, which opens the app in a fresh Chrome profile as a brand-new user. It also checks that the tour appears, the name and UPI ID start empty, and an empty name is blocked.
+
 ## AI reading results (`ai-reading-results.json`)
 
 The most recent run of `eval_reading.py`: for each test sentence, what the AI returned and whether the payer and every share matched to the paisa. Each run overwrites this file.
