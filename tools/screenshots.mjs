@@ -113,6 +113,14 @@ try {
   const backOne = await run(`document.getElementById("howTitle").textContent`);
   console.log("back from set up, then back again:", backOne);
   if (backOne !== "Groups keep the tally") throw new Error("Back didn't go to the previous step");
+  // Swipe right goes back a step, swipe left goes on (pointer events, as a finger or mouse sends them)
+  const drag = (fromX, toX) => run(`(() => { const t = document.querySelector("#how .howStage");
+    t.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, clientX: ${fromX}, clientY: 400, pointerType: "touch" }));
+    t.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, clientX: ${toX}, clientY: 405, pointerType: "touch" }));
+    return document.getElementById("howTitle").textContent; })()`);
+  const swipedBack = await drag(80, 300), swipedOn = await drag(300, 80);
+  console.log("swipe right:", swipedBack, "| swipe left:", swipedOn);
+  if (swipedBack !== "Check it, then save" || swipedOn !== "Groups keep the tally") throw new Error("Swipe didn't move between steps");
   await run(`document.getElementById("howNext").click(); document.getElementById("howNext").click()`);
   await waitFor(`!document.getElementById("setup").hidden && document.getElementById("how").hidden`);
   await sleep(700);

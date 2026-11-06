@@ -619,3 +619,9 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 .ffAdd{margin-top:4px;text-align:center;padding:8px;border-radius:10px;background:var(--blue);color:#fff;font-weight:600;font-size:.82rem}
 .play .ffAdd{animation:press .5s 7.9s var(--ease)}
 .ffList .ffNew .added{opacity:1}
+
+/* Tour: back arrow top left, like a phone app */
+.tourBack{position:absolute;top:calc(var(--safe-t) + 12px);left:14px;z-index:2;width:40px;height:40px;border:0;border-radius:50%;background:rgba(0,0,0,.06);display:grid;place-items:center;color:var(--ink)}
+.tourBack svg{width:22px;height:22px;fill:currentColor}
+.intro.stage{touch-action:pan-y}
+#intro{touch-action:pan-y}

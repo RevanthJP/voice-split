@@ -13,7 +13,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Kitty">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="/static/style.css?v=22">
+<link rel="stylesheet" href="/static/style.css?v=23">
 </head>
 <body>
 <div class="app">
@@ -256,6 +256,7 @@
 
   <!-- Illustrated walkthrough: CSS and SVG only -->
   <section id="how" class="intro stage" hidden role="dialog" aria-modal="true" aria-label="How Kitty works">
+    <button id="howBack" class="tourBack" type="button" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 4.6 14 3.2 5.2 12l8.8 8.8 1.4-1.4L8 12z"/></svg></button>
     <button id="howSkip" class="introSkip" type="button">Skip</button>
     <div class="howStage">
       <div class="phone" id="phone" data-step="0">
@@ -333,12 +334,13 @@
     </div>
     <div class="introFoot">
       <div class="dots" id="howDots" aria-hidden="true"></div>
-      <div class="footBtns"><button id="howBack" class="primaryBtn ghost" type="button">Back</button><button id="howNext" class="primaryBtn" type="button">Next</button></div>
+      <button id="howNext" class="primaryBtn" type="button">Next</button>
     </div>
   </section>
 
   <!-- Last onboarding step: name and UPI -->
   <section id="setup" class="intro stage" hidden role="dialog" aria-modal="true" aria-label="Set up Kitty">
+    <button id="setupBack" class="tourBack" type="button" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 4.6 14 3.2 5.2 12l8.8 8.8 1.4-1.4L8 12z"/></svg></button>
     <div class="stageBody setupBody">      
         <div class="art artSetup"><span class="logoMic small"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5Z"/></svg></span></div>
         <h2 class="slideTitle">Let's set you up</h2>
@@ -349,7 +351,7 @@
         </div>
         <p id="oError" class="error" hidden>Please add your name.</p>
           </div>
-    <div class="introFoot"><div class="footBtns"><button id="setupBack" class="primaryBtn ghost" type="button">Back</button><button id="setupDone" class="primaryBtn" type="button">Start using Kitty</button></div></div>
+    <div class="introFoot"><button id="setupDone" class="primaryBtn" type="button">Start using Kitty</button></div>
   </section>
 
   <!-- Contacts prompt in the main app -->
@@ -397,6 +399,6 @@
   <div id="toast" class="toast" role="status" hidden></div>
 </div>
 <div id="print" class="print" aria-hidden="true"></div>
-<script src="/static/app.js?v=23"></script>
+<script src="/static/app.js?v=24"></script>
 </body>
 </html>

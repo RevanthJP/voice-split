@@ -1045,7 +1045,7 @@ function showHow(i) {
     const typeInto = (box, text, then) => { const c = [...text]; let n = 0;
       const type = () => { box.textContent = c.slice(0, ++n).join(""); if (n < c.length) howTimer = setTimeout(type, 90); else if (then) howTimer = setTimeout(then, 250); };
       type(); };
-    howTimer = setTimeout(() => typeInto($("howFfName"), "Priya", () => typeInto($("howFfPhone"), "99999 99999")), 5700);
+    howTimer = setTimeout(() => typeInto($("howFfName"), "Priya", () => typeInto($("howFfPhone"), "987xxxxxxx")), 5700);
   }
   if (i === 4) {
     const chars = [..."Goa trip"];
@@ -1059,6 +1059,21 @@ $("howSkip").addEventListener("click", openSetup);
 // Back: to the previous step, from the first step to Welcome, and from set up to the last step
 $("howBack").addEventListener("click", () => { if (howAt > 0) showHow(howAt - 1); else { stopHow(); showStage("intro"); hideStage("how"); } });
 $("setupBack").addEventListener("click", () => { showStage("how"); showHow(HOW.length - 1); hideStage("setup"); });
+// Swipe like a phone: right to go back, left to go on. Works with a finger or a mouse drag.
+function onSwipe(id, back, next) {
+  let x0 = null, y0 = 0;
+  $(id).addEventListener("pointerdown", (e) => { if (e.target.closest("input,button")) { x0 = null; return; } x0 = e.clientX; y0 = e.clientY; });
+  $(id).addEventListener("pointerup", (e) => {
+    if (x0 === null) return;
+    const dx = e.clientX - x0, dy = e.clientY - y0;
+    x0 = null;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return; // a scroll or a tap, not a swipe
+    if (dx > 0 && back) back(); else if (dx < 0 && next) next();
+  });
+}
+onSwipe("intro", null, openHow);
+onSwipe("how", () => $("howBack").click(), () => $("howNext").click());
+onSwipe("setup", () => $("setupBack").click(), null);
 // The tour shows once per tour version, so a changed tour reaches people who saw an older one.
 // Opening the app at /#welcome always shows it, which is handy for demos.
 if (state.onboarded !== TOUR_VERSION || ASKED_FOR_TOUR) openIntro();

@@ -8,7 +8,7 @@ Every screenshot is made by `node tools/screenshots.mjs`, which opens the app in
 
 ### Welcome and guide tour
 
-Every tour screen after Welcome has Back and Next; Back on the first step returns to Welcome, and Back on set up returns to the last step. One expense runs through the guide: a ₹10,000 dinner where Akash skipped drinks. Its numbers come from the app's own split maths (`splits.py`).
+Every tour screen after Welcome has a back arrow at the top left, and you can swipe: right to go back, left to go on. Back on the first step returns to Welcome, and back on set up returns to the last step. One expense runs through the guide: a ₹10,000 dinner where Akash skipped drinks. Its numbers come from the app's own split maths (`splits.py`).
 
 | File | What it shows |
 |---|---|
@@ -16,7 +16,7 @@ Every tour screen after Welcome has Back and Next; Back on the first step return
 | `02-how-1-say.jpg` | 1 Just say it: types Tanglish, Hinglish, Tamil and Hindi examples, then stops on the English dinner |
 | `02-how-1-say-laptop-window.jpg` | The same step in a laptop-size window: the phone frame grows (300 × 470) instead of looking small |
 | `03-how-2-friends-1-contacts.jpg` | 2 Find your friends: allow contacts, then each person flips from Add to ✓ Added |
-| `03-how-2-friends-2-by-number.jpg` | 2, same screen: adding Priya by name and WhatsApp number |
+| `03-how-2-friends-2-by-number.jpg` | 2, same screen: adding Priya by name and a WhatsApp number shown as 987xxxxxxx |
 | `03-how-2-friends-3-added.jpg` | 2, end: Priya joins the list |
 | `04-how-3-names.jpg` | 3 Kitty finds the people: five names pop in, then Next |
 | `05-how-4-check.jpg` | 4 Check it, then save: food ₹7,500 for all 5, drinks ₹2,500 without Akash; Akash ₹1,500, everyone else ₹2,125 |
