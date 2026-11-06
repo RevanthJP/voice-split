@@ -73,6 +73,13 @@ try {
   await waitFor(`document.getElementById("howLang").textContent === "English" && document.getElementById("howTyping").textContent.endsWith("Arun")`, 30000);
   await sleep(600);
   await shot("16-how-1-say.jpg");
+  // The same step on a taller screen, like a laptop browser: the phone frame grows instead of floating small
+  await send("Emulation.setDeviceMetricsOverride", { width: 650, height: 1050, deviceScaleFactor: 1, mobile: false });
+  await sleep(600);
+  console.log("phone frame on a tall screen:", await run(`(() => { const r = document.getElementById("phone").getBoundingClientRect(); return Math.round(r.width) + "x" + Math.round(r.height); })()`));
+  await shot("16-how-1-say-tall-screen.jpg");
+  await send("Emulation.setDeviceMetricsOverride", { width: 375, height: 812, deviceScaleFactor: 2, mobile: true });
+  await sleep(600);
   await run(`document.getElementById("howNext").click()`);
   const howShots = ["16-how-2-friends.jpg", "16-how-3-names.jpg", "16-how-4-check.jpg", "16-how-5-group-tally.jpg", "16-how-6-share.jpg"];
   for (let k = 0; k < howShots.length; k++) {
@@ -160,6 +167,7 @@ try {
 
   await run(`document.querySelector('.tabs [data-go=friends]').click()`);
   await sleep(700);
+  console.log("friends empty:", await run(`({ chart: !document.getElementById("friendsCard").hidden, tips: !document.getElementById("friendsTips").hidden })`));
   await shot("22-friends-after-tour.jpg");
   // Friends: two ways to add. From contacts shows the privacy note first.
   await run(`document.getElementById("friendFromContacts").click()`);
@@ -182,6 +190,10 @@ try {
   console.log("added by number:", JSON.stringify(added));
   if (added.friends.join() !== "Meena" || added.phone !== "99999 99999" || added.nameBox) throw new Error("Adding by number failed");
   await shot("25-friends-list.jpg");
+  await run(`document.querySelector('.tabs [data-go=groups]').click()`);
+  await sleep(800);
+  console.log("groups tab:", await run(`[...document.querySelectorAll("#groupIdeas .chip")].map((b) => b.textContent).join(", ") + " | tips shown: " + !document.getElementById("groupsTips").hidden`));
+  await shot("26-groups.jpg");
   await run(`document.querySelector('.tabs [data-go=account]').click()`);
   await sleep(600);
   const account = await run(`({ name: document.getElementById("pName").value, hasLanguageRow: document.body.innerText.includes("Speaking language") })`);

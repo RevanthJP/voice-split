@@ -36,6 +36,7 @@ Order for a new user: Welcome → How it works (6 steps) → Let's set you up �
 |---|---|
 | 01-welcome.jpg | Welcome |
 | 16-how-1-say.jpg | 1 Just say it: types Tanglish, Hinglish, Tamil and Hindi examples, then stops on the English dinner |
+| 16-how-1-say-tall-screen.jpg | Step 1 on a laptop-size window: the phone frame grows (300×470) instead of looking small |
 | 16-how-2-friends.jpg | 2 Find your friends: allow contacts, each person flips from Add to ✓ Added |
 | 16-how-3-names.jpg | 3 Kitty finds the people: five names pop in, then Next |
 | 16-how-4-check.jpg | 4 Check it, then save: food ₹7,500 for all 5, drinks ₹2,500 without Akash; Akash ₹1,500, everyone else ₹2,125 |
@@ -45,7 +46,8 @@ Order for a new user: Welcome → How it works (6 steps) → Let's set you up �
 | 09-setup.jpg | Name and UPI ID, after How it works; names saved with capitals ("asha kumar" → "Asha Kumar") |
 | 20-contacts-ask.jpg | Main app: "Now give your contacts access" |
 | 21-split-share.jpg | A real AI-read split (typed by the test: ₹1,500 with Arun and Ravi) with Share on WhatsApp |
-| 22-friends-after-tour.jpg | Friends after the tour: empty, sample friends not kept |
+| 26-groups.jpg | Groups for a new user: one-tap group ideas and "How groups work" |
+| 22-friends-after-tour.jpg | Friends for a new user: add buttons, a placeholder "Who owes whom" chart and "How friends work" |
 | 23-friends-add-contacts.jpg | Friends → From contacts: the privacy note first |
 | 24-friends-add-number.jpg | Friends → By number: name and WhatsApp number (dummy 99999 99999), number required |
 | 25-friends-list.jpg | The friend added with their number |

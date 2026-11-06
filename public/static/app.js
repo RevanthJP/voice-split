@@ -491,6 +491,7 @@ function renderFriends(friends) {
     return li;
   }));
   $("badge").hidden = !owingMe; $("badge").textContent = owingMe;
+  $("friendsTips").hidden = names.length >= 3;
   renderFriendsChart(friends);
 }
 
@@ -508,6 +509,11 @@ async function renderGroups() {
     return li;
   }));
   $("groups").replaceChildren(...items);
+  const have = new Set(state.groups.map((g) => g.name.toLowerCase()));
+  const ideas = GROUP_IDEAS.filter((n) => !have.has(n.toLowerCase()));
+  document.querySelector(".ideasCard").hidden = !ideas.length;
+  $("groupIdeas").replaceChildren(...ideas.map((n) => { const b = el("button", "chip", "+ " + n); b.type = "button"; b.onclick = () => createGroup(n); return b; }));
+  $("groupsTips").hidden = state.groups.some((g) => g.expenses.length);
 }
 
 async function renderGroup() {
@@ -606,14 +612,19 @@ $("addPersonForm").addEventListener("submit", (e) => {
   state.phones = state.phones || {}; state.phones[name] = raw;
   persist(); closeAddPerson(); renderAll(); toast(`Added ${name}`);
 });
+function createGroup(name) {
+  if (state.groups.some((g) => g.name.toLowerCase() === name.toLowerCase())) { toast(`You already have ${name}`); return; }
+  const g = blankGroup(name);
+  state.groups.push(g); state.current = g.id; persist(); renderAll(); go("group", g.id); toast(`Created ${name}`);
+}
 $("newGroup").addEventListener("submit", (e) => {
   e.preventDefault();
   const name = $("newGroupName").value.trim().replace(/\s+/g, " ");
   $("newGroupName").value = "";
-  if (!name) return;
-  const g = blankGroup(name);
-  state.groups.push(g); state.current = g.id; persist(); renderAll(); go("group", g.id); toast(`Created ${name}`);
+  if (name) createGroup(name);
 });
+// One-tap ideas, leaving out any the person already has
+const GROUP_IDEAS = ["Goa trip", "Flat", "Office lunch", "Family", "Weekend trip"];
 
 function renderAccount() {
   const p = state.profile;
@@ -820,8 +831,8 @@ async function renderSpendChart() {
 function renderFriendsChart(friends) {
   const card = $("friendsCard"), box = $("friendsChart");
   const rows = Object.entries(friends).sort((a, b) => b[1] - a[1]);
-  if (!rows.length) { card.hidden = true; return; }
   card.hidden = false;
+  if (!rows.length) { box.replaceChildren(placeholderRows(3, "Who owes you, and whom you owe, shows here")); return; }
   const W = 320, row = 34, H = rows.length * row + 6, mid = W / 2, nameW = 0;
   const max = Math.max(...rows.map(([, v]) => Math.abs(v)), 1);
   const span = mid - 52;

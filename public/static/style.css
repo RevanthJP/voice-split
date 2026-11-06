@@ -572,3 +572,26 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 .checkRows b{white-space:nowrap}
 .s5 .howSplit p{padding:4px 0}
 .s5 .waChat{height:40%}
+
+/* Friends and Groups: fill the empty space with something useful */
+#view-friends .chartCard,#view-groups .chartCard{margin-top:12px}
+#newGroup{margin-top:12px}
+.tipsCard{margin-top:12px;background:var(--card);border-radius:var(--r);padding:16px 18px;box-shadow:0 1px 2px rgba(0,0,0,.04);animation:rise .5s var(--ease) both}
+.tipsCard h3{margin:0 0 10px;font-size:1rem}
+.tipsCard ol{list-style:none;margin:0;padding:0;counter-reset:tip;display:grid;gap:12px}
+.tipsCard li{counter-increment:tip;display:grid;grid-template-columns:28px 1fr;column-gap:12px;font-size:.92rem}
+.tipsCard li::before{content:counter(tip);grid-row:span 2;width:28px;height:28px;border-radius:50%;background:var(--blue-soft);color:var(--blue-deep);font-weight:700;font-size:.85rem;display:grid;place-items:center}
+.tipsCard li span{color:var(--muted);font-size:.85rem;line-height:1.35}
+.ideasCard .chips{margin-top:4px}
+.ideasCard .chip{background:var(--blue-soft);color:var(--blue-deep);font-weight:600}
+/* How it works: a bigger phone on tall screens, so steps aren't cramped */
+.phone{width:min(300px,82vw);height:clamp(350px,calc(100dvh - 470px),470px)}
+.scene{padding:26px 18px;gap:14px}
+.howBubble{font-size:.95rem}
+.howMic{width:88px;height:88px}
+.s0{justify-content:center}
+@media (min-height:900px){.howMic{width:100px;height:100px}.howBubble{font-size:1rem}.howSplit p,.tally p,.settle p{font-size:.86rem}}
+.phone{width:auto;aspect-ratio:.72;max-width:min(300px,82vw)}
+.phone{height:clamp(360px,calc(100dvh - 440px),470px)}
+.phone .s3{padding:18px 14px;gap:8px}
+.checkRows span{white-space:nowrap}
