@@ -13,7 +13,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Kitty">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="/static/style.css?v=17">
+<link rel="stylesheet" href="/static/style.css?v=18">
 </head>
 <body>
 <div class="app">
@@ -70,12 +70,12 @@
         <div id="friendsChart" class="chart"></div>
         <div class="legend"><span><i class="sw-get"></i>Owes you</span><span><i class="sw-owe"></i>You owe</span></div>
       </div>
-      <form id="addFriend" class="compose inline addFriend">
-        <input id="friendName" maxlength="30" placeholder="Add a friend's name" autocomplete="off" enterkeyhint="done" aria-label="Friend's name">
-        <button type="submit" aria-label="Add friend"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg></button>
-      </form>
+      <div class="addFriendBtns">
+        <button id="friendFromContacts" class="primaryBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5 6h10c0-2.2-2.5-4-5-4s-5 1.8-5 4Z"/></svg>From contacts</button>
+        <button id="friendByNumber" class="primaryBtn ghost" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.2 15.2 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg>By number</button>
+      </div>
       <ul id="friends" class="list"></ul>
-      <div id="friendsEmpty" class="emptyCard"><span class="emptyIcon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5Z"/></svg></span><p><b>No friends yet</b><br>Add a friend above, or just say their name when you add an expense.</p></div>
+      <div id="friendsEmpty" class="emptyCard"><span class="emptyIcon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5Z"/></svg></span><p><b>No friends yet</b><br>Add them from your contacts or by number, so Kitty can send each person their share on WhatsApp.</p></div>
     </section>
 
     <!-- Groups -->
@@ -267,12 +267,8 @@
   <section id="findFriends" class="intro stage" hidden role="dialog" aria-modal="true" aria-label="Find your friends">
     <div class="stageBody">
       <h2 class="slideTitle">Find your friends</h2>
-      <p class="slideText">This is how your friends show up in Kitty. Add your real friends from your contacts once you're in.</p>
+      <p class="slideText">Kitty keeps the people you split with in one list. You'll add yours from contacts or by phone number inside the app.</p>
       <ul id="sampleList" class="list findList"></ul>
-      <div class="tryCard">
-        <span class="tryLabel">Try saying</span>
-        <p id="tryText">“Dinner yesterday ₹1,500 split with Arun and Ravi”</p>
-      </div>
       <button id="howBtn" class="howBtn" type="button"><span class="playDot" aria-hidden="true"></span>How it works</button>
     </div>
     <div class="introFoot"><button id="friendsNext" class="primaryBtn" type="button">Next</button></div>
@@ -288,8 +284,27 @@
           <div class="perm"><span class="permIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5 6h10c0-2.2-2.5-4-5-4s-5 1.8-5 4Z"/></svg></span><b>Allow Kitty to see your contacts?</b><small>Names stay on your phone</small><span class="permBtns"><i>Don't allow</i><i class="allow">Allow</i></span></div>
           <ul class="ctList"><li><span class="avatar">A</span>Arun</li><li><span class="avatar">R</span>Ravi</li><li><span class="avatar">S</span>Suresh</li><li><span class="avatar">A</span>Akash</li></ul>
         </div>
-        <!-- Step 2: make a group -->
+        <!-- Step 2: voice -->
         <div class="scene s1">
+          <span class="howMic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-2.07A7 7 0 0 0 19 12h-2Z"/></svg></span>
+          <div class="howWave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="bubble howBubble"><span class="typing" id="howTyping"></span></div>
+        </div>
+        <!-- Step 3: names appear -->
+        <div class="scene s2">
+          <div class="howHead"><b>Dinner</b><span>₹10,000</span></div>
+          <small class="howSub">Split between</small>
+          <div class="pills"><i>You</i><i>Ravi</i><i>Suresh</i><i>Akash</i><i>Arun</i></div>
+          <span class="fakeNext">Next</span>
+        </div>
+        <!-- Step 4: split and WhatsApp -->
+        <div class="scene s3">
+          <div class="howSplit"><p><span>You</span><b>₹2,000</b></p><p><span>Ravi</span><b>₹2,000</b></p><p><span>Suresh</span><b>₹2,000</b></p><p><span>Akash</span><b>₹2,000</b></p><p><span>Arun</span><b>₹2,000</b></p></div>
+          <div class="waChat"><span class="waTop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.7 1.1 1.5 1.8 1 .9 1.9 1.2 2.2 1.3.3.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.6-.1 1.2Z"/></svg>WhatsApp</span><p class="waMsg">Dinner ₹10,000 split on Kitty: ₹2,000 each. Pick a chat and send.</p></div>
+        </div>
+        <!-- Step 5: make a group, then it keeps the tally -->
+        <div class="scene s4 sGroup">
+          <div class="gMake">
           <div class="gTop"><b>Groups</b><span class="gNew">+ New group</span></div>
           <div class="gForm">
             <small>Group name</small>
@@ -298,29 +313,8 @@
             <div class="gMembers"><span class="avatar me">Y</span><span class="avatar">A</span><span class="avatar">R</span><span class="avatar">S</span><span class="avatar">A</span></div>
             <span class="gCreate">Create</span>
           </div>
-          <div class="gRow"><span class="avatar cat">G</span><span><b>Goa trip</b><small>You + 4 friends</small></span></div>
-        </div>
-        <!-- Step 3: voice -->
-        <div class="scene s2">
-          <span class="gTag">Adding to Goa trip</span>
-          <span class="howMic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-2.07A7 7 0 0 0 19 12h-2Z"/></svg></span>
-          <div class="howWave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-          <div class="bubble howBubble"><span class="typing" id="howTyping"></span></div>
-        </div>
-        <!-- Step 3: names appear -->
-        <div class="scene s3">
-          <div class="howHead"><b>Dinner</b><span>₹10,000</span></div>
-          <small class="howSub">Split between</small>
-          <div class="pills"><i>You</i><i>Ravi</i><i>Suresh</i><i>Akash</i><i>Arun</i></div>
-          <span class="fakeNext">Next</span>
-        </div>
-        <!-- Step 4: split and WhatsApp -->
-        <div class="scene s4">
-          <div class="howSplit"><p><span>You</span><b>₹2,000</b></p><p><span>Ravi</span><b>₹2,000</b></p><p><span>Suresh</span><b>₹2,000</b></p><p><span>Akash</span><b>₹2,000</b></p><p><span>Arun</span><b>₹2,000</b></p></div>
-          <div class="waChat"><span class="waTop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.7 1.1 1.5 1.8 1 .9 1.9 1.2 2.2 1.3.3.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.6-.1 1.2Z"/></svg>WhatsApp</span><p class="waMsg">Dinner ₹10,000 split on Kitty: ₹2,000 each. Pick a chat and send.</p></div>
-        </div>
-        <!-- Step 6: the group keeps the tally -->
-        <div class="scene s5">
+          </div>
+          <div class="gUse">
           <div class="howHead"><b>Goa trip</b><span>₹20,000</span></div>
           <div class="tally">
             <p><span class="avatar me">Y</span><span>Dinner<small>You paid</small></span><b>₹10,000</b></p>
@@ -334,6 +328,7 @@
             <p><span>Suresh → Arun</span><b>₹2,000</b></p>
             <p><span>Ravi → Arun</span><b>₹2,000</b></p>
             <span class="remindChip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.7 1.1 1.5 1.8 1 .9 1.9 1.2 2.2 1.3.3.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.6-.1 1.2Z"/></svg>Remind Akash</span>
+          </div>
           </div>
         </div>
       </div>
@@ -374,6 +369,20 @@
     </div>
   </section>
 
+  <section id="addPerson" class="sheet addPersonSheet" hidden role="dialog" aria-modal="true" aria-label="Add a friend">
+    <div class="grab" aria-hidden="true"></div>
+    <h3 class="sheetTitle">Add a friend</h3>
+    <form id="addPersonForm">
+      <label class="label">Name<input id="apName" class="field" maxlength="30" placeholder="Their name" autocomplete="off"></label>
+      <label class="label">WhatsApp number<input id="apPhone" class="field" inputmode="tel" maxlength="15" placeholder="10-digit mobile number" autocomplete="off"></label>
+      <p class="note">Saved only on this phone. Kitty uses it to open their WhatsApp chat with their share ready to send.</p>
+      <p id="apError" class="error" hidden></p>
+      <div class="actions">
+        <button id="apCancel" type="button">Cancel</button>
+        <button class="primary" type="submit">Add friend</button>
+      </div>
+    </form>
+  </section>
   <section id="remind" class="sheet remindSheet" hidden role="dialog" aria-modal="true" aria-label="Send a reminder">
     <div class="grab" aria-hidden="true"></div>
     <h3 class="sheetTitle" id="remindTitle">Remind</h3>
@@ -392,6 +401,6 @@
   <div id="toast" class="toast" role="status" hidden></div>
 </div>
 <div id="print" class="print" aria-hidden="true"></div>
-<script src="/static/app.js?v=18"></script>
+<script src="/static/app.js?v=19"></script>
 </body>
 </html>

@@ -30,22 +30,23 @@ The saved copy is from the held-back set (`cases_heldout.json`): 7 of 8 read cor
 
 ## Onboarding, contacts and sharing (taken by `tools/screenshots.mjs`)
 
+Order for a new user: welcome tour → Find friends → How it works → Let's set you up → app.
+
 | File | What it shows |
 |---|---|
-| 15-find-friends.jpg | After the name: five sample friends (for the tour only), the example to try, and "How it works" |
+| 15-find-friends.jpg | Five sample friends (tour only, never saved) fill in and flip from Add to ✓ Added |
 | 16-how-1-contacts.jpg | How it works 1: allowing contacts, names appear |
-| 16-how-2-group-form.jpg | How it works 2, mid-way: typing "Goa trip" and adding members |
-| 16-how-2-group.jpg | How it works 2, end: the new group in the list |
-| 16-how-3-voice.jpg | How it works 3: the mic and "Share my expenses for last night dinner ₹10,000 with 5 people" |
-| 16-how-4-names.jpg | How it works 4: five names pop in one by one, then Next |
-| 16-how-5-whatsapp.jpg | How it works 5: ₹2,000 each, WhatsApp opens with the message ready |
-| 16-how-6-tally.jpg | How it works 6: Goa trip's expenses add up, settle up in 4 payments (the app's own maths), remind on WhatsApp |
-| 09-setup.jpg (new order) | Name and UPI ID now come after How it works; names are saved with capitals ("asha kumar" → "Asha Kumar") |
+| 16-how-2-voice.jpg | How it works 2: the mic and "Share my expenses for last night dinner ₹10,000 with 5 people" |
+| 16-how-3-names.jpg | How it works 3: five names pop in one by one, then Next |
+| 16-how-4-whatsapp.jpg | How it works 4: ₹2,000 each, WhatsApp opens with the message ready |
+| 16-how-5-group-make.jpg | How it works 5, first half: making "Goa trip" and adding members |
+| 16-how-5-group-tally.jpg | How it works 5, second half on the same screen: expenses add up, settle up in 4 payments (the app's own maths) |
+| 09-setup.jpg | Name and UPI ID, after How it works; names saved with capitals ("asha kumar" → "Asha Kumar") |
 | 20-contacts-ask.jpg | Main app: "Now give your contacts access" |
 | 21-split-share.jpg | A real AI-read split (typed by the test: ₹1,500 with Arun and Ravi) with Share on WhatsApp |
-| 23-friends-add-contacts.jpg | Friends: + with nothing typed asks to add from contacts, with the privacy note |
-| 22-friends-after-tour.jpg | Friends tab after the tour: empty, the sample friends are not kept |
+| 22-friends-after-tour.jpg | Friends after the tour: empty, sample friends not kept |
+| 23-friends-add-contacts.jpg | Friends → From contacts: the privacy note first |
+| 24-friends-add-number.jpg | Friends → By number: name and WhatsApp number (dummy 99999 99999), number required |
+| 25-friends-list.jpg | The friend added with their number |
 
-Checks in the same run: no sample friends saved and the type box empty after the tour; a spoken "Meena" matched to the contact "Meena Sharma" in the browser with nothing written to storage; the share message lists each share; browsers without a contact picker get a clear note.
-
-Also checked: a stray word from silence ("E aí") doesn't open the expense sheet; no Splitwise text and no example under the mic.
+Also checked: a stray word from silence ("E aí") doesn't open the expense sheet; ₹0 balances don't open Friends; no Splitwise text and no example under the mic; a spoken "Meena" matched to the contact "Meena Sharma" in the browser with nothing written to storage.

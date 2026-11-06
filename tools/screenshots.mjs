@@ -73,16 +73,17 @@ try {
   await sleep(900);
   await run(`document.getElementById("introNext").click()`);
   await waitFor(`!document.getElementById("findFriends").hidden && document.querySelectorAll("#sampleList li").length === 5`);
-  await sleep(900);
+  await sleep(3200); // the list fills in and each person flips to Added
+  console.log("find friends:", await run(`[...document.querySelectorAll("#sampleList .follow")].map((b) => b.textContent).join(",") + " | try card: " + !!document.querySelector(".tryCard")`));
   await shot("15-find-friends.jpg");
 
   // How it works: six illustrated steps
   await run(`document.getElementById("howBtn").click()`);
   await waitFor(`!document.getElementById("how").hidden`);
-  const howShots = ["16-how-1-contacts.jpg", "16-how-2-group.jpg", "16-how-3-voice.jpg", "16-how-4-names.jpg", "16-how-5-whatsapp.jpg", "16-how-6-tally.jpg"];
+  const howShots = ["16-how-1-contacts.jpg", "16-how-2-voice.jpg", "16-how-3-names.jpg", "16-how-4-whatsapp.jpg", "16-how-5-group-tally.jpg"];
   for (let i = 0; i < howShots.length; i++) {
-    if (i === 1) { await sleep(2900); await shot("16-how-2-group-form.jpg"); await sleep(2700); } // mid-way, then the end
-    else await sleep(i === 2 ? 4200 : 3400); // let each step's animation finish
+    if (i === 4) { await sleep(3000); await shot("16-how-5-group-make.jpg"); await sleep(5600); } // making the group, then its tally
+    else await sleep(i === 1 ? 4200 : 3400); // let each step's animation finish
     console.log("how step", i, await run(`document.getElementById("howTitle").textContent`));
     await shot(howShots[i]);
     await run(`document.getElementById("howNext").click()`);
@@ -104,7 +105,7 @@ try {
   const after = await run(`(() => { const s = JSON.parse(localStorage.getItem("voice-split-v2"));
     return { friends: s.friends, samples: s.samples, onboarded: s.onboarded, typed: document.getElementById("typed").value }; })()`);
   console.log("after onboarding", JSON.stringify(after));
-  if (after.friends.length || after.onboarded !== 4 || after.typed) throw new Error("Sample friends or example text were left in the app");
+  if (after.friends.length || after.onboarded !== 5 || after.typed) throw new Error("Sample friends or example text were left in the app");
 
   // The contacts prompt shows in the main app
   await waitFor(`!document.getElementById("contactsAsk").hidden`, 5000);
@@ -162,14 +163,27 @@ try {
   await run(`document.querySelector('.tabs [data-go=friends]').click()`);
   await sleep(700);
   await shot("22-friends-after-tour.jpg");
-  // Friends: + with nothing typed asks to add from contacts, with the privacy note
-  await run(`document.querySelector("#addFriend button").click()`);
+  // Friends: two ways to add. From contacts shows the privacy note first.
+  await run(`document.getElementById("friendFromContacts").click()`);
   await waitFor(`!document.getElementById("contactsAsk").hidden`);
   await sleep(700);
-  console.log("friends + opens:", await run(`document.getElementById("contactsTitle").textContent + " | " + document.getElementById("contactsLater").textContent`));
+  console.log("from contacts opens:", await run(`document.getElementById("contactsTitle").textContent + " | " + document.getElementById("contactsLater").textContent`));
   await shot("23-friends-add-contacts.jpg");
-  await run(`document.getElementById("contactsLater").click()`);
-  await waitFor(`document.getElementById("contactsAsk").hidden`);
+  await run(`document.getElementById("contactsLater").click()`); // "Add by number"
+  await waitFor(`!document.getElementById("addPerson").hidden && document.getElementById("contactsAsk").hidden`);
+  // A name alone isn't enough: the number is required
+  await run(`document.getElementById("apName").value = "meena"; document.getElementById("addPersonForm").requestSubmit()`);
+  console.log("without number:", await run(`document.getElementById("apError").textContent`));
+  await run(`document.getElementById("apPhone").value = "99999 99999"; document.getElementById("apPhone").dispatchEvent(new Event("input"))`);
+  await sleep(600);
+  await shot("24-friends-add-number.jpg");
+  await run(`document.getElementById("addPersonForm").requestSubmit()`);
+  await waitFor(`document.getElementById("addPerson").hidden`);
+  await sleep(600);
+  const added = await run(`(() => { const s = JSON.parse(localStorage.getItem("voice-split-v2")); return { friends: s.friends, phone: (s.phones || {}).Meena, nameBox: !!document.getElementById("friendName") }; })()`);
+  console.log("added by number:", JSON.stringify(added));
+  if (added.friends.join() !== "Meena" || added.phone !== "99999 99999" || added.nameBox) throw new Error("Adding by number failed");
+  await shot("25-friends-list.jpg");
   await run(`document.querySelector('.tabs [data-go=account]').click()`);
   await sleep(600);
   const account = await run(`({ name: document.getElementById("pName").value, hasLanguageRow: document.body.innerText.includes("Speaking language") })`);
@@ -189,7 +203,7 @@ try {
 
   // Someone who got sample friends saved by the earlier build: they're removed on the next load
   await run(`(() => { const s = JSON.parse(localStorage.getItem("voice-split-v2"));
-    s.friends = ["Arun", "Ravi", "Meena"]; s.samples = ["Arun", "Ravi", "Suresh"]; s.onboarded = 4;
+    s.friends = ["Arun", "Ravi", "Meena"]; s.samples = ["Arun", "Ravi", "Suresh"]; s.onboarded = 5;
     localStorage.setItem("voice-split-v2", JSON.stringify(s)); })()`);
   await send("Page.navigate", { url: "about:blank" });
   await sleep(400);

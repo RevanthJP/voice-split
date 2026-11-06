@@ -261,7 +261,7 @@ function closeCard() {
   document.body.classList.remove("sheet-open");
   setTimeout(() => { $("scrim").hidden = true; $("card").hidden = true; }, 260);
 }
-$("scrim").addEventListener("click", () => { if (!$("contactsAsk").hidden) closeContactsAsk(); else if (!$("remind").hidden) closeRemind(); else closeCard(); });
+$("scrim").addEventListener("click", () => { if (!$("addPerson").hidden) closeAddPerson(); else if (!$("contactsAsk").hidden) closeContactsAsk(); else if (!$("remind").hidden) closeRemind(); else closeCard(); });
 $("discard").addEventListener("click", closeCard);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && draft) closeCard(); });
 
@@ -480,7 +480,7 @@ function renderFriends(friends) {
     const li = el("li", "pay");
     const amt = el("span", "amt " + (v > 0 ? "get" : v < 0 ? "owe" : "zero"));
     amt.append(el("small", null, v > 0 ? "owes you" : v < 0 ? "you owe" : "settled up"), el("strong", null, v ? rupees(Math.abs(v)) : ""));
-    li.append(who(n, groups || "Not in a group yet"), amt);
+    li.append(who(n, groups || ((state.phones || {})[n] ? "WhatsApp " + state.phones[n] : "Not in a group yet")), amt);
     if (v > 0) { owingMe++; li.append(remindLink(n, v)); }
     const used = state.groups.some((g) => g.expenses.some((e) => e.payer === n || e.participants.includes(n)));
     if (!used && (state.friends || []).includes(n)) {
@@ -578,15 +578,33 @@ $("gDelete").addEventListener("click", () => {
   if (state.current === g.id) state.current = state.groups[0].id;
   persist(); go("groups"); renderAll(); toast("Group deleted");
 });
-$("addFriend").addEventListener("submit", (e) => {
+$("friendFromContacts").addEventListener("click", () => openContactsAsk("friends"));
+$("friendByNumber").addEventListener("click", openAddPerson);
+
+// Add a friend with their WhatsApp number, so Kitty can send them their share
+function openAddPerson() {
+  $("apName").value = ""; $("apPhone").value = ""; $("apError").hidden = true;
+  $("scrim").hidden = false; $("addPerson").hidden = false;
+  requestAnimationFrame(() => document.body.classList.add("addPerson-open"));
+  setTimeout(() => $("apName").focus(), 320);
+}
+function closeAddPerson() {
+  document.body.classList.remove("addPerson-open");
+  setTimeout(() => { $("addPerson").hidden = true; if ($("card").hidden && $("remind").hidden && $("contactsAsk").hidden) $("scrim").hidden = true; }, 300);
+}
+$("apCancel").addEventListener("click", closeAddPerson);
+["apName", "apPhone"].forEach((id) => $(id).addEventListener("input", () => { $("apError").hidden = true; }));
+$("addPersonForm").addEventListener("submit", (e) => {
   e.preventDefault();
-  const raw = $("friendName").value.trim().replace(/\s+/g, " ");
-  $("friendName").value = "";
-  if (!raw) { openContactsAsk("friends"); return; }
-  const name = titleName(raw);
-  if (name.toLowerCase() === "you" || allPeople().some((p) => p.toLowerCase() === name.toLowerCase())) { toast(`${name} is already a friend`); return; }
+  const name = titleName($("apName").value);
+  const raw = $("apPhone").value.trim();
+  const bad = (msg, field) => { $("apError").textContent = msg; $("apError").hidden = false; $(field).focus(); };
+  if (!name) return bad("Add their name.", "apName");
+  if (!waNumber(raw)) return bad("Add their WhatsApp number: 10 digits, or with the country code.", "apPhone");
+  if (name.toLowerCase() === "you" || allPeople().some((p) => p.toLowerCase() === name.toLowerCase())) return bad(`${name} is already a friend.`, "apName");
   state.friends = [...(state.friends || []), name];
-  persist(); renderAll(); toast(`Added ${name}`);
+  state.phones = state.phones || {}; state.phones[name] = raw;
+  persist(); closeAddPerson(); renderAll(); toast(`Added ${name}`);
 });
 $("newGroup").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -904,7 +922,7 @@ function paintDots() {
   runSayDemo(slides()[slideAt].contains($("typing")));
 }
 
-const TOUR_VERSION = 4;
+const TOUR_VERSION = 5;
 const SAY = [
   { lang: "Tanglish", text: "Petrol-ku naan 1,200 kuduthen, Arun Ravi kooda split pannu", what: "Petrol", amt: "₹1,200", split: "You, Arun, Ravi · ₹400 each" },
   { lang: "Hinglish", text: "Maine dinner ke 900 diye, Arun aur Ravi ke saath split karo", what: "Dinner", amt: "₹900", split: "You, Arun, Ravi · ₹300 each" },
@@ -986,16 +1004,16 @@ if (state.onboarded !== TOUR_VERSION || ASKED_FOR_TOUR) openIntro();
 // Sample names so a new person can try a split straight away. They're marked as samples
 // in Friends and can be removed there.
 const SAMPLE_FRIENDS = ["Arun", "Ravi", "Suresh", "Akash", "Priya"];
-let samplePicked = new Set(SAMPLE_FRIENDS);
+let sampleTimers = [];
 function paintSamples() {
-  $("sampleList").replaceChildren(...SAMPLE_FRIENDS.map((n) => {
+  sampleTimers.forEach(clearTimeout); sampleTimers = [];
+  $("sampleList").replaceChildren(...SAMPLE_FRIENDS.map((n, i) => {
     const li = el("li");
-    const on = samplePicked.has(n);
-    const b = el("button", "follow" + (on ? " on" : ""), on ? "Added" : "Add");
-    b.type = "button";
-    b.setAttribute("aria-pressed", on);
-    b.setAttribute("aria-label", (on ? "Remove " : "Add ") + n);
-    b.onclick = () => { on ? samplePicked.delete(n) : samplePicked.add(n); paintSamples(); };
+    li.style.animationDelay = `${i * 120}ms`;
+    const b = el("span", "follow", "Add");
+    b.setAttribute("aria-hidden", "true");
+    // A short demo: each one is added in turn, the way picking from contacts feels
+    sampleTimers.push(setTimeout(() => { b.textContent = "Added"; b.classList.add("on"); }, 900 + i * 380));
     li.append(who(n), b);
     return li;
   }));
@@ -1009,7 +1027,6 @@ function hideStage(id) {
   setTimeout(() => { $(id).hidden = true; }, 350);
 }
 function openFindFriends() {
-  samplePicked = new Set(SAMPLE_FRIENDS);
   paintSamples();
   showStage("findFriends");
   hideStage("intro");
@@ -1047,11 +1064,10 @@ $("howBtn").addEventListener("click", () => { showStage("how"); showHow(0); });
 // ---------- "How it works": illustrated with CSS and SVG ----------
 const HOW = [
   { title: "Allow your contacts", text: "Kitty reads your friends' names on your phone, so it knows who you mean." },
-  { title: "Make a group", text: "Make one for a trip, your flat or office lunches. Add friends once, then just say the expense." },
   { title: "Just say it", text: "Tap the mic and say the expense the way you'd tell a friend." },
   { title: "Kitty finds the people", text: "The names you said show up, ready to check. Tap Next when it looks right." },
   { title: "Split and share", text: "Kitty splits it equally and opens WhatsApp with the message ready to send." },
-  { title: "Your group keeps the tally", text: "Every expense in Goa trip adds up. Kitty works out who pays whom in the fewest payments, and you can remind anyone on WhatsApp." },
+  { title: "Groups keep the tally", text: "Make a group for a trip or your flat. Every expense adds up, and Kitty works out who pays whom in the fewest payments." },
 ];
 const HOW_SAY = "Share my expenses for last night dinner ₹10,000 with 5 people";
 let howAt = 0, howTimer = null;
@@ -1071,13 +1087,13 @@ function showHow(i) {
   t.textContent = "";
   const g = $("howGroupName");
   g.textContent = "";
-  if (i === 1) {
+  if (i === 4) {
     const chars = [..."Goa trip"];
     let n = 0;
     const type = () => { g.textContent = chars.slice(0, ++n).join(""); if (n < chars.length) howTimer = setTimeout(type, 110); };
     howTimer = setTimeout(type, 900);
   }
-  if (i === 2) {
+  if (i === 1) {
     const chars = [...HOW_SAY];
     let n = 0;
     const type = () => { t.textContent = chars.slice(0, ++n).join(""); if (n < chars.length) howTimer = setTimeout(type, 38); };
@@ -1102,7 +1118,7 @@ async function pickContacts() {
 let contactsMode = "app";
 const CONTACT_TEXT = {
   app: { title: "Now give your contacts access", body: "Kitty uses your friends' names to match who you mean when you speak. They stay on this phone: nothing from your contacts is uploaded or saved on a server.", later: "Not now", allow: "Allow contacts" },
-  friends: { title: "Add friends from your contacts", body: "Your phone opens its contact list and you choose who to add. Only the names and numbers you pick are saved, and only on this phone. Nothing from your contacts is uploaded to a server.", later: "Add manually", allow: "Choose contacts" },
+  friends: { title: "Add friends from your contacts", body: "Your phone opens its contact list and you choose who to add. Only the names and numbers you pick are saved, and only on this phone. Nothing from your contacts is uploaded to a server.", later: "Add by number", allow: "Choose contacts" },
 };
 function openContactsAsk(mode) {
   contactsMode = mode === "friends" ? "friends" : "app";
@@ -1122,7 +1138,7 @@ function closeContactsAsk() {
 const NO_PICKER = "This browser can't share contacts with Kitty. It works in Chrome on Android and in the Android app. You can still add friends by name in Friends, or just say their names.";
 $("contactsLater").addEventListener("click", () => {
   closeContactsAsk();
-  if (contactsMode === "friends") setTimeout(() => $("friendName").focus(), 320);
+  if (contactsMode === "friends") setTimeout(openAddPerson, 320);
 });
 $("contactsAllow").addEventListener("click", async () => {
   if (!canPickContacts()) {
