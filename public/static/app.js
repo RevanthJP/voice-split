@@ -448,6 +448,8 @@ async function renderHome(friends) {
   const owe = Math.abs(Object.values(friends).filter((v) => v < 0).reduce((a, b) => a + b, 0));
   $("getBack").textContent = rupees(get); $("youOwe").textContent = rupees(owe);
   $("getBack").className = get ? "get" : "zero"; $("youOwe").className = owe ? "owe" : "zero";
+  // These open Friends to show who owes what. At ₹0 there's nothing to show, so they don't open anything.
+  $("getBack").closest("button").disabled = !get; $("youOwe").closest("button").disabled = !owe;
   const net = get - owe;
   $("heroLabel").textContent = net > 0 ? "Overall, you get back" : net < 0 ? "Overall, you owe" : "Overall";
   $("heroValue").textContent = rupees(Math.abs(net));
@@ -1100,7 +1102,7 @@ async function pickContacts() {
 let contactsMode = "app";
 const CONTACT_TEXT = {
   app: { title: "Now give your contacts access", body: "Kitty uses your friends' names to match who you mean when you speak. They stay on this phone: nothing from your contacts is uploaded or saved on a server.", later: "Not now", allow: "Allow contacts" },
-  friends: { title: "Add friends from your contacts", body: "Your phone opens its contact list and you choose who to add. Only the names and numbers you pick are saved, and only on this phone. Nothing from your contacts is uploaded to a server.", later: "Type a name", allow: "Choose contacts" },
+  friends: { title: "Add friends from your contacts", body: "Your phone opens its contact list and you choose who to add. Only the names and numbers you pick are saved, and only on this phone. Nothing from your contacts is uploaded to a server.", later: "Add manually", allow: "Choose contacts" },
 };
 function openContactsAsk(mode) {
   contactsMode = mode === "friends" ? "friends" : "app";

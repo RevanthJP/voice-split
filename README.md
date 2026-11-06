@@ -4,11 +4,11 @@ Say a shared expense the way you'd tell a friend, in Tamil, Hindi, English or a 
 
 > "Petrol-ku naan 1,200 kuduthen, Arun Ravi kooda split pannu" → You, Arun and Ravi owe ₹400 each.
 
-A voice feature for expense-splitting apps like Splitwise, built as a working prototype. Splitwise's API needs a paid Pro plan, so this runs on its own. Each saved expense is also shown in the paid-share and owed-share format that Splitwise's API uses.
+A working prototype of voice input for splitting shared expenses with friends, built as a mobile web app that also installs on a phone.
 
 ## How it works
 
-1. **Speech to text:** Whisper large-v3 on Groq. You can pick Tamil, Hindi or English, or leave it on auto. On auto, if Tamil or Hindi speech comes back translated into English, it listens again in that language.
+1. **Speech to text:** Whisper large-v3 on Groq. The language is detected automatically. If Tamil or Hindi speech comes back translated into English, it listens again in that language.
 2. **Reading the expense:** one call to gpt-oss-20b on Groq returns structured JSON: who paid, the amount, who shares, and any parts only some people share ("Arun didn't have drinks, that was 300"). It turns Tamil and Hindi number words into digits (aayiram → 1000, dedh hazaar → 1500).
 3. **The maths is plain code, not AI:** `splits.py` works in paise, so shares always add up to the exact total. It supports equal, exact, shares and percent splits, items only some people share, and simplified settle-up.
 4. **You confirm:** nothing is saved until you check the card. You can change the amount, the payer or who shares.

@@ -517,3 +517,4 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 .tally p{padding:4px 0}
 .contactsSheet .actions{grid-template-columns:1fr 1.4fr}
 .contactsSheet .actions button{white-space:nowrap}
+.heroSplit button:disabled{cursor:default}

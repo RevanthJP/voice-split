@@ -129,6 +129,12 @@ try {
   await sleep(1500);
   await shot("10-home.jpg");
 
+  // New user with ₹0: the balance shortcuts don't open Friends
+  const zero = await run(`(() => { const b = document.querySelectorAll(".heroSplit button"); b[0].click(); b[1].click();
+    return { disabled: [...b].every((x) => x.disabled), stillHome: location.hash === "#home" }; })()`);
+  console.log("₹0 shortcuts:", JSON.stringify(zero));
+  if (!zero.disabled || !zero.stillHome) throw new Error("₹0 balances still open Friends");
+
   // Empty box: the new message
   await run(`document.getElementById("typed").value = ""; document.getElementById("typeForm").requestSubmit()`);
   console.log("empty box says:", await run(`document.getElementById("error").textContent`));
@@ -160,7 +166,7 @@ try {
   await run(`document.querySelector("#addFriend button").click()`);
   await waitFor(`!document.getElementById("contactsAsk").hidden`);
   await sleep(700);
-  console.log("friends + opens:", await run(`document.getElementById("contactsTitle").textContent`));
+  console.log("friends + opens:", await run(`document.getElementById("contactsTitle").textContent + " | " + document.getElementById("contactsLater").textContent`));
   await shot("23-friends-add-contacts.jpg");
   await run(`document.getElementById("contactsLater").click()`);
   await waitFor(`document.getElementById("contactsAsk").hidden`);
