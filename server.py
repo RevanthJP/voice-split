@@ -17,7 +17,7 @@ MAX_AUDIO = 4 * 1024 * 1024  # Vercel rejects bodies over 4.5 MB
 PUBLIC = Path(__file__).parent / "public"
 _usage = {"day": "", "count": 0}
 
-app = FastAPI(title="Voice Split", docs_url=None, redoc_url=None)
+app = FastAPI(title="Kitty", docs_url=None, redoc_url=None)
 
 
 def _spend():
@@ -173,7 +173,7 @@ class ExportRow(BaseModel):
 
 
 class ExportIn(BaseModel):
-    title: str = Field("Voice Split", max_length=80)
+    title: str = Field("Kitty", max_length=80)
     rows: list[ExportRow] = Field(default_factory=list, max_length=3000)
 
 
@@ -184,7 +184,7 @@ def export_xlsx(body: ExportIn):
     except SplitError as err:
         raise HTTPException(400, str(err))
     return Response(data, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    headers={"Content-Disposition": 'attachment; filename="voice-split.xlsx"'})
+                    headers={"Content-Disposition": 'attachment; filename="kitty.xlsx"'})
 
 
 @app.get("/manifest.webmanifest")

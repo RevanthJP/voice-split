@@ -262,3 +262,60 @@ h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.07em;color:var(--mut
 .listen .hint{margin:.6rem 0 .4rem;font-size:1.25rem}
 .listenTip{margin:0;color:var(--muted);font-size:.95rem;text-align:center;font-style:italic;max-width:300px}
 .listen .error{text-align:center}
+
+/* ---- Kitty: mobile app colours. Same blue and orange brand, set on an iOS-style grouped
+   background with a deep navy balance card, which reads better on a phone than the web's bright blue. ---- */
+:root{--gray:#F2F2F7;--navy:#0E1A33;--navy-2:#1B3366;--blue:#2F7CF6;--blue-deep:#1F4FB5;--blue-soft:#E3EDFE}
+body{background:#DCDCE2}
+.bar{background:rgba(242,242,247,.85)}
+.hero,.hero.neg{background:linear-gradient(150deg,var(--navy) 0%,var(--navy-2) 100%);box-shadow:0 18px 40px -22px rgba(14,26,51,.75)}
+.hero::after{background:conic-gradient(from 0deg,rgba(47,124,246,0),rgba(47,124,246,.55),rgba(255,155,92,.6),rgba(47,124,246,0));opacity:.9}
+.heroSplit button{background:rgba(255,255,255,.09)}
+.heroSplit .get{color:#7FE0B0} .heroSplit .owe{color:#FFB27A} .heroSplit .zero{color:#fff}
+.hero.neg .heroValue{color:#FFB27A}
+.fab span{background:linear-gradient(150deg,#2F7CF6,#1F4FB5);box-shadow:0 10px 24px -8px rgba(31,79,181,.75),0 0 0 5px var(--gray)}
+.compose{box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.chartCard,.list,.form,.emptyCard,.totals>button,.totals>div{box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.meBtn{background:linear-gradient(150deg,var(--navy),var(--navy-2));color:#fff}
+
+/* ---- First-run walkthrough ---- */
+.intro{position:absolute;inset:0;z-index:40;background:var(--gray);display:flex;flex-direction:column;padding:calc(var(--safe-t) + 12px) 0 calc(var(--safe-b) + 18px);opacity:0;transition:opacity .4s var(--ease)}
+.intro-open .intro{opacity:1}
+.introSkip{position:absolute;top:calc(var(--safe-t) + 14px);right:18px;z-index:2;border:0;background:rgba(0,0,0,.06);border-radius:999px;padding:7px 14px;font-weight:600;font-size:.9rem;color:var(--ink)}
+.slides{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+.slides::-webkit-scrollbar{display:none}
+.slide{flex:0 0 100%;scroll-snap-align:center;display:flex;flex-direction:column;justify-content:center;padding:40px 28px 10px;text-align:center}
+.slideTitle{font-size:1.75rem;line-height:1.2;font-weight:700;letter-spacing:-.02em;color:var(--ink);text-transform:none;margin:1.6rem 0 .6rem}
+.slideText{color:var(--muted);font-size:1.02rem;margin:0 auto;max-width:320px}
+.brand{background:linear-gradient(95deg,#1F4FB5 5%,#2F7CF6 45%,#B9500C 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.art{height:260px;display:grid;place-items:center;position:relative}
+.logoMic{width:150px;height:150px;border-radius:44px;display:grid;place-items:center;background:linear-gradient(150deg,var(--navy),var(--navy-2));box-shadow:0 30px 60px -30px rgba(14,26,51,.8);position:relative;animation:floaty 4s ease-in-out infinite}
+.logoMic::before{content:"";position:absolute;inset:-14px;border-radius:56px;background:conic-gradient(from 0deg,#2F7CF6,#7DB5F5,#FF9B5C,#B9500C,#2F7CF6);filter:blur(26px);opacity:.45;z-index:-1;animation:aura 9s linear infinite}
+.logoMic svg{width:70px;height:70px;fill:#fff}
+@keyframes floaty{50%{transform:translateY(-8px)}}
+.artSay{align-content:center;gap:14px}
+.bubble{max-width:290px;background:var(--blue);color:#fff;border-radius:20px 20px 6px 20px;padding:12px 16px;text-align:left;font-size:.98rem;min-height:3.2em;justify-self:end;box-shadow:0 10px 24px -14px rgba(31,79,181,.7)}
+.typing::after{content:"";display:inline-block;width:2px;height:1em;background:#fff;margin-left:2px;vertical-align:-2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.mini{width:270px;background:var(--card);border-radius:20px;padding:14px 16px;text-align:left;box-shadow:0 14px 30px -18px rgba(0,0,0,.35);display:grid;grid-template-columns:1fr auto;gap:2px 10px}
+.mini b{font-size:1.05rem} .mini>span{font-weight:700}
+.mini small{grid-column:1/-1;color:var(--muted);font-size:.82rem}
+.artSay .mini{opacity:0;transform:translateY(14px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
+.artSay.done .mini{opacity:1;transform:none}
+.mini.big{width:280px}
+.miniChips{grid-column:1/-1;display:flex;gap:6px;margin:6px 0 2px}
+.miniChips i{font-style:normal;font-size:.8rem;font-weight:600;background:var(--blue-soft);color:var(--blue-deep);border-radius:999px;padding:4px 10px}
+.miniRows{grid-column:1/-1;margin-top:6px}
+.miniRows p{display:flex;justify-content:space-between;margin:0;padding:6px 0;border-top:1px solid var(--hair);font-size:.9rem}
+.artSettle .mini{grid-template-columns:1fr}
+.owesRow{display:flex;justify-content:space-between;margin:6px 0 4px;font-size:.92rem}
+.owesRow b{color:var(--green)}
+.miniBar{height:10px;border-radius:0 5px 5px 0;background:var(--green);width:var(--w);transform-origin:left;animation:grow 1s var(--ease) both}
+.miniWa{margin-top:12px;text-align:center;padding:9px;border-radius:12px;background:var(--green-soft);color:var(--green);font-weight:600;font-size:.88rem}
+.slide.setup{justify-content:flex-start;padding-top:70px}
+.slide.setup .form{margin-top:1.4rem;text-align:left}
+.introFoot{display:grid;gap:14px;padding:0 24px}
+.dots{display:flex;justify-content:center;gap:7px}
+.dots i{width:7px;height:7px;border-radius:4px;background:#C7C7CC;transition:width .3s var(--ease),background .3s}
+.dots i.on{width:22px;background:var(--blue)}
+#replayIntro{margin-top:1.6rem}

@@ -385,7 +385,7 @@ function remindLink(name, amount) {
 
 async function renderHome(friends) {
   const first = (state.profile.name || "").split(" ")[0];
-  $("greet").textContent = first ? `Hello, ${first}` : "Hello";
+  $("greet").textContent = first ? `Hello, ${first} 👋` : "Hello there 👋";
   $("meInitial").textContent = (state.profile.name || "You").slice(0, 1).toUpperCase();
   const get = Object.values(friends).filter((v) => v > 0).reduce((a, b) => a + b, 0);
   const owe = Math.abs(Object.values(friends).filter((v) => v < 0).reduce((a, b) => a + b, 0));
@@ -576,7 +576,7 @@ function exportRows() {
     .filter((e) => (!gid || e._gid === gid) && (!from || new Date(e.at) >= from) && (!to || new Date(e.at) < to))
     .sort((a, b) => (a.at < b.at ? -1 : 1));
   const gname = gid ? group(gid).name : "All groups";
-  return { rows, title: `Voice Split: ${gname}, ${label}`, file: `voice-split-${gname}-${label}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+$/, "") };
+  return { rows, title: `Kitty: ${gname}, ${label}`, file: `kitty-${gname}-${label}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+$/, "") };
 }
 function renderExportCount() {
   const n = exportRows().rows.length;
@@ -642,7 +642,7 @@ $("xPdf").addEventListener("click", async () => {
     for (const [n, v] of owes) ul.append(el("li", null, v > 0 ? `${n} owes you ${rupees(v)}` : `You owe ${n} ${rupees(-v)}`));
     p.append(ul);
   }
-  p.append(el("p", "meta", "Made with Voice Split. Shares are calculated exactly, to the paisa."));
+  p.append(el("p", "meta", "Made with Kitty. Shares are calculated exactly, to the paisa."));
   window.print();
 });
 
@@ -828,3 +828,69 @@ async function renderGroupChart() {
   box.replaceChildren(root);
   $("groupNote").textContent = `Your share: ${rupees(rows.reduce((a, [, v]) => a + v, 0))}`;
 }
+
+
+// ---------- first-run walkthrough ----------
+const slides = () => [...document.querySelectorAll("#slides .slide")];
+let slideAt = 0;
+function paintDots() {
+  $("dots").replaceChildren(...slides().map((_, i) => el("i", i === slideAt ? "on" : "")));
+  const last = slideAt === slides().length - 1;
+  $("introNext").textContent = last ? "Start using Kitty" : "Next";
+  $("introSkip").hidden = last;
+  // Replay the typing animation each time its slide comes into view.
+  document.querySelectorAll(".typing").forEach((t) => {
+    clearInterval(t._timer);
+    t.textContent = "";
+    t.closest(".art").classList.remove("done");
+    if (!slides()[slideAt].contains(t)) return;
+    const text = t.dataset.text;
+    let i = 0;
+    t._timer = setInterval(() => {
+      t.textContent = text.slice(0, ++i);
+      if (i >= text.length) { clearInterval(t._timer); t.closest(".art").classList.add("done"); }
+    }, 38);
+  });
+}
+function showSlide(i) {
+  slideAt = Math.max(0, Math.min(i, slides().length - 1));
+  $("slides").scrollTo({ left: slideAt * $("slides").clientWidth, behavior: "smooth" });
+  paintDots();
+}
+let scrollTimer = null;
+$("slides").addEventListener("scroll", () => {
+  clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(() => {
+    const i = Math.round($("slides").scrollLeft / $("slides").clientWidth);
+    if (i !== slideAt) { slideAt = i; paintDots(); }
+  }, 80);
+});
+function openIntro() {
+  $("oName").value = state.profile.name || "";
+  $("oLang").value = state.profile.lang || "";
+  $("oUpi").value = state.profile.upi || "";
+  $("oError").hidden = true;
+  $("intro").hidden = false;
+  requestAnimationFrame(() => { document.body.classList.add("intro-open"); $("slides").scrollLeft = 0; slideAt = 0; paintDots(); });
+}
+function finishIntro() {
+  state.onboarded = true;
+  persist();
+  document.body.classList.remove("intro-open");
+  setTimeout(() => { $("intro").hidden = true; }, 350);
+  renderAll();
+}
+$("introNext").addEventListener("click", () => {
+  if (slideAt < slides().length - 1) { showSlide(slideAt + 1); return; }
+  const name = $("oName").value.trim().replace(/\s+/g, " ");
+  if (!name) { $("oError").hidden = false; $("oName").focus(); return; }
+  state.profile.name = name;
+  state.profile.lang = $("oLang").value;
+  state.profile.upi = $("oUpi").value.trim();
+  paintLangs();
+  finishIntro();
+  toast(`Welcome, ${name.split(" ")[0]}`);
+});
+$("introSkip").addEventListener("click", () => showSlide(slides().length - 1));
+$("replayIntro").addEventListener("click", openIntro);
+if (!state.onboarded) openIntro();

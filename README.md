@@ -1,4 +1,4 @@
-# Voice Split
+# Kitty
 
 Say a shared expense the way you'd tell a friend, in Tamil, Hindi, English or a mix, and see who owes what.
 

@@ -3,29 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Voice Split</title>
+<title>Kitty</title>
 <meta name="description" content="Say an expense in Tamil, Hindi, English or a mix, and see who owes what.">
-<meta name="theme-color" content="#F5F5F7">
+<meta name="theme-color" content="#F2F2F7">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icons/icon-192.png">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Voice Split">
+<meta name="apple-mobile-web-app-title" content="Kitty">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="/static/style.css?v=7">
+<link rel="stylesheet" href="/static/style.css?v=8">
 </head>
 <body>
 <div class="app">
   <header class="bar">
     <button id="back" class="back" type="button" hidden aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 5.4 14 4l-8 8 8 8 1.4-1.4L8.8 12z"/></svg></button>
-    <h1 id="title">Voice Split</h1>
+    <h1 id="title">Kitty</h1>
     <button id="meBtn" class="meBtn" type="button" data-go="account" aria-label="Account"><span id="meInitial">Y</span></button>
   </header>
 
   <main id="views">
     <!-- Home -->
-    <section class="view" id="view-home" data-title="Voice Split">
+    <section class="view" id="view-home" data-title="Kitty">
       <p class="greet" id="greet">Hello</p>
 
       <div class="hero">
@@ -161,6 +161,7 @@
       </ul>
       <h2>About</h2>
       <p class="muted small">Your data stays on this phone. Speech and text are sent to Groq's AI to be read, and this app doesn't store them. The AI reads the expense, and plain code does the maths, so shares always add up exactly.</p>
+      <button id="replayIntro" class="primaryBtn ghost" type="button">Show the welcome tour again</button>
       <button id="reset" class="danger" type="button">Delete all my data</button>
     </section>
   </main>
@@ -223,9 +224,63 @@
     </div>
   </section>
 
+  <!-- First-run walkthrough -->
+  <section id="intro" class="intro" hidden role="dialog" aria-modal="true" aria-label="Welcome to Kitty">
+    <button id="introSkip" class="introSkip" type="button">Skip</button>
+    <div class="slides" id="slides">
+      <article class="slide">
+        <div class="art artLogo"><span class="logoMic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-2.07A7 7 0 0 0 19 12h-2Z"/></svg></span></div>
+        <h2 class="slideTitle">Welcome to <span class="brand">Kitty</span></h2>
+        <p class="slideText">Split shared expenses with friends just by saying them, in English, தமிழ், हिंदी or a mix.</p>
+      </article>
+      <article class="slide">
+        <div class="art artSay">
+          <div class="bubble"><span class="typing" data-text="Petrol-ku naan 1,200 kuduthen, Arun Ravi kooda split pannu"></span></div>
+          <div class="mini"><b>Petrol</b><span>₹1,200</span><small>You, Arun, Ravi · ₹400 each</small></div>
+        </div>
+        <h2 class="slideTitle">Say it like you'd tell a friend</h2>
+        <p class="slideText">Tap the mic in the middle of the bar at the bottom, and say who paid, how much, and who shares it.</p>
+      </article>
+      <article class="slide">
+        <div class="art artCheck">
+          <div class="mini big"><b>Dinner</b><span>₹1,500</span>
+            <div class="miniChips"><i class="on">You</i><i class="on">Arun</i><i class="on">Ravi</i></div>
+            <small>Arun skipped drinks (₹300)</small>
+            <div class="miniRows"><p><span>Your share</span><b>₹550</b></p><p><span>Arun</span><b>₹400</b></p><p><span>Ravi</span><b>₹550</b></p></div>
+          </div>
+        </div>
+        <h2 class="slideTitle">Check it, then save</h2>
+        <p class="slideText">You see exactly what Kitty understood. Fix anything with a tap. The maths is always exact.</p>
+      </article>
+      <article class="slide">
+        <div class="art artSettle">
+          <div class="mini"><p class="owesRow"><span>Arun owes you</span><b>₹1,800</b></p><div class="miniBar" style="--w:90%"></div><p class="owesRow"><span>Ravi owes you</span><b>₹550</b></p><div class="miniBar" style="--w:32%"></div><span class="miniWa">Remind on WhatsApp</span></div>
+        </div>
+        <h2 class="slideTitle">See who owes whom, and settle up</h2>
+        <p class="slideText">Send a friendly WhatsApp reminder with your UPI ID. Export a month as Excel or PDF any time.</p>
+      </article>
+      <article class="slide setup">
+        <h2 class="slideTitle">Let's set you up</h2>
+        <p class="slideText">This stays on your phone. You can change it later in Account.</p>
+        <div class="form">
+          <label>Your name<input id="oName" maxlength="40" placeholder="Revanth" autocomplete="name"></label>
+          <label>You'll speak in
+            <select id="oLang"><option value="">Any, Kitty works it out</option><option value="ta">தமிழ் / Tanglish</option><option value="hi">हिंदी / Hinglish</option><option value="en">English</option></select>
+          </label>
+          <label>UPI ID<input id="oUpi" maxlength="60" placeholder="Optional" autocomplete="off"></label>
+        </div>
+        <p id="oError" class="error" hidden>Please add your name.</p>
+      </article>
+    </div>
+    <div class="introFoot">
+      <div class="dots" id="dots" aria-hidden="true"></div>
+      <button id="introNext" class="primaryBtn" type="button">Next</button>
+    </div>
+  </section>
+
   <div id="toast" class="toast" role="status" hidden></div>
 </div>
 <div id="print" class="print" aria-hidden="true"></div>
-<script src="/static/app.js?v=7"></script>
+<script src="/static/app.js?v=8"></script>
 </body>
 </html>

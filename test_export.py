@@ -12,7 +12,7 @@ class ExcelExport(unittest.TestCase):
     def setUp(self):
         rows = [("01 Oct", "Goa trip", Expense("Dinner", 1500, ME, [ME, "அருண்", "Ravi"], items=[Item(300, "drinks", excluded=["அருண்"])])),
                 ("03 Oct", "Flat", Expense("Cab", 1200, "Ravi", [ME, "Ravi"]))]
-        self.wb = load_workbook(BytesIO(build_xlsx(rows, "Voice Split: October")))
+        self.wb = load_workbook(BytesIO(build_xlsx(rows, "Kitty: October")))
 
     def test_expense_rows(self):
         ws = self.wb["Expenses"]
