@@ -30,17 +30,18 @@ The saved copy is from the held-back set (`cases_heldout.json`): 7 of 8 read cor
 
 ## Onboarding, contacts and sharing (taken by `tools/screenshots.mjs`)
 
-Order for a new user: welcome tour → Find friends → How it works → Let's set you up → app.
+Order for a new user: Welcome → How it works (6 steps) → Let's set you up → app. One expense runs through the walkthrough: the ₹10,000 dinner where Akash skipped drinks. Its numbers come from the app's own split maths.
 
 | File | What it shows |
 |---|---|
-| 15-find-friends.jpg | Five sample friends (tour only, never saved) fill in and flip from Add to ✓ Added |
-| 16-how-1-contacts.jpg | How it works 1: allowing contacts, names appear |
-| 16-how-2-voice.jpg | How it works 2: the mic and "Share my expenses for last night dinner ₹10,000 with 5 people" |
-| 16-how-3-names.jpg | How it works 3: five names pop in one by one, then Next |
-| 16-how-4-whatsapp.jpg | How it works 4: ₹2,000 each, WhatsApp opens with the message ready |
-| 16-how-5-group-make.jpg | How it works 5, first half: making "Goa trip" and adding members |
-| 16-how-5-group-tally.jpg | How it works 5, second half on the same screen: expenses add up, settle up in 4 payments (the app's own maths) |
+| 01-welcome.jpg | Welcome |
+| 16-how-1-say.jpg | 1 Just say it: types Tanglish, Hinglish, Tamil and Hindi examples, then stops on the English dinner |
+| 16-how-2-friends.jpg | 2 Find your friends: allow contacts, each person flips from Add to ✓ Added |
+| 16-how-3-names.jpg | 3 Kitty finds the people: five names pop in, then Next |
+| 16-how-4-check.jpg | 4 Check it, then save: food ₹7,500 for all 5, drinks ₹2,500 without Akash; Akash ₹1,500, everyone else ₹2,125 |
+| 16-how-5-group-make.jpg | 5 Groups keep the tally, first half: making "Goa trip" |
+| 16-how-5-group-tally.jpg | 5, second half on the same screen: dinner, hotel and cab; settle up in 4 payments |
+| 16-how-6-share.jpg | 6 Split and share: everyone's share, WhatsApp opens with the message ready |
 | 09-setup.jpg | Name and UPI ID, after How it works; names saved with capitals ("asha kumar" → "Asha Kumar") |
 | 20-contacts-ask.jpg | Main app: "Now give your contacts access" |
 | 21-split-share.jpg | A real AI-read split (typed by the test: ₹1,500 with Arun and Ravi) with Share on WhatsApp |

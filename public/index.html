@@ -13,7 +13,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Kitty">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="/static/style.css?v=18">
+<link rel="stylesheet" href="/static/style.css?v=19">
 </head>
 <body>
 <div class="app">
@@ -225,70 +225,29 @@
         <h2 class="slideTitle">Welcome to <span class="brand">Kitty</span></h2>
         <p class="slideText">Split shared expenses with friends just by saying them, in English, தமிழ், हिंदी or a mix.</p>
       </article>
-      <article class="slide">
-        <div class="art artSay">
-          <span class="langTag" id="langTag">Tanglish</span>
-          <div class="bubble"><span class="typing" id="typing"></span></div>
-          <div class="mini" id="sayResult"><b id="sayWhat">Petrol</b><span id="sayAmt">₹1,200</span><small id="saySplit">You, Arun, Ravi · ₹400 each</small></div>
-        </div>
-        <h2 class="slideTitle">Say it like you'd tell a friend</h2>
-        <p class="slideText">Tap the mic in the middle of the bar at the bottom. Speak in English, Tamil, Hindi, or a mix.</p>
-      </article>
-      <article class="slide">
-        <div class="art artCheck">
-          <div class="mini big">
-            <p class="said">“Dinner was 1,500. Arun didn't have drinks, those were 300.”</p>
-            <div class="miniHead"><b>Dinner</b><span>₹1,500</span></div>
-            <div class="parts">
-              <p><span>Food ₹1,200</span><em>shared by You, Arun, Ravi</em><b>₹400 each</b></p>
-              <p><span>Drinks ₹300</span><em>shared by You, Ravi</em><b>₹150 each</b></p>
-            </div>
-            <div class="miniRows"><p><span>You</span><b>₹550</b></p><p><span>Arun</span><b>₹400</b></p><p><span>Ravi</span><b>₹550</b></p></div>
-          </div>
-        </div>
-        <h2 class="slideTitle">Check it, then save</h2>
-        <p class="slideText">Kitty shows how it split the bill. Arun pays only for food, so he owes less. Fix anything with a tap before saving.</p>
-      </article>
-      <article class="slide">
-        <div class="art artSettle">
-          <div class="mini"><p class="owesRow"><span>Arun owes you</span><b>₹1,800</b></p><div class="miniBar" style="--w:90%"></div><p class="owesRow"><span>Ravi owes you</span><b>₹550</b></p><div class="miniBar" style="--w:32%"></div><span class="miniWa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.7 1.1 1.5 1.8 1 .9 1.9 1.2 2.2 1.3.3.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.6-.1 1.2Z"/></svg>Send on WhatsApp</span></div>
-        </div>
-        <h2 class="slideTitle">See who owes whom, and settle up</h2>
-        <p class="slideText">Check the message, add their number if you like, and send it on WhatsApp with your UPI ID. Export any month as Excel or PDF.</p>
-      </article>
     </div>
     <div class="introFoot">
-      <div class="dots" id="dots" aria-hidden="true"></div>
       <button id="introNext" class="primaryBtn" type="button">Next</button>
     </div>
   </section>
 
-  <!-- After setup: sample friends, like a "find friends" list -->
-  <section id="findFriends" class="intro stage" hidden role="dialog" aria-modal="true" aria-label="Find your friends">
-    <div class="stageBody">
-      <h2 class="slideTitle">Find your friends</h2>
-      <p class="slideText">Kitty keeps the people you split with in one list. You'll add yours from contacts or by phone number inside the app.</p>
-      <ul id="sampleList" class="list findList"></ul>
-      <button id="howBtn" class="howBtn" type="button"><span class="playDot" aria-hidden="true"></span>How it works</button>
-    </div>
-    <div class="introFoot"><button id="friendsNext" class="primaryBtn" type="button">Next</button></div>
-  </section>
 
   <!-- Illustrated walkthrough: CSS and SVG only -->
   <section id="how" class="intro stage" hidden role="dialog" aria-modal="true" aria-label="How Kitty works">
     <button id="howSkip" class="introSkip" type="button">Skip</button>
     <div class="howStage">
       <div class="phone" id="phone" data-step="0">
-        <!-- Step 1: contacts -->
+        <!-- Step 1: say it, in five languages -->
         <div class="scene s0">
-          <div class="perm"><span class="permIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5 6h10c0-2.2-2.5-4-5-4s-5 1.8-5 4Z"/></svg></span><b>Allow Kitty to see your contacts?</b><small>Names stay on your phone</small><span class="permBtns"><i>Don't allow</i><i class="allow">Allow</i></span></div>
-          <ul class="ctList"><li><span class="avatar">A</span>Arun</li><li><span class="avatar">R</span>Ravi</li><li><span class="avatar">S</span>Suresh</li><li><span class="avatar">A</span>Akash</li></ul>
-        </div>
-        <!-- Step 2: voice -->
-        <div class="scene s1">
+          <span class="langTag howLang" id="howLang">Tanglish</span>
           <span class="howMic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-2.07A7 7 0 0 0 19 12h-2Z"/></svg></span>
           <div class="howWave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
           <div class="bubble howBubble"><span class="typing" id="howTyping"></span></div>
+        </div>
+        <!-- Step 2: find your friends (contacts, matched on the phone) -->
+        <div class="scene s1">
+          <div class="perm"><span class="permIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5 6h10c0-2.2-2.5-4-5-4s-5 1.8-5 4Z"/></svg></span><b>Allow Kitty to see your contacts?</b><small>Names stay on your phone</small><span class="permBtns"><i>Don't allow</i><i class="allow">Allow</i></span></div>
+          <ul class="ctList ffList"><li><span class="avatar">R</span><span class="ffName">Ravi</span><span class="ffChip"><i class="add">Add</i><i class="added">✓ Added</i></span></li><li><span class="avatar">S</span><span class="ffName">Suresh</span><span class="ffChip"><i class="add">Add</i><i class="added">✓ Added</i></span></li><li><span class="avatar">A</span><span class="ffName">Akash</span><span class="ffChip"><i class="add">Add</i><i class="added">✓ Added</i></span></li><li><span class="avatar">A</span><span class="ffName">Arun</span><span class="ffChip"><i class="add">Add</i><i class="added">✓ Added</i></span></li></ul>
         </div>
         <!-- Step 3: names appear -->
         <div class="scene s2">
@@ -297,10 +256,15 @@
           <div class="pills"><i>You</i><i>Ravi</i><i>Suresh</i><i>Akash</i><i>Arun</i></div>
           <span class="fakeNext">Next</span>
         </div>
-        <!-- Step 4: split and WhatsApp -->
+        <!-- Step 4: check it, then save -->
         <div class="scene s3">
-          <div class="howSplit"><p><span>You</span><b>₹2,000</b></p><p><span>Ravi</span><b>₹2,000</b></p><p><span>Suresh</span><b>₹2,000</b></p><p><span>Akash</span><b>₹2,000</b></p><p><span>Arun</span><b>₹2,000</b></p></div>
-          <div class="waChat"><span class="waTop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.7 1.1 1.5 1.8 1 .9 1.9 1.2 2.2 1.3.3.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.6-.1 1.2Z"/></svg>WhatsApp</span><p class="waMsg">Dinner ₹10,000 split on Kitty: ₹2,000 each. Pick a chat and send.</p></div>
+          <p class="howSaid">“Akash didn't have drinks, those were ₹2,500”</p>
+          <div class="howParts">
+            <p><span>Food ₹7,500<em>all 5</em></span><b>₹1,500 each</b></p>
+            <p><span>Drinks ₹2,500<em>everyone but Akash</em></span><b>₹625 each</b></p>
+          </div>
+          <div class="howSplit checkRows"><p><span>Everyone else</span><b>₹2,125 each</b></p><p><span>Akash</span><b>₹1,500</b></p></div>
+          <span class="fakeSave">Save</span>
         </div>
         <!-- Step 5: make a group, then it keeps the tally -->
         <div class="scene s4 sGroup">
@@ -323,13 +287,17 @@
           </div>
           <div class="settle">
             <small>Settle up in 4 payments</small>
-            <p><span>Akash → You</span><b>₹4,000</b></p>
-            <p><span>Suresh → You</span><b>₹2,000</b></p>
-            <p><span>Suresh → Arun</span><b>₹2,000</b></p>
-            <p><span>Ravi → Arun</span><b>₹2,000</b></p>
-            <span class="remindChip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.7 1.1 1.5 1.8 1 .9 1.9 1.2 2.2 1.3.3.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.6-.1 1.2Z"/></svg>Remind Akash</span>
+            <p><span>Suresh → You</span><b>₹4,125</b></p>
+            <p><span>Akash → You</span><b>₹1,750</b></p>
+            <p><span>Akash → Arun</span><b>₹1,750</b></p>
+            <p><span>Ravi → Arun</span><b>₹2,125</b></p>
           </div>
           </div>
+        </div>
+        <!-- Step 6: split and share on WhatsApp -->
+        <div class="scene s5">
+          <div class="howSplit"><p><span>You</span><b>₹2,125</b></p><p><span>Ravi</span><b>₹2,125</b></p><p><span>Suresh</span><b>₹2,125</b></p><p><span>Arun</span><b>₹2,125</b></p><p><span>Akash</span><b>₹1,500</b></p></div>
+          <div class="waChat"><span class="waTop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.7 1.1 1.5 1.8 1 .9 1.9 1.2 2.2 1.3.3.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.6-.1 1.2Z"/></svg>WhatsApp</span><p class="waMsg">Dinner ₹10,000 on Kitty: ₹2,125 each, Akash ₹1,500. Pick a chat and send.</p></div>
         </div>
       </div>
       <h2 class="slideTitle" id="howTitle"></h2>
@@ -401,6 +369,6 @@
   <div id="toast" class="toast" role="status" hidden></div>
 </div>
 <div id="print" class="print" aria-hidden="true"></div>
-<script src="/static/app.js?v=19"></script>
+<script src="/static/app.js?v=20"></script>
 </body>
 </html>

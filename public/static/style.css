@@ -412,7 +412,7 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 .permBtns i{font-style:normal;font-size:.8rem;font-weight:600;padding:6px 12px;border-radius:9px;background:var(--gray)}
 .permBtns .allow{background:var(--blue);color:#fff}
 .play .permBtns .allow{animation:press .5s 1s var(--ease) both}
-.play .s0 .perm{animation:permOut .4s 1.5s var(--ease) forwards}
+.play .s1 .perm{animation:permOut .4s 1.5s var(--ease) forwards}
 .ctList{list-style:none;margin:0;padding:0;width:100%;position:absolute;top:22px;left:0;padding:0 14px;display:grid;gap:6px}
 .ctList li{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:12px;padding:7px 10px;font-weight:600;font-size:.9rem;opacity:0}
 .ctList .avatar{width:28px;height:28px;font-size:.8rem}
@@ -540,3 +540,35 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 .addPerson-open .scrim{opacity:1}
 .addFriendBtns{margin-bottom:12px}
 .addFriendBtns .primaryBtn{white-space:nowrap;font-size:.95rem;padding:12px 10px}
+
+/* How it works 1: languages */
+.howLang{align-self:flex-end;margin-bottom:-4px}
+/* How it works 2: find your friends, Add flips to Added */
+.ffList li{justify-content:flex-start}
+.ffName{flex:1}
+.ffChip{display:grid;font-size:.72rem;font-weight:600}
+.ffChip i{grid-area:1/1;font-style:normal;text-align:center;padding:4px 9px;border-radius:8px}
+.ffChip .add{background:var(--blue);color:#fff}
+.ffChip .added{background:var(--gray);color:var(--ink);opacity:0}
+.play .ffList li:nth-child(1) .add{animation:fadeOut .25s 2.9s forwards}.play .ffList li:nth-child(1) .added{animation:pop .3s 2.9s both}
+.play .ffList li:nth-child(2) .add{animation:fadeOut .25s 3.3s forwards}.play .ffList li:nth-child(2) .added{animation:pop .3s 3.3s both}
+.play .ffList li:nth-child(3) .add{animation:fadeOut .25s 3.7s forwards}.play .ffList li:nth-child(3) .added{animation:pop .3s 3.7s both}
+.play .ffList li:nth-child(4) .add{animation:fadeOut .25s 4.1s forwards}.play .ffList li:nth-child(4) .added{animation:pop .3s 4.1s both}
+@keyframes fadeOut{to{opacity:0}}
+/* How it works 4: check it, then save */
+.howSaid{margin:0;width:100%;background:var(--blue);color:#fff;border-radius:16px 16px 4px 16px;padding:8px 12px;font-size:.8rem;text-align:left}
+.howParts{width:100%;background:var(--card);border-radius:14px;padding:4px 10px}
+.howParts p{display:flex;justify-content:space-between;align-items:center;margin:0;padding:5px 0;border-bottom:1px solid var(--hair);font-size:.78rem;text-align:left;opacity:0}
+.howParts p:last-child{border-bottom:0}
+.howParts em{display:block;font-style:normal;color:var(--muted);font-size:.68rem}
+.play .howParts p:nth-child(1){animation:rise .35s .5s var(--ease) both}.play .howParts p:nth-child(2){animation:rise .35s .9s var(--ease) both}
+.checkRows p{font-weight:600}
+.play .checkRows p:nth-child(1){animation-delay:1.5s}.play .checkRows p:nth-child(2){animation-delay:1.7s}
+.fakeSave{margin-top:auto;width:100%;padding:9px;border-radius:12px;background:var(--blue);color:#fff;font-weight:600;font-size:.88rem;opacity:0}
+.play .fakeSave{animation:rise .4s 2.2s var(--ease) both,press .5s 2.9s var(--ease)}
+.s3{gap:8px;padding-top:16px}
+.ffName{text-align:left}
+.checkRows p{text-align:left;gap:8px;align-items:center}
+.checkRows b{white-space:nowrap}
+.s5 .howSplit p{padding:4px 0}
+.s5 .waChat{height:40%}

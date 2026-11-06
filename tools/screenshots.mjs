@@ -65,29 +65,27 @@ try {
   if (!checks.tourShown || !checks.nameEmpty || !checks.upiEmpty) throw new Error("New-user checks failed");
 
   await shot("01-welcome.jpg");
-  await run(`document.getElementById("introNext").click()`);
-  await waitFor(`document.getElementById("langTag").textContent === "Tanglish" && document.querySelector(".artSay").classList.contains("done")`);
-  await shot("02-tour-tanglish.jpg");
-  // Order: tour -> Find friends -> How it works -> Set up -> app
-  await run(`showSlide(3)`);
-  await sleep(900);
-  await run(`document.getElementById("introNext").click()`);
-  await waitFor(`!document.getElementById("findFriends").hidden && document.querySelectorAll("#sampleList li").length === 5`);
-  await sleep(3200); // the list fills in and each person flips to Added
-  console.log("find friends:", await run(`[...document.querySelectorAll("#sampleList .follow")].map((b) => b.textContent).join(",") + " | try card: " + !!document.querySelector(".tryCard")`));
-  await shot("15-find-friends.jpg");
 
-  // How it works: six illustrated steps
-  await run(`document.getElementById("howBtn").click()`);
-  await waitFor(`!document.getElementById("how").hidden`);
-  const howShots = ["16-how-1-contacts.jpg", "16-how-2-voice.jpg", "16-how-3-names.jpg", "16-how-4-whatsapp.jpg", "16-how-5-group-tally.jpg"];
-  for (let i = 0; i < howShots.length; i++) {
+  // Order: Welcome -> How it works (6 steps) -> Set up -> app
+  await run(`document.getElementById("introNext").click()`);
+  await waitFor(`!document.getElementById("how").hidden && document.getElementById("howTitle").textContent === "Just say it"`);
+  // Step 1 types all five languages, then stops on the English dinner
+  await waitFor(`document.getElementById("howLang").textContent === "English" && document.getElementById("howTyping").textContent.endsWith("Arun")`, 30000);
+  await sleep(600);
+  await shot("16-how-1-say.jpg");
+  await run(`document.getElementById("howNext").click()`);
+  const howShots = ["16-how-2-friends.jpg", "16-how-3-names.jpg", "16-how-4-check.jpg", "16-how-5-group-tally.jpg", "16-how-6-share.jpg"];
+  for (let k = 0; k < howShots.length; k++) {
+    const i = k + 1;
     if (i === 4) { await sleep(3000); await shot("16-how-5-group-make.jpg"); await sleep(5600); } // making the group, then its tally
-    else await sleep(i === 1 ? 4200 : 3400); // let each step's animation finish
+    else await sleep(i === 1 ? 5000 : 3600); // let each step's animation finish
     console.log("how step", i, await run(`document.getElementById("howTitle").textContent`));
-    await shot(howShots[i]);
+    await shot(howShots[k]);
     await run(`document.getElementById("howNext").click()`);
   }
+  const findFriendsGone = await run(`!document.getElementById("findFriends") && !document.querySelector("#slides .artSay")`);
+  console.log("old tour slides and Find friends screen removed:", findFriendsGone);
+  if (!findFriendsGone) throw new Error("Old screens are still there");
 
   // Set up comes after How it works
   await waitFor(`!document.getElementById("setup").hidden && document.getElementById("how").hidden`);
@@ -98,14 +96,14 @@ try {
   console.log("empty name blocked:", blocked);
   if (!blocked) throw new Error("Empty name was not blocked");
   await run(`document.getElementById("oName").value = "asha kumar"; document.getElementById("setupDone").click()`);
-  await waitFor(`document.getElementById("setup").hidden && document.getElementById("findFriends").hidden`);
+  await waitFor(`document.getElementById("setup").hidden`);
   const saved = await run(`JSON.parse(localStorage.getItem("voice-split-v2")).profile.name`);
   console.log("name saved as:", saved);
   if (saved !== "Asha Kumar") throw new Error("Name was not capitalised");
   const after = await run(`(() => { const s = JSON.parse(localStorage.getItem("voice-split-v2"));
     return { friends: s.friends, samples: s.samples, onboarded: s.onboarded, typed: document.getElementById("typed").value }; })()`);
   console.log("after onboarding", JSON.stringify(after));
-  if (after.friends.length || after.onboarded !== 5 || after.typed) throw new Error("Sample friends or example text were left in the app");
+  if (after.friends.length || after.onboarded !== 6 || after.typed) throw new Error("Sample friends or example text were left in the app");
 
   // The contacts prompt shows in the main app
   await waitFor(`!document.getElementById("contactsAsk").hidden`, 5000);
@@ -203,7 +201,7 @@ try {
 
   // Someone who got sample friends saved by the earlier build: they're removed on the next load
   await run(`(() => { const s = JSON.parse(localStorage.getItem("voice-split-v2"));
-    s.friends = ["Arun", "Ravi", "Meena"]; s.samples = ["Arun", "Ravi", "Suresh"]; s.onboarded = 5;
+    s.friends = ["Arun", "Ravi", "Meena"]; s.samples = ["Arun", "Ravi", "Suresh"]; s.onboarded = 6;
     localStorage.setItem("voice-split-v2", JSON.stringify(s)); })()`);
   await send("Page.navigate", { url: "about:blank" });
   await sleep(400);

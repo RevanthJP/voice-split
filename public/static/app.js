@@ -913,111 +913,8 @@ async function renderGroupChart() {
 
 
 // ---------- first-run walkthrough ----------
-const slides = () => [...document.querySelectorAll("#slides .slide")];
-let slideAt = 0;
-function paintDots() {
-  $("dots").replaceChildren(...slides().map((_, i) => el("i", i === slideAt ? "on" : "")));
-  const last = slideAt === slides().length - 1;
-  $("introNext").textContent = "Next";
-  runSayDemo(slides()[slideAt].contains($("typing")));
-}
-
-const TOUR_VERSION = 5;
-const SAY = [
-  { lang: "Tanglish", text: "Petrol-ku naan 1,200 kuduthen, Arun Ravi kooda split pannu", what: "Petrol", amt: "₹1,200", split: "You, Arun, Ravi · ₹400 each" },
-  { lang: "Hinglish", text: "Maine dinner ke 900 diye, Arun aur Ravi ke saath split karo", what: "Dinner", amt: "₹900", split: "You, Arun, Ravi · ₹300 each" },
-  { lang: "தமிழ்", text: "நான் சாப்பாட்டுக்கு ஆயிரம் ரூபாய் கொடுத்தேன், பிரதி கூட பிரிச்சுக்கோ", what: "Food", amt: "₹1,000", split: "You, Prathi · ₹500 each" },
-  { lang: "हिंदी", text: "मैंने ऑटो के लिए तीन सौ रुपये दिए, अरुण के साथ बाँट दो", what: "Auto", amt: "₹300", split: "You, Arun · ₹150 each" },
-  { lang: "English", text: "Movie tickets 750, Kavya paid, split with me and Arun", what: "Movie tickets", amt: "₹750", split: "Paid by Kavya · ₹250 each" },
-];
-let sayTimer = null;
-function runSayDemo(active) {
-  clearTimeout(sayTimer);
-  const art = document.querySelector(".artSay");
-  const t = $("typing");
-  if (!active) { t.textContent = ""; art.classList.remove("done"); return; }
-  let n = 0;
-  const step = () => {
-    const ex = SAY[n % SAY.length];
-    // Fade the last result out first, then swap in the next example and type it.
-    art.classList.remove("done");
-    sayTimer = setTimeout(() => {
-      $("langTag").textContent = ex.lang;
-      $("sayWhat").textContent = ex.what; $("sayAmt").textContent = ex.amt; $("saySplit").textContent = ex.split;
-      t.textContent = "";
-      let i = 0;
-      const chars = [...ex.text];
-      const type = () => {
-        t.textContent = chars.slice(0, ++i).join("");
-        if (i < chars.length) { sayTimer = setTimeout(type, 34); return; }
-        art.classList.add("done");
-        sayTimer = setTimeout(() => { n++; step(); }, 2200);
-      };
-      type();
-    }, n ? 500 : 0);
-  };
-  step();
-}
-let settleAfter = 0; // ignore scroll events while a button-driven slide change is animating
-function showSlide(i) {
-  settleAfter = Date.now() + 700;
-  slideAt = Math.max(0, Math.min(i, slides().length - 1));
-  $("slides").scrollTo({ left: slideAt * $("slides").clientWidth, behavior: "smooth" });
-  paintDots();
-}
-let scrollTimer = null;
-$("slides").addEventListener("scroll", () => {
-  clearTimeout(scrollTimer);
-  scrollTimer = setTimeout(() => {
-    if (Date.now() < settleAfter) return;
-    const i = Math.round($("slides").scrollLeft / $("slides").clientWidth);
-    if (i !== slideAt) { slideAt = i; paintDots(); }
-  }, 80);
-});
-function openIntro() {
-  hideStage("setup");
-  $("oName").value = "";
-  $("oUpi").value = "";
-  $("oError").hidden = true;
-  $("intro").hidden = false;
-  requestAnimationFrame(() => { document.body.classList.add("intro-open"); $("slides").scrollLeft = 0; slideAt = 0; paintDots(); });
-}
-function finishIntro() {
-  state.onboarded = TOUR_VERSION;
-  persist();
-  document.body.classList.remove("intro-open");
-  runSayDemo(false);
-  setTimeout(() => { $("intro").hidden = true; }, 350);
-  renderAll();
-}
-$("introNext").addEventListener("click", () => {
-  if (slideAt < slides().length - 1) { showSlide(slideAt + 1); return; }
-  runSayDemo(false);
-  openFindFriends();
-});
-$("introSkip").addEventListener("click", () => { runSayDemo(false); openFindFriends(); });
-// The tour shows once per tour version, so a changed tour reaches people who saw an older one.
-// Opening the app at /#welcome always shows it, which is handy for demos.
-if (state.onboarded !== TOUR_VERSION || ASKED_FOR_TOUR) openIntro();
-
-// ---------- after setup: sample friends ----------
-// Sample names so a new person can try a split straight away. They're marked as samples
-// in Friends and can be removed there.
-const SAMPLE_FRIENDS = ["Arun", "Ravi", "Suresh", "Akash", "Priya"];
-let sampleTimers = [];
-function paintSamples() {
-  sampleTimers.forEach(clearTimeout); sampleTimers = [];
-  $("sampleList").replaceChildren(...SAMPLE_FRIENDS.map((n, i) => {
-    const li = el("li");
-    li.style.animationDelay = `${i * 120}ms`;
-    const b = el("span", "follow", "Add");
-    b.setAttribute("aria-hidden", "true");
-    // A short demo: each one is added in turn, the way picking from contacts feels
-    sampleTimers.push(setTimeout(() => { b.textContent = "Added"; b.classList.add("on"); }, 900 + i * 380));
-    li.append(who(n), b);
-    return li;
-  }));
-}
+// Welcome -> How it works (6 illustrated steps) -> Let's set you up -> the app.
+const TOUR_VERSION = 6;
 function showStage(id) {
   $(id).hidden = false;
   requestAnimationFrame(() => document.body.classList.add(id + "-open"));
@@ -1026,29 +923,36 @@ function hideStage(id) {
   document.body.classList.remove(id + "-open");
   setTimeout(() => { $(id).hidden = true; }, 350);
 }
-function openFindFriends() {
-  paintSamples();
-  showStage("findFriends");
+function openIntro() {
+  hideStage("setup"); hideStage("how");
+  $("oName").value = "";
+  $("oUpi").value = "";
+  $("oError").hidden = true;
+  showStage("intro");
+}
+function openHow() {
+  showStage("how");
+  showHow(0);
   hideStage("intro");
-  document.body.classList.remove("intro-open");
+}
+// Last step: name and UPI ID, after the walkthrough
+function openSetup() {
+  stopHow();
+  showStage("setup");
+  hideStage("how"); hideStage("intro");
 }
 function finishOnboarding() {
   state.onboarded = TOUR_VERSION;
   persist();
-  hideStage("findFriends"); hideStage("how"); hideStage("intro"); hideStage("setup");
-  document.body.classList.remove("intro-open");
+  hideStage("how"); hideStage("intro"); hideStage("setup");
   stopHow();
   go("home");
   renderAll();
   toast(`Welcome, ${state.profile.name.split(" ")[0]}`);
   if (!state.contactsAsked) setTimeout(openContactsAsk, 1400);
 }
-// Last step: name and UPI ID, after the walkthrough
-function openSetup() {
-  stopHow();
-  showStage("setup");
-  hideStage("how"); hideStage("findFriends");
-}
+$("introNext").addEventListener("click", openHow);
+$("introSkip").addEventListener("click", openSetup);
 $("setupDone").addEventListener("click", () => {
   // The name is always what the person types here, never one saved earlier.
   const name = titleName($("oName").value);
@@ -1058,20 +962,40 @@ $("setupDone").addEventListener("click", () => {
   paintLangs();
   finishOnboarding();
 });
-$("friendsNext").addEventListener("click", openSetup);
-$("howBtn").addEventListener("click", () => { showStage("how"); showHow(0); });
 
 // ---------- "How it works": illustrated with CSS and SVG ----------
+// One expense runs through every step: the ₹10,000 dinner, where Akash skipped drinks.
+// Its numbers come from the app's own split maths (splits.py).
 const HOW = [
-  { title: "Allow your contacts", text: "Kitty reads your friends' names on your phone, so it knows who you mean." },
-  { title: "Just say it", text: "Tap the mic and say the expense the way you'd tell a friend." },
+  { title: "Just say it", text: "Tap the mic and say the expense the way you'd tell a friend, in English, Tamil, Hindi or a mix." },
+  { title: "Find your friends", text: "Allow contacts once, and Kitty matches the names you say to people on your phone. They never leave it." },
   { title: "Kitty finds the people", text: "The names you said show up, ready to check. Tap Next when it looks right." },
-  { title: "Split and share", text: "Kitty splits it equally and opens WhatsApp with the message ready to send." },
+  { title: "Check it, then save", text: "Akash skipped drinks, so he pays only for food. Fix anything with a tap, then save." },
   { title: "Groups keep the tally", text: "Make a group for a trip or your flat. Every expense adds up, and Kitty works out who pays whom in the fewest payments." },
+  { title: "Split and share", text: "Kitty opens WhatsApp with everyone's share, ready to send." },
 ];
-const HOW_SAY = "Share my expenses for last night dinner ₹10,000 with 5 people";
+const SAY = [
+  { lang: "Tanglish", text: "Petrol-ku naan 1,200 kuduthen, Arun Ravi kooda split pannu" },
+  { lang: "Hinglish", text: "Maine dinner ke 900 diye, Arun aur Ravi ke saath split karo" },
+  { lang: "தமிழ்", text: "நான் சாப்பாட்டுக்கு ஆயிரம் ரூபாய் கொடுத்தேன், பிரதி கூட பிரிச்சுக்கோ" },
+  { lang: "हिंदी", text: "मैंने ऑटो के लिए तीन सौ रुपये दिए, अरुण के साथ बाँट दो" },
+  { lang: "English", text: "Last night's dinner ₹10,000, I paid, split with Ravi, Suresh, Akash and Arun" },
+];
 let howAt = 0, howTimer = null;
 function stopHow() { clearTimeout(howTimer); }
+// Types each example in turn and stops on the English one, the dinner the next steps follow.
+function typeSayings(n = 0) {
+  const ex = SAY[n], t = $("howTyping"), chars = [...ex.text];
+  $("howLang").textContent = ex.lang;
+  t.textContent = "";
+  let i = 0;
+  const type = () => {
+    t.textContent = chars.slice(0, ++i).join("");
+    if (i < chars.length) { howTimer = setTimeout(type, 26); return; }
+    if (n < SAY.length - 1) howTimer = setTimeout(() => typeSayings(n + 1), 900);
+  };
+  type();
+}
 function showHow(i) {
   stopHow();
   howAt = i;
@@ -1083,25 +1007,22 @@ function showHow(i) {
   $("howDots").replaceChildren(...HOW.map((_, k) => el("i", k === i ? "on" : "")));
   $("howNext").textContent = "Next";
   $("howSkip").hidden = i === HOW.length - 1;
-  const t = $("howTyping");
-  t.textContent = "";
+  $("howTyping").textContent = "";
   const g = $("howGroupName");
   g.textContent = "";
+  if (i === 0) howTimer = setTimeout(() => typeSayings(0), 700);
   if (i === 4) {
     const chars = [..."Goa trip"];
     let n = 0;
     const type = () => { g.textContent = chars.slice(0, ++n).join(""); if (n < chars.length) howTimer = setTimeout(type, 110); };
     howTimer = setTimeout(type, 900);
   }
-  if (i === 1) {
-    const chars = [...HOW_SAY];
-    let n = 0;
-    const type = () => { t.textContent = chars.slice(0, ++n).join(""); if (n < chars.length) howTimer = setTimeout(type, 38); };
-    howTimer = setTimeout(type, 900);
-  }
 }
 $("howNext").addEventListener("click", () => { if (howAt < HOW.length - 1) showHow(howAt + 1); else openSetup(); });
 $("howSkip").addEventListener("click", openSetup);
+// The tour shows once per tour version, so a changed tour reaches people who saw an older one.
+// Opening the app at /#welcome always shows it, which is handy for demos.
+if (state.onboarded !== TOUR_VERSION || ASKED_FOR_TOUR) openIntro();
 
 // ---------- contacts: read on this phone only ----------
 // Contacts are held in this variable for this visit only. They are never written to storage
