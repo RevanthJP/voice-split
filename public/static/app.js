@@ -2,6 +2,7 @@
 // Everything is stored in this browser only.
 const ME = "You";
 const KEY = "voice-split-v2";
+const ASKED_FOR_TOUR = location.hash === "#welcome"; // read before the app changes the address
 const OLD_KEY = "voice-split-v1";
 const $ = (id) => document.getElementById(id);
 let state = load();
@@ -884,6 +885,7 @@ function paintDots() {
   runSayDemo(slides()[slideAt].contains($("typing")));
 }
 
+const TOUR_VERSION = 2;
 const SAY = [
   { lang: "Tanglish", text: "Petrol-ku naan 1,200 kuduthen, Arun Ravi kooda split pannu", what: "Petrol", amt: "₹1,200", split: "You, Arun, Ravi · ₹400 each" },
   { lang: "Hinglish", text: "Maine dinner ke 900 diye, Arun aur Ravi ke saath split karo", what: "Dinner", amt: "₹900", split: "You, Arun, Ravi · ₹300 each" },
@@ -943,7 +945,7 @@ function openIntro() {
   requestAnimationFrame(() => { document.body.classList.add("intro-open"); $("slides").scrollLeft = 0; slideAt = 0; paintDots(); });
 }
 function finishIntro() {
-  state.onboarded = true;
+  state.onboarded = TOUR_VERSION;
   persist();
   document.body.classList.remove("intro-open");
   runSayDemo(false);
@@ -961,4 +963,6 @@ $("introNext").addEventListener("click", () => {
   toast(`Welcome, ${name.split(" ")[0]}`);
 });
 $("introSkip").addEventListener("click", () => showSlide(slides().length - 1));
-if (!state.onboarded) openIntro();
+// The tour shows once per tour version, so a changed tour reaches people who saw an older one.
+// Opening the app at /#welcome always shows it, which is handy for demos.
+if (state.onboarded !== TOUR_VERSION || ASKED_FOR_TOUR) openIntro();
