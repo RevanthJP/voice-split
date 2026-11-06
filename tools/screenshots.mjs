@@ -156,10 +156,10 @@ try {
   if (!noSplitwise) throw new Error("Splitwise text or the mic tip is still there");
   await run(`document.getElementById("shareWa").scrollIntoView({ block: "center" })`);
   await shot("21-split-share.jpg");
-  await run(`closeCard()`);
+  await run(`closeCard(); document.getElementById("typed").value = ""`);
   await sleep(500);
 
-  await run(`document.querySelector('[data-go=friends]').click()`);
+  await run(`document.querySelector('.tabs [data-go=friends]').click()`);
   await sleep(700);
   await shot("22-friends-after-tour.jpg");
   // Friends: + with nothing typed asks to add from contacts, with the privacy note
@@ -170,7 +170,7 @@ try {
   await shot("23-friends-add-contacts.jpg");
   await run(`document.getElementById("contactsLater").click()`);
   await waitFor(`document.getElementById("contactsAsk").hidden`);
-  await run(`document.querySelector('[data-go=account]').click()`);
+  await run(`document.querySelector('.tabs [data-go=account]').click()`);
   await sleep(600);
   const account = await run(`({ name: document.getElementById("pName").value, hasLanguageRow: document.body.innerText.includes("Speaking language") })`);
   console.log("account", JSON.stringify(account));
