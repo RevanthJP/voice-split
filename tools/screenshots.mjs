@@ -78,25 +78,76 @@ try {
   console.log("empty name blocked:", blocked);
   if (!blocked) throw new Error("Empty name was not blocked");
 
-  // Finish setup with a sample name, then capture Home and Account as a new user sees them
+  // Finish setup with a sample name: the Find friends screen comes next
   await run(`document.getElementById("oName").value = "Asha"; document.getElementById("introNext").click()`);
-  await waitFor(`document.getElementById("intro").hidden`);
-  await waitFor(`document.getElementById("greet").textContent.includes("Asha")`);
-  const home = await run(`({ greet: document.getElementById("greet").textContent, upi: JSON.parse(localStorage.getItem("voice-split-v2")).profile.upi })`);
-  console.log("home", JSON.stringify(home));
-  await sleep(2600); // wait for the "Welcome" message to fade
+  await waitFor(`!document.getElementById("findFriends").hidden && document.querySelectorAll("#sampleList li").length === 5`);
+  await sleep(900);
+  await shot("15-find-friends.jpg");
+
+  // How it works: four illustrated steps
+  await run(`document.getElementById("howBtn").click()`);
+  await waitFor(`!document.getElementById("how").hidden`);
+  const howShots = ["16-how-contacts.jpg", "17-how-voice.jpg", "18-how-names.jpg", "19-how-whatsapp.jpg"];
+  for (let i = 0; i < 4; i++) {
+    await sleep(i === 1 ? 4200 : 3400); // let each step's animation finish
+    console.log("how step", i, await run(`document.getElementById("howTitle").textContent`));
+    await shot(howShots[i]);
+    await run(`document.getElementById("howNext").click()`);
+  }
+  await waitFor(`document.getElementById("how").hidden && document.getElementById("findFriends").hidden`);
+  const after = await run(`(() => { const s = JSON.parse(localStorage.getItem("voice-split-v2"));
+    return { friends: s.friends, samples: s.samples, onboarded: s.onboarded, typed: document.getElementById("typed").value }; })()`);
+  console.log("after onboarding", JSON.stringify(after));
+  if (after.friends.length !== 5 || after.onboarded !== 3) throw new Error("Sample friends were not saved");
+
+  // The contacts prompt shows in the main app
+  await waitFor(`!document.getElementById("contactsAsk").hidden`, 5000);
+  await sleep(800);
+  await shot("20-contacts-ask.jpg");
+  await run(`document.getElementById("contactsAllow").click()`); // desktop Chrome has no contact picker
+  const note = await run(`document.getElementById("contactsNote").hidden ? "" : document.getElementById("contactsNote").textContent`);
+  console.log("no-picker note:", note.slice(0, 60));
+  await run(`document.getElementById("contactsAllow").click()`);
+  await waitFor(`document.getElementById("contactsAsk").hidden`);
+
+  // Contacts are matched in the browser and never saved
+  const match = await run(`(() => { phoneContacts = [{ name: "Meena Sharma", tel: "" }];
+    const e = { payer: "You", participants: ["You", "Meena", "Arun"], items: [] };
+    const changed = matchContacts(e);
+    const saved = localStorage.getItem("voice-split-v2").includes("Meena");
+    phoneContacts = [];
+    return { changed, participants: e.participants, savedToStorage: saved }; })()`);
+  console.log("contact match", JSON.stringify(match));
+  if (!match.changed || match.participants[1] !== "Meena Sharma" || match.participants[2] !== "Arun" || match.savedToStorage) throw new Error("Contact matching failed");
+
+  await sleep(1500);
   await shot("10-home.jpg");
+
+  // The example split, read by the AI, with Share on WhatsApp at the bottom
+  await run(`document.getElementById("typeForm").requestSubmit()`);
+  await waitFor(`!document.getElementById("card").hidden && !document.getElementById("shareWa").disabled`, 40000);
+  await sleep(900);
+  const share = await run(`({ msg: splitMessage(), owed: lastOwed })`);
+  console.log("share message:", JSON.stringify(share));
+  await run(`document.getElementById("shareWa").scrollIntoView({ block: "center" })`);
+  await shot("21-split-share.jpg");
+  await run(`closeCard()`);
+  await sleep(500);
+
+  await run(`document.querySelector('[data-go=friends]').click()`);
+  await sleep(700);
+  await shot("22-friends-samples.jpg");
   await run(`document.querySelector('[data-go=account]').click()`);
   await sleep(600);
-  const account = await run(`({ name: document.getElementById("pName").value, upi: document.getElementById("pUpi").value,
-    hasLanguageRow: document.body.innerText.includes("Speaking language") })`);
+  const account = await run(`({ name: document.getElementById("pName").value, hasLanguageRow: document.body.innerText.includes("Speaking language") })`);
   console.log("account", JSON.stringify(account));
   if (account.hasLanguageRow) throw new Error("Speaking language row is still there");
   await shot("13-account.jpg");
 
   // A returning user who replays the tour must type the name again; nothing is pre-filled
-  await send("Page.navigate", { url: "http://localhost:8502/#welcome" });
-  await send("Page.reload", { ignoreCache: true }); // a hash change alone does not reload the page
+  await send("Page.navigate", { url: "about:blank" }); // leave the app so the next load is a full one
+  await sleep(500);
+  await send("Page.navigate", { url: "http://localhost:8502/?again=1#welcome" });
   await sleep(1500);
   await waitFor(`!document.getElementById("intro").hidden`);
   const replay = await run(`({ nameEmpty: document.getElementById("oName").value === "" })`);

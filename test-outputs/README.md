@@ -27,3 +27,18 @@ Not covered by these screenshots: recording with a real microphone, opening What
 The most recent run of `eval_reading.py`: for each test sentence, what the AI returned and whether the payer and every share matched to the paisa. Each run overwrites this file.
 
 The saved copy is from the held-back set (`cases_heldout.json`): 7 of 8 read correctly. The miss is a Tamil-script sentence where the AI got the payer wrong, which the confirmation screen lets you fix.
+
+## Onboarding, contacts and sharing (taken by `tools/screenshots.mjs`)
+
+| File | What it shows |
+|---|---|
+| 15-find-friends.jpg | After the name: five sample friends, the example to try, and "How it works" |
+| 16-how-contacts.jpg | How it works 1: allowing contacts, names appear |
+| 17-how-voice.jpg | How it works 2: the mic and "Share my expenses for last night dinner ₹10,000 with 5 people" |
+| 18-how-names.jpg | How it works 3: five names pop in one by one, then Next |
+| 19-how-whatsapp.jpg | How it works 4: ₹2,000 each, WhatsApp opens with the message ready |
+| 20-contacts-ask.jpg | Main app: "Now give your contacts access" |
+| 21-split-share.jpg | A real AI-read split (₹1,500 with Arun and Ravi) with Share on WhatsApp |
+| 22-friends-samples.jpg | Friends tab with the sample friends marked |
+
+Checks in the same run: sample friends saved; a spoken "Meena" matched to the contact "Meena Sharma" in the browser with nothing written to storage; the share message lists each share; browsers without a contact picker get a clear note.

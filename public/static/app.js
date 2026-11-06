@@ -251,7 +251,7 @@ function closeCard() {
   document.body.classList.remove("sheet-open");
   setTimeout(() => { $("scrim").hidden = true; $("card").hidden = true; }, 260);
 }
-$("scrim").addEventListener("click", () => { if (!$("remind").hidden) closeRemind(); else closeCard(); });
+$("scrim").addEventListener("click", () => { if (!$("contactsAsk").hidden) closeContactsAsk(); else if (!$("remind").hidden) closeRemind(); else closeCard(); });
 $("discard").addEventListener("click", closeCard);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && draft) closeCard(); });
 
@@ -269,9 +269,11 @@ function showCard(res, gid) {
   $("heard").textContent = res.transcript ? "“" + res.transcript + "”" : "";
   $("desc").value = draft.description || "";
   $("total").value = draft.total || "";
+  const matched = matchContacts(draft);
   paintCard(res);
   $("card").scrollTop = 0;
   openSheet();
+  if (matched) recheck(); // names changed to the contact's full name, so work the shares out again
 }
 function newBlankCard(gid) {
   showCard({ expense: { description: "", total: null, payer: ME, participants: [...group(gid).people], mode: "equal", values: {}, items: [] }, missing: ["amount"], transcript: null }, gid);
@@ -324,6 +326,8 @@ function paintCard(res) {
     }
   }
   $("save").disabled = !res.owed;
+  $("shareWa").disabled = !res.owed;
+  lastOwed = res.owed || null;
   $("swJson").textContent = res.splitwise ? JSON.stringify({ cost: Number(draft.total).toFixed(2), description: draft.description, users: res.splitwise }, null, 2) : "";
 }
 let checkTimer = null;
@@ -465,7 +469,7 @@ function renderFriends(friends) {
     const li = el("li", "pay");
     const amt = el("span", "amt " + (v > 0 ? "get" : v < 0 ? "owe" : "zero"));
     amt.append(el("small", null, v > 0 ? "owes you" : v < 0 ? "you owe" : "settled up"), el("strong", null, v ? rupees(Math.abs(v)) : ""));
-    li.append(who(n, groups || "Not in a group yet"), amt);
+    li.append(who(n, groups || ((state.samples || []).includes(n) ? "Sample friend" : "Not in a group yet")), amt);
     if (v > 0) { owingMe++; li.append(remindLink(n, v)); }
     const used = state.groups.some((g) => g.expenses.some((e) => e.payer === n || e.participants.includes(n)));
     if (!used && (state.friends || []).includes(n)) {
@@ -884,7 +888,7 @@ function paintDots() {
   runSayDemo(slides()[slideAt].contains($("typing")));
 }
 
-const TOUR_VERSION = 2;
+const TOUR_VERSION = 3;
 const SAY = [
   { lang: "Tanglish", text: "Petrol-ku naan 1,200 kuduthen, Arun Ravi kooda split pannu", what: "Petrol", amt: "₹1,200", split: "You, Arun, Ravi · ₹400 each" },
   { lang: "Hinglish", text: "Maine dinner ke 900 diye, Arun aur Ravi ke saath split karo", what: "Dinner", amt: "₹900", split: "You, Arun, Ravi · ₹300 each" },
@@ -959,10 +963,184 @@ $("introNext").addEventListener("click", () => {
   state.profile.name = name;
   state.profile.upi = $("oUpi").value.trim();
   paintLangs();
-  finishIntro();
-  toast(`Welcome, ${name.split(" ")[0]}`);
+  persist();
+  runSayDemo(false);
+  openFindFriends();
 });
 $("introSkip").addEventListener("click", () => showSlide(slides().length - 1));
 // The tour shows once per tour version, so a changed tour reaches people who saw an older one.
 // Opening the app at /#welcome always shows it, which is handy for demos.
 if (state.onboarded !== TOUR_VERSION || ASKED_FOR_TOUR) openIntro();
+
+// ---------- after setup: sample friends ----------
+// Sample names so a new person can try a split straight away. They're marked as samples
+// in Friends and can be removed there.
+const SAMPLE_FRIENDS = ["Arun", "Ravi", "Suresh", "Akash", "Priya"];
+let samplePicked = new Set(SAMPLE_FRIENDS);
+function paintSamples() {
+  $("sampleList").replaceChildren(...SAMPLE_FRIENDS.map((n) => {
+    const li = el("li");
+    const on = samplePicked.has(n);
+    const b = el("button", "follow" + (on ? " on" : ""), on ? "Added" : "Add");
+    b.type = "button";
+    b.setAttribute("aria-pressed", on);
+    b.setAttribute("aria-label", (on ? "Remove " : "Add ") + n);
+    b.onclick = () => { on ? samplePicked.delete(n) : samplePicked.add(n); paintSamples(); };
+    li.append(who(n, "Sample friend"), b);
+    return li;
+  }));
+}
+function showStage(id) {
+  $(id).hidden = false;
+  requestAnimationFrame(() => document.body.classList.add(id + "-open"));
+}
+function hideStage(id) {
+  document.body.classList.remove(id + "-open");
+  setTimeout(() => { $(id).hidden = true; }, 350);
+}
+function openFindFriends() {
+  samplePicked = new Set(SAMPLE_FRIENDS);
+  paintSamples();
+  showStage("findFriends");
+  hideStage("intro");
+  document.body.classList.remove("intro-open");
+}
+function finishOnboarding() {
+  const picked = SAMPLE_FRIENDS.filter((n) => samplePicked.has(n));
+  state.friends = [...new Set([...(state.friends || []), ...picked])];
+  state.samples = [...new Set([...(state.samples || []), ...picked])];
+  state.onboarded = TOUR_VERSION;
+  persist();
+  hideStage("findFriends"); hideStage("how"); hideStage("intro");
+  document.body.classList.remove("intro-open");
+  stopHow();
+  go("home");
+  renderAll();
+  // Ready to try: the example from the Find friends screen, if those friends were kept
+  if (picked.includes("Arun") && picked.includes("Ravi")) $("typed").value = "Dinner yesterday ₹1,500 split with Arun and Ravi";
+  toast(`Welcome, ${state.profile.name.split(" ")[0]}`);
+  if (!state.contactsAsked) setTimeout(openContactsAsk, 1400);
+}
+$("friendsNext").addEventListener("click", finishOnboarding);
+$("howBtn").addEventListener("click", () => { showStage("how"); showHow(0); });
+
+// ---------- "How it works": illustrated with CSS and SVG ----------
+const HOW = [
+  { title: "Allow your contacts", text: "Kitty reads your friends' names on your phone, so it knows who you mean." },
+  { title: "Just say it", text: "Tap the mic and say the expense the way you'd tell a friend." },
+  { title: "Kitty finds the people", text: "The names you said show up, ready to check. Tap Next when it looks right." },
+  { title: "Split and share", text: "Kitty splits it equally and opens WhatsApp with the message ready to send." },
+];
+const HOW_SAY = "Share my expenses for last night dinner ₹10,000 with 5 people";
+let howAt = 0, howTimer = null;
+function stopHow() { clearTimeout(howTimer); }
+function showHow(i) {
+  stopHow();
+  howAt = i;
+  const phone = $("phone");
+  phone.dataset.step = i;
+  phone.classList.remove("play"); void phone.offsetWidth; phone.classList.add("play"); // restart the animations
+  $("howTitle").textContent = HOW[i].title;
+  $("howText").textContent = HOW[i].text;
+  $("howDots").replaceChildren(...HOW.map((_, k) => el("i", k === i ? "on" : "")));
+  $("howNext").textContent = i === HOW.length - 1 ? "Start using Kitty" : "Next";
+  $("howSkip").hidden = i === HOW.length - 1;
+  const t = $("howTyping");
+  t.textContent = "";
+  if (i === 1) {
+    const chars = [...HOW_SAY];
+    let n = 0;
+    const type = () => { t.textContent = chars.slice(0, ++n).join(""); if (n < chars.length) howTimer = setTimeout(type, 38); };
+    howTimer = setTimeout(type, 900);
+  }
+}
+$("howNext").addEventListener("click", () => { if (howAt < HOW.length - 1) showHow(howAt + 1); else finishOnboarding(); });
+$("howSkip").addEventListener("click", finishOnboarding);
+
+// ---------- contacts: read on this phone only ----------
+// Contacts are held in this variable for this visit only. They are never written to storage
+// and never sent to the server; matching spoken names to them happens here in the browser.
+let phoneContacts = [];
+const canPickContacts = () => "contacts" in navigator && "ContactsManager" in window;
+async function pickContacts() {
+  const picked = await navigator.contacts.select(["name", "tel"], { multiple: true });
+  const fresh = picked.map((c) => ({ name: ((c.name || [])[0] || "").trim().replace(/\s+/g, " "), tel: (c.tel || [])[0] || "" })).filter((c) => c.name);
+  const seen = new Set(phoneContacts.map((c) => c.name));
+  phoneContacts = [...phoneContacts, ...fresh.filter((c) => !seen.has(c.name))];
+  return fresh;
+}
+function openContactsAsk() {
+  state.contactsAsked = true; persist();
+  $("contactsNote").hidden = true;
+  $("contactsAllow").textContent = "Allow contacts";
+  $("scrim").hidden = false; $("contactsAsk").hidden = false;
+  requestAnimationFrame(() => document.body.classList.add("contactsAsk-open"));
+}
+function closeContactsAsk() {
+  document.body.classList.remove("contactsAsk-open");
+  setTimeout(() => { $("contactsAsk").hidden = true; if ($("card").hidden && $("remind").hidden) $("scrim").hidden = true; }, 300);
+}
+const NO_PICKER = "This browser can't share contacts with Kitty. It works in Chrome on Android and in the Android app. You can still add friends by name in Friends, or just say their names.";
+$("contactsLater").addEventListener("click", closeContactsAsk);
+$("contactsAllow").addEventListener("click", async () => {
+  if (!canPickContacts()) {
+    if (!$("contactsNote").hidden) { closeContactsAsk(); return; }
+    $("contactsNote").textContent = NO_PICKER; $("contactsNote").hidden = false;
+    $("contactsAllow").textContent = "OK";
+    return;
+  }
+  try {
+    const got = await pickContacts();
+    closeContactsAsk();
+    if (got.length) toast(`${got.length} contact${got.length > 1 ? "s" : ""} ready to match`);
+  } catch (_) { toast("Couldn't open your contacts"); }
+});
+// On the split sheet: add people straight from the phone's contacts
+$("pickContacts").addEventListener("click", async () => {
+  if (!draft) return;
+  if (!canPickContacts()) { toast("Contacts work in Chrome on Android. Type the name instead."); return; }
+  try {
+    const got = await pickContacts();
+    if (!got.length) return;
+    draft.participants = [...new Set([...draft.participants, ...got.map((c) => c.name)])];
+    if (draft.mode !== "equal") { draft.mode = "equal"; draft.values = {}; }
+    recheck();
+  } catch (_) { toast("Couldn't open your contacts"); }
+});
+// After the AI reads a name like "Ravi", use the contact's full name ("Ravi Kumar") when exactly
+// one contact matches and the name isn't already a known friend.
+function matchContacts(expense) {
+  if (!phoneContacts.length || !expense) return false;
+  const known = new Set(knownNames().map((n) => n.toLowerCase()));
+  let changed = false;
+  const fix = (n) => {
+    if (!n || n === ME || known.has(n.toLowerCase())) return n;
+    const low = n.toLowerCase();
+    const hits = phoneContacts.filter((c) => c.name.toLowerCase() === low || c.name.toLowerCase().split(" ")[0] === low);
+    if (hits.length !== 1 || hits[0].name === n) return n;
+    changed = true;
+    return hits[0].name;
+  };
+  expense.payer = fix(expense.payer);
+  expense.participants = [...new Set(expense.participants.map(fix))];
+  for (const it of expense.items || []) { it.only = it.only.map(fix); it.excluded = it.excluded.map(fix); }
+  return changed;
+}
+
+// ---------- Share the split on WhatsApp ----------
+let lastOwed = null;
+function splitMessage() {
+  const total = rupees(draft.total);
+  const paid = draft.payer === ME ? "I paid" : `${draft.payer} paid`;
+  const lines = Object.entries(lastOwed || {}).filter(([, v]) => v).map(([n, v]) => `• ${n === ME ? (state.profile.name || "Me").split(" ")[0] : n}: ${rupees(v)}`);
+  let msg = `${draft.description || "Expense"} ${total} (${paid}), split on Kitty:\n${lines.join("\n")}`;
+  const upi = (state.profile.upi || "").trim();
+  if (draft.payer === ME && /^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(upi)) msg += `\nPay me at UPI ID: ${upi}`;
+  return msg;
+}
+$("shareWa").addEventListener("click", () => {
+  if (!draft || !lastOwed) return;
+  // No number in the link, so WhatsApp opens its own chat list to pick who gets it.
+  window.open(`https://wa.me/?text=${encodeURIComponent(splitMessage())}`, "_blank", "noopener");
+  toast("Opening WhatsApp. Remember to save the expense too.");
+});
