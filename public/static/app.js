@@ -90,6 +90,7 @@ function go(view, gid) {
     if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
   });
   $("back").hidden = view !== "group";
+  document.body.classList.toggle("home", view === "home");
   $("title").textContent = view === "group" ? group(openGroupId).name : $("view-" + view).dataset.title;
   $("views").scrollTop = 0;
   const hash = view === "group" ? "group/" + openGroupId : view;
@@ -106,7 +107,43 @@ $("back").addEventListener("click", () => go("groups"));
 // ---------- reading an expense ----------
 function busy(on, label) {
   document.body.classList.toggle("busy", on);
+  document.body.classList.toggle("checking", on);
   $("micHint").textContent = on ? label : "Tap and say the expense";
+}
+
+// A faint sound wave behind the mic, the same as the earlier design: it follows the voice while recording.
+const WAVE = 34;
+(function buildWave() {
+  const w = $("wave");
+  for (let i = 0; i < WAVE; i++) {
+    const b = document.createElement("i");
+    const mid = 1 - Math.abs(i - (WAVE - 1) / 2) / ((WAVE - 1) / 2);
+    b.style.setProperty("--h", (0.12 + 0.5 * mid * (0.6 + 0.4 * Math.sin(i * 1.7) ** 2)).toFixed(3));
+    b.style.setProperty("--v", (0.6 + 1.6 * mid).toFixed(2));
+    b.style.setProperty("--c", i / WAVE < 0.55 ? "#0071E3" : "#B9500C");
+    w.append(b);
+  }
+})();
+let meterStop = null;
+function meter(stream) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const an = ctx.createAnalyser();
+    an.fftSize = 512;
+    ctx.createMediaStreamSource(stream).connect(an);
+    const data = new Uint8Array(an.fftSize);
+    let raf = 0;
+    const tick = () => {
+      an.getByteTimeDomainData(data);
+      let sum = 0;
+      for (const v of data) sum += (v - 128) ** 2;
+      const level = Math.min(1, Math.sqrt(sum / data.length) / 40);
+      document.body.style.setProperty("--level", level.toFixed(3));
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
+    meterStop = () => { cancelAnimationFrame(raf); ctx.close(); document.body.style.setProperty("--level", 0); };
+  } catch (_) { meterStop = null; }
 }
 const knownNames = () => [...new Set([...current().people, ...allPeople()])];
 async function readText(text) {
@@ -132,12 +169,6 @@ $("typeForm").addEventListener("submit", (e) => {
   const t = $("typed").value.trim();
   if (t) { $("typed").blur(); readText(t); } else showError("Type or say an expense first.");
 });
-$("examples").addEventListener("click", (e) => {
-  if (e.target.tagName !== "BUTTON") return;
-  $("typed").value = e.target.textContent;
-  readText(e.target.textContent);
-});
-$("homeGroup").addEventListener("change", () => { state.current = $("homeGroup").value; persist(); });
 
 function paintLangs() {
   document.querySelectorAll(".langs button").forEach((b) => {
@@ -175,14 +206,16 @@ $("mic").addEventListener("click", async () => {
   rec.onstop = () => {
     clearTimeout(stopTimer);
     stream.getTracks().forEach((t) => t.stop());
-    $("mic").classList.remove("live");
+    if (meterStop) meterStop();
+    document.body.classList.remove("recording");
     const type = rec.mimeType || "audio/webm";
     if (Date.now() - started < 800) { showError("That was too short. Tap, speak, then tap again."); busy(false); return; }
     const ext = type.includes("mp4") ? "m4a" : type.includes("ogg") ? "ogg" : "webm";
     readAudio(new Blob(chunks, { type }), "expense." + ext);
   };
   rec.start();
-  $("mic").classList.add("live");
+  document.body.classList.add("recording");
+  meter(stream);
   $("micHint").textContent = "Listening… tap when done";
   if (navigator.vibrate) navigator.vibrate(10);
   stopTimer = setTimeout(() => rec.state === "recording" && rec.stop(), 45000);
@@ -332,9 +365,8 @@ function remindLink(name, amount) {
 }
 
 async function renderHome(friends) {
-  fillGroupSelect($("homeGroup"), current().id);
   const get = Object.values(friends).filter((v) => v > 0).reduce((a, b) => a + b, 0);
-  const owe = -Object.values(friends).filter((v) => v < 0).reduce((a, b) => a + b, 0);
+  const owe = Math.abs(Object.values(friends).filter((v) => v < 0).reduce((a, b) => a + b, 0));
   $("getBack").textContent = rupees(get); $("youOwe").textContent = rupees(owe);
   $("getBack").className = get ? "get" : "zero"; $("youOwe").className = owe ? "owe" : "zero";
   const recent = allExpenses().sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 5);
@@ -344,7 +376,8 @@ async function renderHome(friends) {
     li.onclick = () => go("group", e._gid);
     return li;
   }));
-  $("examples").hidden = recent.length > 0;
+  $("recentEmpty").hidden = recent.length > 0;
+  renderSpendChart();
 }
 
 function renderFriends(friends) {
@@ -362,6 +395,7 @@ function renderFriends(friends) {
     return li;
   }));
   $("badge").hidden = !owingMe; $("badge").textContent = owingMe;
+  renderFriendsChart(friends);
 }
 
 async function renderGroups() {
@@ -406,6 +440,7 @@ async function renderGroup() {
     }
     return li;
   }));
+  renderGroupShare(g);
   const settle = $("gSettle");
   settle.replaceChildren();
   $("gBal").textContent = "₹0"; $("gBal").className = "zero"; $("gBalLabel").textContent = "All settled";
@@ -582,3 +617,118 @@ renderAll();
 
 // Lets the phone install this as an app from the browser's "Add to Home Screen".
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+
+
+// ---------- charts ----------
+// Plain SVG. One hue per job: blue for your spending, green for "owes you", orange for "you owe".
+// Every value also has a text label, so colour is never the only way to read it.
+const SVGNS = "http://www.w3.org/2000/svg";
+function svg(tag, attrs, text) {
+  const n = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) n.setAttribute(k, v);
+  if (text != null) n.textContent = text;
+  return n;
+}
+const shortRupees = (n) => n >= 100000 ? "₹" + (n / 100000).toFixed(n >= 1000000 ? 0 : 1) + "L" : n >= 1000 ? "₹" + (n / 1000).toFixed(n >= 10000 ? 0 : 1) + "k" : "₹" + Math.round(n);
+// A bar with a 4px rounded end and a square base.
+function barPath(x, y, w, h, dir) {
+  const r = Math.min(4, Math.abs(dir === "up" ? h : w) / 2);
+  if (dir === "up") return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+  if (dir === "right") return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`;
+  return `M${x + w},${y}H${x + r}Q${x},${y} ${x},${y + r}V${y + h - r}Q${x},${y + h} ${x + r},${y + h}H${x + w}Z`;
+}
+let sharesCache = { key: "", list: [] };
+async function myShares() {
+  const exps = allExpenses();
+  const key = exps.map((e) => e.id).join(",");
+  if (sharesCache.key === key) return { exps, list: sharesCache.list };
+  const list = exps.length ? (await post("/api/shares", { expenses: exps.map(plainExpense) })).shares : [];
+  sharesCache = { key, list };
+  return { exps, list };
+}
+
+async function renderSpendChart() {
+  const card = $("spendCard"), box = $("spendChart");
+  let data;
+  try { data = await myShares(); } catch (_) { card.hidden = true; return; }
+  if (!data.exps.length) { card.hidden = true; return; }
+  const now = new Date();
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({ key: d.getFullYear() + "-" + d.getMonth(), label: d.toLocaleDateString("en-IN", { month: "short" }), total: 0 });
+  }
+  data.exps.forEach((e, i) => {
+    const d = new Date(e.at);
+    const m = months.find((x) => x.key === d.getFullYear() + "-" + d.getMonth());
+    if (m) m.total += data.list[i][ME] || 0;
+  });
+  card.hidden = false;
+  const W = 320, H = 150, top = 22, base = H - 24, slot = W / months.length, bw = Math.min(24, slot * 0.5);
+  const max = Math.max(...months.map((m) => m.total), 1);
+  const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Your share of spending for the last six months: " + months.map((m) => `${m.label} ${rupees(m.total)}`).join(", ") });
+  root.append(svg("line", { x1: 0, x2: W, y1: base + 0.5, y2: base + 0.5, class: "axis" }));
+  const tip = svg("text", { class: "tip", "text-anchor": "middle" });
+  months.forEach((m, i) => {
+    const x = slot * i + (slot - bw) / 2;
+    const h = m.total ? Math.max(3, (base - top) * (m.total / max)) : 0;
+    const g = svg("g", { class: "hit" + (i === months.length - 1 ? " now" : "") });
+    g.append(svg("rect", { x: slot * i, y: 0, width: slot, height: H, fill: "transparent" }));
+    if (h) g.append(svg("path", { d: barPath(x, base - h, bw, h, "up"), class: "bar blue", style: `--d:${i * 60}ms` }));
+    g.append(svg("text", { x: x + bw / 2, y: H - 6, "text-anchor": "middle", class: "tick" }, m.label));
+    const show = () => { tip.textContent = rupees(m.total); tip.setAttribute("x", Math.min(W - 28, Math.max(28, x + bw / 2))); tip.setAttribute("y", Math.max(14, base - h - 7)); };
+    g.addEventListener("pointerenter", show); g.addEventListener("click", show);
+    root.append(g);
+    if (i === months.length - 1) show();
+  });
+  root.append(tip);
+  box.replaceChildren(root);
+  const total = months.reduce((a, m) => a + m.total, 0);
+  $("spendNote").textContent = `Your share: ${rupees(total)}`;
+}
+
+function renderFriendsChart(friends) {
+  const card = $("friendsCard"), box = $("friendsChart");
+  const rows = Object.entries(friends).sort((a, b) => b[1] - a[1]);
+  if (!rows.length) { card.hidden = true; return; }
+  card.hidden = false;
+  const W = 320, row = 34, H = rows.length * row + 6, mid = W / 2, nameW = 0;
+  const max = Math.max(...rows.map(([, v]) => Math.abs(v)), 1);
+  const span = mid - 52;
+  const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": rows.map(([n, v]) => v > 0 ? `${n} owes you ${rupees(v)}` : `you owe ${n} ${rupees(-v)}`).join(", ") });
+  root.append(svg("line", { x1: mid + 0.5, x2: mid + 0.5, y1: 0, y2: H, class: "axis" }));
+  rows.forEach(([n, v], i) => {
+    const y = i * row + 8, bh = 18, w = Math.max(3, span * Math.abs(v) / max);
+    const right = v > 0;
+    const x = right ? mid + 1 : mid - w;
+    root.append(svg("path", { d: barPath(x, y, w, bh, right ? "right" : "left"), class: "bar " + (right ? "green" : "orange"), style: `--d:${i * 60}ms` }));
+    // Name on the empty side of the axis, amount at the end of the bar.
+    root.append(svg("text", { x: right ? mid - 8 : mid + 8, y: y + 13, "text-anchor": right ? "end" : "start", class: "lbl" }, n));
+    root.append(svg("text", { x: right ? x + w + 6 : x - 6, y: y + 13, "text-anchor": right ? "start" : "end", class: "val" }, shortRupees(Math.abs(v))));
+  });
+  void nameW;
+  box.replaceChildren(root);
+}
+
+async function renderGroupShare(g) {
+  const card = $("gShareCard"), box = $("gShareChart");
+  if (!g.expenses.length) { card.hidden = true; return; }
+  let list;
+  try { list = (await post("/api/shares", { expenses: g.expenses.map(plainExpense) })).shares; } catch (_) { card.hidden = true; return; }
+  const totals = {};
+  list.forEach((sh) => { for (const [k, v] of Object.entries(sh)) totals[k] = (totals[k] || 0) + v; });
+  const rows = Object.entries(totals).filter(([, v]) => v).sort((a, b) => b[1] - a[1]);
+  const spent = g.expenses.reduce((a, e) => a + Number(e.total), 0);
+  card.hidden = false;
+  $("gShareNote").textContent = `${rupees(spent)} spent in total`;
+  const W = 320, row = 34, H = rows.length * row + 4, labelW = 88, span = W - labelW - 56;
+  const max = Math.max(...rows.map(([, v]) => v), 1);
+  const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": rows.map(([n, v]) => `${n} ${rupees(v)}`).join(", ") });
+  rows.forEach(([n, v], i) => {
+    const y = i * row + 8, w = Math.max(3, span * v / max);
+    root.append(svg("text", { x: 0, y: y + 13, class: "lbl" }, n === ME ? "You" : (n.length > 11 ? n.slice(0, 10) + "…" : n)));
+    root.append(svg("path", { d: barPath(labelW, y, w, 18, "right"), class: "bar " + (n === ME ? "blue" : "soft"), style: `--d:${i * 60}ms` }));
+    root.append(svg("text", { x: labelW + w + 6, y: y + 13, class: "val" }, rupees(v)));
+  });
+  box.replaceChildren(root);
+}

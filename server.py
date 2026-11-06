@@ -157,6 +157,15 @@ def friends(body: AllIn):
     return {"friends": {k: v / 100 for k, v in pairs.items() if v}}
 
 
+@app.post("/api/shares")
+def shares(body: AllIn):
+    """What each person owes for each expense, in the same order. Used for the charts."""
+    try:
+        return {"shares": [{k: v / 100 for k, v in owed_shares(_expense(e)).items()} for e in body.expenses]}
+    except SplitError as err:
+        raise HTTPException(400, str(err))
+
+
 class ExportRow(BaseModel):
     date: str = Field("", max_length=20)
     group: str = Field("", max_length=60)

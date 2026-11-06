@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Voice Split</title>
 <meta name="description" content="Say an expense in Tamil, Hindi, English or a mix, and see who owes what.">
-<meta name="theme-color" content="#f6f4ef">
+<meta name="theme-color" content="#F5F5F7">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icons/icon-192.png">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
@@ -13,7 +13,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Voice Split">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="/static/style.css?v=5">
+<link rel="stylesheet" href="/static/style.css?v=6">
 </head>
 <body>
 <div class="app">
@@ -25,10 +25,14 @@
   <main id="views">
     <!-- Home -->
     <section class="view" id="view-home" data-title="Home">
-      <label class="pill">Adding to <select id="homeGroup" aria-label="Group to add the expense to"></select></label>
       <div class="add">
+        <div class="wave" id="wave" aria-hidden="true"></div>
         <button id="mic" class="mic" type="button" aria-label="Tap to speak">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-2.07A7 7 0 0 0 19 12h-2Z"/></svg>
+          <span class="mic-core">
+            <svg class="i-mic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+            <svg class="i-stop" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>
+            <span class="spinner" aria-hidden="true"></span>
+          </span>
         </button>
         <p id="micHint" class="hint">Tap and say the expense</p>
         <div class="seg langs" role="radiogroup" aria-label="Language you'll speak">
@@ -48,19 +52,23 @@
         <button type="button" data-go="friends"><span>You get back</span><strong id="getBack">₹0</strong></button>
         <button type="button" data-go="friends"><span>You owe</span><strong id="youOwe">₹0</strong></button>
       </div>
+      <div class="chartCard" id="spendCard" hidden>
+        <div class="chartHead"><h3>Last 6 months</h3><span class="muted" id="spendNote"></span></div>
+        <div id="spendChart" class="chart"></div>
+      </div>
 
       <div class="sectionHead"><h2>Recent</h2><button type="button" class="link" data-go="groups">All groups</button></div>
       <ul id="recent" class="list"></ul>
-      <div id="examples" class="examples">
-        <p>New here? Try one</p>
-        <button type="button">Petrol-ku naan 1,200 kuduthen, Arun Ravi kooda split pannu</button>
-        <button type="button">Maine dinner ke 900 diye, Arun aur Ravi ke saath split karo</button>
-        <button type="button">Dinner was 1500, I paid, split with Arun and Ravi, but Arun didn't have drinks, that was 300</button>
-      </div>
+      <p id="recentEmpty" class="muted small centre">Your expenses will show up here.</p>
     </section>
 
     <!-- Friends -->
     <section class="view" id="view-friends" data-title="Friends" hidden>
+      <div class="chartCard" id="friendsCard" hidden>
+        <div class="chartHead"><h3>Who owes whom</h3><span class="muted">Across all groups</span></div>
+        <div id="friendsChart" class="chart"></div>
+        <div class="legend"><span><i class="sw-get"></i>Owes you</span><span><i class="sw-owe"></i>You owe</span></div>
+      </div>
       <ul id="friends" class="list"></ul>
       <div id="friendsEmpty" class="empty"><p>Friends appear here once you split an expense with them.</p><button type="button" class="link" data-go="home">Add an expense</button></div>
     </section>
@@ -79,6 +87,10 @@
       <div class="groupHead">
         <div class="totals single"><div><span id="gBalLabel">Your balance</span><strong id="gBal">₹0</strong></div></div>
         <button id="gAdd" class="primaryBtn" type="button">Add expense here</button>
+      </div>
+      <div class="chartCard" id="gShareCard" hidden>
+        <div class="chartHead"><h3>Each person's share</h3><span class="muted" id="gShareNote"></span></div>
+        <div id="gShareChart" class="chart"></div>
       </div>
       <h2>Settle up</h2>
       <ul id="gSettle" class="list"></ul>
@@ -138,9 +150,8 @@
       <h2>More on the way</h2>
       <ul class="list soon">
         <li><span>Sync across your phones</span><em>Coming soon</em></li>
-        <li><span>Add straight to Splitwise</span><em>Needs Splitwise Pro</em></li>
         <li><span>Scan a bill photo</span><em>Coming soon</em></li>
-        <li><span>Repeating expenses, like rent</span><em>Coming soon</em></li>
+        <li><span>Monthly bills added for you, like rent or Wi-Fi</span><em>Coming soon</em></li>
         <li><span>Payment reminders</span><em>Coming soon</em></li>
       </ul>
       <h2>About</h2>
@@ -191,6 +202,6 @@
   <div id="toast" class="toast" role="status" hidden></div>
 </div>
 <div id="print" class="print" aria-hidden="true"></div>
-<script src="/static/app.js?v=5"></script>
+<script src="/static/app.js?v=6"></script>
 </body>
 </html>
