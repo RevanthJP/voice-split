@@ -360,3 +360,4 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 
 /* App name in one colour */
 .home .bar h1,.brand{background:none;-webkit-background-clip:border-box;background-clip:border-box;color:var(--blue)}
+.wa{font-weight:600;font-size:.92rem}
