@@ -202,8 +202,11 @@ try {
   await sleep(700);
   console.log("from contacts opens:", await run(`document.getElementById("contactsTitle").textContent + " | " + document.getElementById("contactsLater").textContent`));
   await shot("13-friends-from-contacts.jpg");
-  await run(`document.getElementById("contactsLater").click()`); // "Add by number"
-  await waitFor(`!document.getElementById("addPerson").hidden && document.getElementById("contactsAsk").hidden`);
+  await run(`document.getElementById("contactsLater").click()`); // "Not now"
+  await waitFor(`document.getElementById("contactsAsk").hidden`);
+  await sleep(400);
+  await run(`document.getElementById("friendByNumber").click()`);
+  await waitFor(`!document.getElementById("addPerson").hidden`);
   // A name alone isn't enough: the number is required
   await run(`document.getElementById("apName").value = "meena"; document.getElementById("addPersonForm").requestSubmit()`);
   console.log("without number:", await run(`document.getElementById("apError").textContent`));
@@ -216,7 +219,6 @@ try {
   const added = await run(`(() => { const s = JSON.parse(localStorage.getItem("voice-split-v2")); return { friends: s.friends, phone: (s.phones || {}).Meena, nameBox: !!document.getElementById("friendName") }; })()`);
   console.log("added by number:", JSON.stringify(added));
   if (added.friends.join() !== "Meena" || added.phone !== "99999 99999" || added.nameBox) throw new Error("Adding by number failed");
-  await shot("15-friends-list.jpg");
 
   // Search: by name, by part of the number, and an offer to add someone who isn't there
   const search = async (text) => { await run(`(() => { const i = document.getElementById("friendSearch"); i.value = ${JSON.stringify(text)}; i.dispatchEvent(new Event("input")); })()`); await sleep(300);
@@ -231,6 +233,35 @@ try {
   await run(`document.getElementById("apCancel").click()`);
   await waitFor(`document.getElementById("addPerson").hidden`);
   await search("");
+
+  // Each friend: Invite to Kitty, and how you last reached them. Invite opens the send sheet with WhatsApp and SMS.
+  await run(`[...document.querySelectorAll("#friends li")].find((li) => li.textContent.includes("Meena")).querySelector(".friendActions .link").click()`);
+  await waitFor(`!document.getElementById("remind").hidden`);
+  await sleep(500);
+  const invite = await run(`({ title: document.getElementById("remindTitle").textContent, link: document.getElementById("remindText").value.includes("https://voice-split.vercel.app"), number: document.getElementById("remindPhone").value, buttons: [...document.querySelectorAll("#sendBtns button")].map((b) => b.textContent.trim()) })`);
+  console.log("invite:", JSON.stringify(invite));
+  if (!invite.link || invite.number !== "99999 99999" || invite.buttons.join() !== "WhatsApp,SMS") throw new Error("Invite sheet is wrong");
+  await shot("15-friends-invite.jpg");
+  // Send by SMS (the test stops the browser leaving for the Messages app), then the row shows the SMS icon
+  await run(`window.addEventListener("beforeunload", (e) => { e.preventDefault(); }); document.getElementById("remindSms").click()`);
+  await sleep(900);
+  const afterSms = await run(`({ via: JSON.parse(localStorage.getItem("voice-split-v2")).via, badge: !!document.querySelector("#friends .via.sms") })`);
+  console.log("after SMS:", JSON.stringify(afterSms));
+  if (!afterSms.badge || afterSms.via.Meena !== "sms") throw new Error("SMS wasn't remembered");
+  // A friend Kitty only knows by name (say, from a voice note) gets "Add number"
+  await run(`(() => { state.friends.push("Ravi"); persist(); renderAll(); })()`);
+  await sleep(2600); // let the "Opening Messages" note fade
+  await shot("15-friends-list.jpg");
+  await run(`[...document.querySelectorAll("#friends li")].find((li) => li.textContent.includes("Ravi")).querySelector(".friendActions .link").click()`);
+  await waitFor(`!document.getElementById("addPerson").hidden`);
+  console.log("add number sheet:", await run(`document.getElementById("apTitle").textContent + " | name locked: " + document.getElementById("apName").readOnly`));
+  await run(`document.getElementById("apPhone").value = "987xxxxxxx"; document.getElementById("addPersonForm").requestSubmit()`);
+  console.log("placeholder-style number refused:", await run(`!document.getElementById("apError").hidden`));
+  await run(`document.getElementById("apPhone").value = "99999 99998"; document.getElementById("addPersonForm").requestSubmit()`);
+  await waitFor(`document.getElementById("addPerson").hidden`);
+  const ravi = await run(`JSON.parse(localStorage.getItem("voice-split-v2")).phones.Ravi`);
+  console.log("Ravi's number saved:", ravi);
+  if (ravi !== "99999 99998") throw new Error("Add number failed");
   await run(`document.querySelector('.tabs [data-go=groups]').click()`);
   await sleep(800);
   console.log("groups tab:", await run(`[...document.querySelectorAll("#groupIdeas .chip")].map((b) => b.textContent).join(", ") + " | tips shown: " + !document.getElementById("groupsTips").hidden`));

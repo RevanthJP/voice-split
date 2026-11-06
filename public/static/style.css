@@ -625,3 +625,19 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 .tourBack svg{width:22px;height:22px;fill:currentColor}
 .intro.stage{touch-action:pan-y}
 #intro{touch-action:pan-y}
+
+/* Send sheet: WhatsApp and SMS side by side; the one you last used comes first */
+.sendBtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.sendBtns button{display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border:0;border-radius:14px;font-weight:600;color:#fff}
+.sendBtns svg{width:20px;height:20px;fill:currentColor}
+.sendBtns .wa-btn{background:var(--green)}
+.sendBtns .sms-btn{background:var(--blue)}
+.sendBtns.smsFirst .sms-btn{order:-1}
+/* Friend rows: how you last reached them, and quick actions */
+.via{display:inline-grid;place-items:center;width:18px;height:18px;margin-left:6px;vertical-align:-3px}
+.via svg{width:16px;height:16px;fill:currentColor}
+.via.wa{color:var(--green)} .via.sms{color:var(--blue)}
+.friendActions{flex-basis:100%;display:flex;gap:16px;justify-content:flex-end;margin-top:2px}
+.friendActions .link{font-size:.85rem}
+.friendActions .removeFriend{flex-basis:auto;color:var(--red)}
+.shareOther{display:block;margin:8px auto 0;font-size:.9rem}

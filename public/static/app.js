@@ -337,6 +337,7 @@ function paintCard(res) {
   }
   $("save").disabled = !res.owed;
   $("shareWa").disabled = !res.owed;
+  $("shareOther").hidden = !res.owed;
   lastOwed = res.owed || null;
 }
 let checkTimer = null;
@@ -393,20 +394,30 @@ function remindMessage(name, amount) {
   return msg + me;
 }
 function remindLink(name, amount) {
-  const b = el("button", "wa", "Send reminder on WhatsApp");
+  const b = el("button", "wa", "Send reminder");
   b.type = "button";
   b.onclick = () => openRemind(name, amount);
   return b;
 }
-let remindFor = null;
-function openRemind(name, amount) {
-  remindFor = name;
-  $("remindTitle").textContent = `Remind ${name} about ${rupees(amount)}`;
-  $("remindText").value = remindMessage(name, amount);
+// One sheet sends reminders and invites, by WhatsApp, SMS or any other app.
+let remindFor = null, sendKind = "remind";
+function openSend(name, title, text, kind) {
+  remindFor = name; sendKind = kind;
+  $("remindTitle").textContent = title;
+  $("remindText").value = text;
   $("remindPhone").value = (state.phones || {})[name] || "";
   $("remindPhone").dispatchEvent(new Event("input"));
+  // The way you last reached this person comes first
+  const sms = (state.via || {})[name] === "sms";
+  $("sendBtns").classList.toggle("smsFirst", sms);
   $("scrim").hidden = false; $("remind").hidden = false;
   requestAnimationFrame(() => document.body.classList.add("remind-open"));
+}
+function openRemind(name, amount) { openSend(name, `Remind ${name} about ${rupees(amount)}`, remindMessage(name, amount), "remind"); }
+const APP_LINK = /localhost|127\.0\.0\.1/.test(location.host) ? "https://voice-split.vercel.app" : location.origin;
+function openInvite(name) {
+  const me = state.profile.name ? ` – ${state.profile.name.split(" ")[0]}` : "";
+  openSend(name, `Invite ${name} to Kitty`, `Hi ${name}, I'm using Kitty to split our expenses. Just say what you spent, in English, Tamil, Hindi or a mix, and it works out who owes what: ${APP_LINK}${me}`, "invite");
 }
 function closeRemind() {
   document.body.classList.remove("remind-open");
@@ -420,19 +431,34 @@ function waNumber(raw) {
 $("remindCancel").addEventListener("click", closeRemind);
 $("remindPhone").addEventListener("input", () => {
   const raw = $("remindPhone").value.trim();
-  $("remindNote").textContent = !raw ? "Without a number, WhatsApp opens and you pick the chat."
-    : waNumber(raw) ? "Opens a chat with this number." : "That number doesn't look right. Use 10 digits, or add the country code.";
+  $("remindNote").textContent = !raw ? "Without a number, WhatsApp lets you pick the chat. SMS needs their number."
+    : waNumber(raw) ? "Opens a chat with this number, on WhatsApp or SMS." : "That number doesn't look right. Use 10 digits, or add the country code.";
 });
+// Saves the number and how you sent it, so their row shows it and it comes first next time
+function sentVia(how, raw, num) {
+  state.phones = state.phones || {}; state.via = state.via || {};
+  if (num) state.phones[remindFor] = raw; else delete state.phones[remindFor];
+  state.via[remindFor] = how;
+  persist();
+  closeRemind();
+  renderAll();
+}
 $("remindSend").addEventListener("click", () => {
   const raw = $("remindPhone").value.trim();
   const num = waNumber(raw);
   if (raw && !num) { $("remindPhone").focus(); return; }
-  state.phones = state.phones || {};
-  if (num) state.phones[remindFor] = raw; else delete state.phones[remindFor];
-  persist();
   window.open(`https://wa.me/${num}?text=${encodeURIComponent($("remindText").value)}`, "_blank", "noopener");
-  closeRemind();
+  sentVia("wa", raw, num);
   toast("Opening WhatsApp");
+});
+$("remindSms").addEventListener("click", () => {
+  const raw = $("remindPhone").value.trim();
+  const num = waNumber(raw);
+  if (!num) { $("remindNote").textContent = "Add their mobile number to send an SMS."; $("remindPhone").focus(); return; }
+  // "?&body=" works on both iPhone and Android
+  location.href = `sms:+${num}?&body=${encodeURIComponent($("remindText").value)}`;
+  sentVia("sms", raw, num);
+  toast("Opening Messages");
 });
 $("remindOther").addEventListener("click", async () => {
   const text = $("remindText").value;
@@ -469,6 +495,8 @@ async function renderHome(friends) {
 }
 
 let lastFriendBalances = {};
+const WA_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.7 1.1 1.5 1.8 1 .9 1.9 1.2 2.2 1.3.3.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.6-.1 1.2Z"/></svg>';
+const SMS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2Zm3 6v2h2V9H7Zm4 0v2h2V9h-2Zm4 0v2h2V9h-2Z"/></svg>';
 function renderFriends(friends) {
   lastFriendBalances = friends;
   // Everyone you know: people in your groups, friends you added, and anyone with a balance.
@@ -489,14 +517,27 @@ function renderFriends(friends) {
     const li = el("li", "pay");
     const amt = el("span", "amt " + (v > 0 ? "get" : v < 0 ? "owe" : "zero"));
     amt.append(el("small", null, v > 0 ? "owes you" : v < 0 ? "you owe" : "settled up"), el("strong", null, v ? rupees(Math.abs(v)) : ""));
-    li.append(who(n, groups || ((state.phones || {})[n] ? "WhatsApp " + state.phones[n] : "Not in a group yet")), amt);
+    const phone = (state.phones || {})[n];
+    const w = who(n, groups || phone || "No number yet");
+    const via = (state.via || {})[n];
+    if (via) { // how you last reached them, never a guess
+      const badge = el("span", "via " + via); badge.innerHTML = via === "sms" ? SMS_ICON : WA_ICON;
+      badge.title = via === "sms" ? "Last reached by SMS" : "Last reached on WhatsApp";
+      badge.setAttribute("aria-label", badge.title);
+      w.querySelector(".name").append(badge);
+    }
+    li.append(w, amt);
     if (v > 0) li.append(remindLink(n, v));
+    const acts = el("div", "friendActions");
+    if (!phone) { const a = el("button", "link", "Add number"); a.type = "button"; a.onclick = () => openAddPerson(n, true); acts.append(a); }
+    const inv = el("button", "link", "Invite to Kitty"); inv.type = "button"; inv.onclick = () => openInvite(n); acts.append(inv);
     const used = state.groups.some((g) => g.expenses.some((e) => e.payer === n || e.participants.includes(n)));
     if (!used && (state.friends || []).includes(n)) {
       const x = el("button", "link removeFriend", "Remove"); x.type = "button";
       x.onclick = () => { state.friends = state.friends.filter((f) => f !== n); persist(); renderAll(); toast(`Removed ${n}`); };
-      li.append(x);
+      acts.append(x);
     }
+    li.append(acts);
     return li;
   }));
   $("badge").hidden = !owingMe; $("badge").textContent = owingMe;
@@ -598,9 +639,14 @@ $("friendByNumber").addEventListener("click", () => openAddPerson());
 $("friendSearch").addEventListener("input", () => renderFriends(lastFriendBalances));
 $("addSearched").addEventListener("click", () => openAddPerson($("friendSearch").value));
 
-// Add a friend with their WhatsApp number, so Kitty can send them their share
-function openAddPerson(name) {
-  $("apName").value = typeof name === "string" ? titleName(name) : ""; $("apPhone").value = ""; $("apError").hidden = true;
+// Add a friend with their mobile number, so Kitty can send them their share
+let apEditing = null; // set when adding a number for someone already in Kitty
+function openAddPerson(name, editing) {
+  apEditing = editing ? name : null;
+  $("apTitle").textContent = editing ? `Add ${name}'s number` : "Add a friend";
+  $("apSubmit").textContent = editing ? "Save number" : "Add friend";
+  $("apName").readOnly = !!editing;
+  $("apName").value = typeof name === "string" ? (editing ? name : titleName(name)) : ""; $("apPhone").value = ""; $("apError").hidden = true;
   $("scrim").hidden = false; $("addPerson").hidden = false;
   requestAnimationFrame(() => document.body.classList.add("addPerson-open"));
   setTimeout(() => $($("apName").value ? "apPhone" : "apName").focus(), 320);
@@ -617,7 +663,11 @@ $("addPersonForm").addEventListener("submit", (e) => {
   const raw = $("apPhone").value.trim();
   const bad = (msg, field) => { $("apError").textContent = msg; $("apError").hidden = false; $(field).focus(); };
   if (!name) return bad("Add their name.", "apName");
-  if (!waNumber(raw)) return bad("Add their WhatsApp number: 10 digits, or with the country code.", "apPhone");
+  if (!waNumber(raw)) return bad("Add their mobile number: 10 digits, or with the country code.", "apPhone");
+  if (apEditing) {
+    state.phones = state.phones || {}; state.phones[apEditing] = raw;
+    persist(); closeAddPerson(); renderAll(); toast(`Saved ${apEditing}'s number`); return;
+  }
   if (name.toLowerCase() === "you" || allPeople().some((p) => p.toLowerCase() === name.toLowerCase())) return bad(`${name} is already a friend.`, "apName");
   state.friends = [...(state.friends || []), name];
   state.phones = state.phones || {}; state.phones[name] = raw;
@@ -996,11 +1046,11 @@ $("setupDone").addEventListener("click", () => {
 // Its numbers come from the app's own split maths (splits.py).
 const HOW = [
   { title: "Just say it", text: "Tap the mic and say the expense the way you'd tell a friend, in English, Tamil, Hindi or a mix." },
-  { title: "Find your friends", text: "Pick them from your contacts, or add someone by name and WhatsApp number. Everything stays on your phone." },
+  { title: "Find your friends", text: "Pick them from your contacts, or add someone by name and mobile number. Everything stays on your phone." },
   { title: "Kitty finds the people", text: "The names you said show up, ready to check. Tap Next when it looks right." },
   { title: "Check it, then save", text: "Akash skipped drinks, so he pays only for food. Fix anything with a tap, then save." },
   { title: "Groups keep the tally", text: "Make a group for a trip or your flat. Every expense adds up, and Kitty works out who pays whom in the fewest payments." },
-  { title: "Split and share", text: "Kitty opens WhatsApp with everyone's share, ready to send." },
+  { title: "Split and share", text: "Kitty opens WhatsApp, or SMS for anyone not on it, with everyone's share ready to send." },
 ];
 const SAY = [
   { lang: "Tanglish", text: "Petrol-ku naan 1,200 kuduthen, Arun Ravi kooda split pannu" },
@@ -1093,7 +1143,7 @@ async function pickContacts() {
 let contactsMode = "app";
 const CONTACT_TEXT = {
   app: { title: "Now give your contacts access", body: "Kitty uses your friends' names to match who you mean when you speak. They stay on this phone: nothing from your contacts is uploaded or saved on a server.", later: "Not now", allow: "Allow contacts" },
-  friends: { title: "Add friends from your contacts", body: "Your phone opens its contact list and you choose who to add. Only the names and numbers you pick are saved, and only on this phone. Nothing from your contacts is uploaded to a server.", later: "Add by number", allow: "Choose contacts" },
+  friends: { title: "Add friends from your contacts", body: "Your phone opens its contact list and you choose who to add. Only the names and numbers you pick are saved, and only on this phone. Nothing from your contacts is uploaded to a server.", later: "Not now", allow: "Choose contacts" },
 };
 function openContactsAsk(mode) {
   contactsMode = mode === "friends" ? "friends" : "app";
@@ -1113,7 +1163,6 @@ function closeContactsAsk() {
 const NO_PICKER = "This browser can't share contacts with Kitty. It works in Chrome on Android and in the Android app. You can still add friends by name in Friends, or just say their names.";
 $("contactsLater").addEventListener("click", () => {
   closeContactsAsk();
-  if (contactsMode === "friends") setTimeout(() => openAddPerson(), 320);
 });
 $("contactsAllow").addEventListener("click", async () => {
   if (!canPickContacts()) {
@@ -1181,6 +1230,12 @@ function splitMessage() {
   if (draft.payer === ME && /^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(upi)) msg += `\nPay me at UPI ID: ${upi}`;
   return msg;
 }
+$("shareOther").addEventListener("click", async () => {
+  if (!draft || !lastOwed) return;
+  const text = splitMessage();
+  if (navigator.share) { try { await navigator.share({ text }); return; } catch (e) { if (e.name === "AbortError") return; } }
+  try { await navigator.clipboard.writeText(text); toast("Split copied. Paste it in any app."); } catch (_) { toast("Couldn't share. Try WhatsApp instead."); }
+});
 $("shareWa").addEventListener("click", () => {
   if (!draft || !lastOwed) return;
   // No number in the link, so WhatsApp opens its own chat list to pick who gets it.

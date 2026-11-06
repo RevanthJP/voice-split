@@ -33,16 +33,17 @@ Every tour screen after Welcome has a back arrow at the top left, and you can sw
 | `10-home.jpg` | Home for a new user: greeting, balance card (₹0 shortcuts don't open Friends), type box and empty charts |
 | `11-split-share.jpg` | A real AI-read split ("Dinner yesterday ₹1,500 split with Arun and Ravi") with Share on WhatsApp |
 | `12-friends.jpg` | Friends for a new user: two equal add buttons, search, a placeholder chart and "How friends work" |
-| `13-friends-from-contacts.jpg` | From contacts: the privacy note before the phone's contact list opens |
-| `14-friends-by-number.jpg` | By number: name and WhatsApp number, number required |
-| `15-friends-list.jpg` | The friend added, with their number |
+| `13-friends-from-contacts.jpg` | From contacts: the privacy note before the phone's contact list opens, with Not now |
+| `14-friends-by-number.jpg` | By number: name and mobile number, number required |
+| `15-friends-invite.jpg` | Invite to Kitty: the message with the app link, sent by WhatsApp, SMS or other apps |
+| `15-friends-list.jpg` | Meena with an SMS icon (how she was last reached), and Ravi, known only by name, with "Add number" |
 | `16-friends-search.jpg` | Search with no match, offering to add that name by number |
 | `17-groups.jpg` | Groups for a new user: one-tap group ideas and "How groups work" |
 | `18-account.jpg` | Account |
 
-The same run also checks: a stray word from silence ("E aí") doesn't open the expense sheet; no Splitwise text and no example under the mic; a spoken "Meena" is matched to the contact "Meena Sharma" in the browser with nothing written to storage; search finds people by name or by part of their number; sample friends saved by an older version are removed; replaying the tour (`/#welcome`) never pre-fills the name.
+The same run also checks: a stray word from silence ("E aí") doesn't open the expense sheet; no Splitwise text and no example under the mic; a spoken "Meena" is matched to the contact "Meena Sharma" in the browser with nothing written to storage; search finds people by name or by part of their number; sending by SMS is remembered on that friend; "Add number" saves a number for someone known only by name and refuses a made-up one like 987xxxxxxx; sample friends saved by an older version are removed; replaying the tour (`/#welcome`) never pre-fills the name.
 
-Not covered: recording with a real microphone, the phone's contact picker, opening WhatsApp, and installing on a phone. Those need a real phone.
+Not covered: recording with a real microphone, the phone's contact picker, opening WhatsApp or the Messages app, and installing on a phone. Those need a real phone.
 
 ## AI reading results (`ai-reading-results.json`)
 
