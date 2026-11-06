@@ -357,3 +357,6 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 .actions.three button{white-space:nowrap;padding:14px 14px;font-size:.95rem}
 .actions.three{grid-template-columns:1fr 1fr}
 .actions.three .wa-btn{grid-column:1/-1;order:-1}
+
+/* App name in one colour */
+.home .bar h1,.brand{background:none;-webkit-background-clip:border-box;background-clip:border-box;color:var(--blue)}

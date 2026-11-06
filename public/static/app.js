@@ -937,7 +937,6 @@ $("slides").addEventListener("scroll", () => {
 });
 function openIntro() {
   $("oName").value = state.profile.name || "";
-  $("oLang").value = state.profile.lang || "";
   $("oUpi").value = state.profile.upi || "";
   $("oError").hidden = true;
   $("intro").hidden = false;
@@ -956,7 +955,6 @@ $("introNext").addEventListener("click", () => {
   const name = $("oName").value.trim().replace(/\s+/g, " ");
   if (!name) { $("oError").hidden = false; $("oName").focus(); return; }
   state.profile.name = name;
-  state.profile.lang = $("oLang").value;
   state.profile.upi = $("oUpi").value.trim();
   paintLangs();
   finishIntro();
