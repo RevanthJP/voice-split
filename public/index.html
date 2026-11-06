@@ -13,7 +13,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Kitty">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="/static/style.css?v=14">
+<link rel="stylesheet" href="/static/style.css?v=15">
 </head>
 <body>
 <div class="app">
@@ -283,7 +283,7 @@
   <section id="findFriends" class="intro stage" hidden role="dialog" aria-modal="true" aria-label="Find your friends">
     <div class="stageBody">
       <h2 class="slideTitle">Find your friends</h2>
-      <p class="slideText">We've added sample friends so you can try a split right away. Add your own from contacts later.</p>
+      <p class="slideText">This is how your friends show up in Kitty. Add your real friends from your contacts once you're in.</p>
       <ul id="sampleList" class="list findList"></ul>
       <div class="tryCard">
         <span class="tryLabel">Try saying</span>
@@ -304,21 +304,34 @@
           <div class="perm"><span class="permIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5 6h10c0-2.2-2.5-4-5-4s-5 1.8-5 4Z"/></svg></span><b>Allow Kitty to see your contacts?</b><small>Names stay on your phone</small><span class="permBtns"><i>Don't allow</i><i class="allow">Allow</i></span></div>
           <ul class="ctList"><li><span class="avatar">A</span>Arun</li><li><span class="avatar">R</span>Ravi</li><li><span class="avatar">S</span>Suresh</li><li><span class="avatar">A</span>Akash</li></ul>
         </div>
-        <!-- Step 2: voice -->
+        <!-- Step 2: make a group -->
         <div class="scene s1">
+          <div class="gTop"><b>Groups</b><span class="gNew">+ New group</span></div>
+          <div class="gForm">
+            <small>Group name</small>
+            <p class="gName"><span id="howGroupName"></span></p>
+            <small>Members</small>
+            <div class="gMembers"><span class="avatar me">Y</span><span class="avatar">A</span><span class="avatar">R</span><span class="avatar">S</span><span class="avatar">A</span></div>
+            <span class="gCreate">Create</span>
+          </div>
+          <div class="gRow"><span class="avatar cat">G</span><span><b>Goa trip</b><small>You + 4 friends</small></span></div>
+        </div>
+        <!-- Step 3: voice -->
+        <div class="scene s2">
+          <span class="gTag">Adding to Goa trip</span>
           <span class="howMic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-2.07A7 7 0 0 0 19 12h-2Z"/></svg></span>
           <div class="howWave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
           <div class="bubble howBubble"><span class="typing" id="howTyping"></span></div>
         </div>
         <!-- Step 3: names appear -->
-        <div class="scene s2">
+        <div class="scene s3">
           <div class="howHead"><b>Dinner</b><span>₹10,000</span></div>
           <small class="howSub">Split between</small>
           <div class="pills"><i>You</i><i>Ravi</i><i>Suresh</i><i>Akash</i><i>Arun</i></div>
           <span class="fakeNext">Next</span>
         </div>
         <!-- Step 4: split and WhatsApp -->
-        <div class="scene s3">
+        <div class="scene s4">
           <div class="howSplit"><p><span>You</span><b>₹2,000</b></p><p><span>Ravi</span><b>₹2,000</b></p><p><span>Suresh</span><b>₹2,000</b></p><p><span>Akash</span><b>₹2,000</b></p><p><span>Arun</span><b>₹2,000</b></p></div>
           <div class="waChat"><span class="waTop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.7 1.1 1.5 1.8 1 .9 1.9 1.2 2.2 1.3.3.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.6-.1 1.2Z"/></svg>WhatsApp</span><p class="waMsg">Dinner ₹10,000 split on Kitty: ₹2,000 each. Pick a chat and send.</p></div>
         </div>
@@ -363,6 +376,6 @@
   <div id="toast" class="toast" role="status" hidden></div>
 </div>
 <div id="print" class="print" aria-hidden="true"></div>
-<script src="/static/app.js?v=15"></script>
+<script src="/static/app.js?v=16"></script>
 </body>
 </html>

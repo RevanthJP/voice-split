@@ -87,9 +87,10 @@ try {
   // How it works: four illustrated steps
   await run(`document.getElementById("howBtn").click()`);
   await waitFor(`!document.getElementById("how").hidden`);
-  const howShots = ["16-how-contacts.jpg", "17-how-voice.jpg", "18-how-names.jpg", "19-how-whatsapp.jpg"];
-  for (let i = 0; i < 4; i++) {
-    await sleep(i === 1 ? 4200 : 3400); // let each step's animation finish
+  const howShots = ["16-how-1-contacts.jpg", "16-how-2-group.jpg", "16-how-3-voice.jpg", "16-how-4-names.jpg", "16-how-5-whatsapp.jpg"];
+  for (let i = 0; i < howShots.length; i++) {
+    if (i === 1) { await sleep(2900); await shot("16-how-2-group-form.jpg"); await sleep(2700); } // mid-way, then the end
+    else await sleep(i === 2 ? 4200 : 3400); // let each step's animation finish
     console.log("how step", i, await run(`document.getElementById("howTitle").textContent`));
     await shot(howShots[i]);
     await run(`document.getElementById("howNext").click()`);
@@ -98,7 +99,7 @@ try {
   const after = await run(`(() => { const s = JSON.parse(localStorage.getItem("voice-split-v2"));
     return { friends: s.friends, samples: s.samples, onboarded: s.onboarded, typed: document.getElementById("typed").value }; })()`);
   console.log("after onboarding", JSON.stringify(after));
-  if (after.friends.length !== 5 || after.onboarded !== 3) throw new Error("Sample friends were not saved");
+  if (after.friends.length || after.onboarded !== 3 || after.typed) throw new Error("Sample friends or example text were left in the app");
 
   // The contacts prompt shows in the main app
   await waitFor(`!document.getElementById("contactsAsk").hidden`, 5000);
@@ -124,7 +125,7 @@ try {
   await shot("10-home.jpg");
 
   // The example split, read by the AI, with Share on WhatsApp at the bottom
-  await run(`document.getElementById("typeForm").requestSubmit()`);
+  await run(`document.getElementById("typed").value = "Dinner yesterday ₹1,500 split with Arun and Ravi"; document.getElementById("typeForm").requestSubmit()`);
   await waitFor(`!document.getElementById("card").hidden && !document.getElementById("shareWa").disabled`, 40000);
   await sleep(900);
   const share = await run(`({ msg: splitMessage(), owed: lastOwed })`);
@@ -136,7 +137,7 @@ try {
 
   await run(`document.querySelector('[data-go=friends]').click()`);
   await sleep(700);
-  await shot("22-friends-samples.jpg");
+  await shot("22-friends-after-tour.jpg");
   await run(`document.querySelector('[data-go=account]').click()`);
   await sleep(600);
   const account = await run(`({ name: document.getElementById("pName").value, hasLanguageRow: document.body.innerText.includes("Speaking language") })`);
@@ -153,6 +154,18 @@ try {
   const replay = await run(`({ nameEmpty: document.getElementById("oName").value === "" })`);
   console.log("replay", JSON.stringify(replay));
   if (!replay.nameEmpty) throw new Error("Name was pre-filled on replay");
+
+  // Someone who got sample friends saved by the earlier build: they're removed on the next load
+  await run(`(() => { const s = JSON.parse(localStorage.getItem("voice-split-v2"));
+    s.friends = ["Arun", "Ravi", "Meena"]; s.samples = ["Arun", "Ravi", "Suresh"]; s.onboarded = 3;
+    localStorage.setItem("voice-split-v2", JSON.stringify(s)); })()`);
+  await send("Page.navigate", { url: "about:blank" });
+  await sleep(400);
+  await send("Page.navigate", { url: "http://localhost:8502/?clean=1#friends" });
+  await sleep(1500);
+  const cleaned = await run(`(() => { const s = JSON.parse(localStorage.getItem("voice-split-v2")); return { friends: s.friends, samples: s.samples || null }; })()`);
+  console.log("old samples cleaned", JSON.stringify(cleaned));
+  if (cleaned.friends.join() !== "Meena" || cleaned.samples) throw new Error("Old sample friends were not removed");
 } finally {
   ws.close();
   chrome.kill();

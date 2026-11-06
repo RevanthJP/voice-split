@@ -469,7 +469,7 @@ function renderFriends(friends) {
     const li = el("li", "pay");
     const amt = el("span", "amt " + (v > 0 ? "get" : v < 0 ? "owe" : "zero"));
     amt.append(el("small", null, v > 0 ? "owes you" : v < 0 ? "you owe" : "settled up"), el("strong", null, v ? rupees(Math.abs(v)) : ""));
-    li.append(who(n, groups || ((state.samples || []).includes(n) ? "Sample friend" : "Not in a group yet")), amt);
+    li.append(who(n, groups || "Not in a group yet"), amt);
     if (v > 0) { owingMe++; li.append(remindLink(n, v)); }
     const used = state.groups.some((g) => g.expenses.some((e) => e.payer === n || e.participants.includes(n)));
     if (!used && (state.friends || []).includes(n)) {
@@ -702,6 +702,11 @@ async function renderAll() {
   renderFriends(friends);
   renderGroups();
   if (!$("view-group").hidden) renderGroup();
+}
+if (state.samples) {
+  const used = new Set(state.groups.flatMap((g) => g.expenses.flatMap((e) => [e.payer, ...e.participants])));
+  state.friends = (state.friends || []).filter((f) => !state.samples.includes(f) || used.has(f));
+  delete state.samples;
 }
 persist(); // saves data brought over from the first version
 paintLangs();
@@ -986,7 +991,7 @@ function paintSamples() {
     b.setAttribute("aria-pressed", on);
     b.setAttribute("aria-label", (on ? "Remove " : "Add ") + n);
     b.onclick = () => { on ? samplePicked.delete(n) : samplePicked.add(n); paintSamples(); };
-    li.append(who(n, "Sample friend"), b);
+    li.append(who(n), b);
     return li;
   }));
 }
@@ -1006,9 +1011,6 @@ function openFindFriends() {
   document.body.classList.remove("intro-open");
 }
 function finishOnboarding() {
-  const picked = SAMPLE_FRIENDS.filter((n) => samplePicked.has(n));
-  state.friends = [...new Set([...(state.friends || []), ...picked])];
-  state.samples = [...new Set([...(state.samples || []), ...picked])];
   state.onboarded = TOUR_VERSION;
   persist();
   hideStage("findFriends"); hideStage("how"); hideStage("intro");
@@ -1016,8 +1018,6 @@ function finishOnboarding() {
   stopHow();
   go("home");
   renderAll();
-  // Ready to try: the example from the Find friends screen, if those friends were kept
-  if (picked.includes("Arun") && picked.includes("Ravi")) $("typed").value = "Dinner yesterday ₹1,500 split with Arun and Ravi";
   toast(`Welcome, ${state.profile.name.split(" ")[0]}`);
   if (!state.contactsAsked) setTimeout(openContactsAsk, 1400);
 }
@@ -1027,6 +1027,7 @@ $("howBtn").addEventListener("click", () => { showStage("how"); showHow(0); });
 // ---------- "How it works": illustrated with CSS and SVG ----------
 const HOW = [
   { title: "Allow your contacts", text: "Kitty reads your friends' names on your phone, so it knows who you mean." },
+  { title: "Make a group", text: "Make one for a trip, your flat or office lunches. Add friends once, then just say the expense." },
   { title: "Just say it", text: "Tap the mic and say the expense the way you'd tell a friend." },
   { title: "Kitty finds the people", text: "The names you said show up, ready to check. Tap Next when it looks right." },
   { title: "Split and share", text: "Kitty splits it equally and opens WhatsApp with the message ready to send." },
@@ -1047,7 +1048,15 @@ function showHow(i) {
   $("howSkip").hidden = i === HOW.length - 1;
   const t = $("howTyping");
   t.textContent = "";
+  const g = $("howGroupName");
+  g.textContent = "";
   if (i === 1) {
+    const chars = [..."Goa trip"];
+    let n = 0;
+    const type = () => { g.textContent = chars.slice(0, ++n).join(""); if (n < chars.length) howTimer = setTimeout(type, 110); };
+    howTimer = setTimeout(type, 900);
+  }
+  if (i === 2) {
     const chars = [...HOW_SAY];
     let n = 0;
     const type = () => { t.textContent = chars.slice(0, ++n).join(""); if (n < chars.length) howTimer = setTimeout(type, 38); };

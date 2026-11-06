@@ -32,13 +32,15 @@ The saved copy is from the held-back set (`cases_heldout.json`): 7 of 8 read cor
 
 | File | What it shows |
 |---|---|
-| 15-find-friends.jpg | After the name: five sample friends, the example to try, and "How it works" |
-| 16-how-contacts.jpg | How it works 1: allowing contacts, names appear |
-| 17-how-voice.jpg | How it works 2: the mic and "Share my expenses for last night dinner ₹10,000 with 5 people" |
-| 18-how-names.jpg | How it works 3: five names pop in one by one, then Next |
-| 19-how-whatsapp.jpg | How it works 4: ₹2,000 each, WhatsApp opens with the message ready |
+| 15-find-friends.jpg | After the name: five sample friends (for the tour only), the example to try, and "How it works" |
+| 16-how-1-contacts.jpg | How it works 1: allowing contacts, names appear |
+| 16-how-2-group-form.jpg | How it works 2, mid-way: typing "Goa trip" and adding members |
+| 16-how-2-group.jpg | How it works 2, end: the new group in the list |
+| 16-how-3-voice.jpg | How it works 3: the mic and "Share my expenses for last night dinner ₹10,000 with 5 people" |
+| 16-how-4-names.jpg | How it works 4: five names pop in one by one, then Next |
+| 16-how-5-whatsapp.jpg | How it works 5: ₹2,000 each, WhatsApp opens with the message ready |
 | 20-contacts-ask.jpg | Main app: "Now give your contacts access" |
-| 21-split-share.jpg | A real AI-read split (₹1,500 with Arun and Ravi) with Share on WhatsApp |
-| 22-friends-samples.jpg | Friends tab with the sample friends marked |
+| 21-split-share.jpg | A real AI-read split (typed by the test: ₹1,500 with Arun and Ravi) with Share on WhatsApp |
+| 22-friends-after-tour.jpg | Friends tab after the tour: empty, the sample friends are not kept |
 
-Checks in the same run: sample friends saved; a spoken "Meena" matched to the contact "Meena Sharma" in the browser with nothing written to storage; the share message lists each share; browsers without a contact picker get a clear note.
+Checks in the same run: no sample friends saved and the type box empty after the tour; a spoken "Meena" matched to the contact "Meena Sharma" in the browser with nothing written to storage; the share message lists each share; browsers without a contact picker get a clear note.
