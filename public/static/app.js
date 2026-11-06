@@ -4,22 +4,32 @@ const ME = "You";
 const KEY = "voice-split-v1";
 const $ = (id) => document.getElementById(id);
 let state = load();
-let draft = null; // the expense on the confirmation card
+let draft = null; // the expense on the confirmation sheet
 
 function load() {
   try {
     const s = JSON.parse(localStorage.getItem(KEY));
     if (s && Array.isArray(s.people) && Array.isArray(s.expenses)) return s;
   } catch (_) {}
-  return { people: [ME], expenses: [], upi: "" };
+  return { people: [ME], expenses: [], upi: "", lang: "" };
 }
 function persist() { localStorage.setItem(KEY, JSON.stringify(state)); }
 const rupees = (n) => "₹" + Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: Number(n) % 1 ? 2 : 0 });
 const others = () => state.people.filter((p) => p !== ME);
 function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+function initial(name) { const a = el("span", "avatar" + (name === ME ? " me" : ""), (name || "?").slice(0, 1).toUpperCase()); a.setAttribute("aria-hidden", "true"); return a; }
 
 function showError(msg) { $("error").textContent = msg; $("error").hidden = false; }
 function clearError() { $("error").hidden = true; }
+
+let toastTimer = null;
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg; t.hidden = false;
+  requestAnimationFrame(() => t.classList.add("show"));
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.classList.remove("show"); setTimeout(() => (t.hidden = true), 250); }, 2200);
+}
 
 async function post(url, body, isForm) {
   const res = await fetch(url, isForm ? { method: "POST", body } :
@@ -30,10 +40,28 @@ async function post(url, body, isForm) {
   return data;
 }
 
+// ---------- tabs ----------
+function go(tab) {
+  if (!["add", "balances", "history", "group"].includes(tab)) tab = "add";
+  document.querySelectorAll(".view").forEach((v) => (v.hidden = v.id !== "view-" + tab));
+  document.querySelectorAll(".tabs button").forEach((b) => {
+    const on = b.dataset.go === tab;
+    b.classList.toggle("on", on);
+    if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+  });
+  $("title").textContent = $("view-" + tab).dataset.title;
+  $("views").scrollTop = 0;
+  if (location.hash !== "#" + tab) history.replaceState(null, "", "#" + tab);
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-go]");
+  if (b) go(b.dataset.go);
+});
+
 // ---------- reading an expense ----------
 function busy(on, label) {
   document.body.classList.toggle("busy", on);
-  $("micHint").textContent = on ? label : "Tap and speak. Tap again when you're done.";
+  $("micHint").textContent = on ? label : "Tap to speak";
 }
 
 async function readText(text) {
@@ -46,7 +74,7 @@ async function readText(text) {
 
 async function readAudio(blob, name) {
   clearError();
-  busy(true, "Listening back…");
+  busy(true, "Understanding…");
   const form = new FormData();
   form.append("file", blob, name);
   form.append("people", state.people.join("|"));
@@ -59,7 +87,7 @@ async function readAudio(blob, name) {
 $("typeForm").addEventListener("submit", (e) => {
   e.preventDefault();
   const t = $("typed").value.trim();
-  if (t) readText(t); else showError("Type or say an expense first.");
+  if (t) { $("typed").blur(); readText(t); } else showError("Type or say an expense first.");
 });
 $("examples").addEventListener("click", (e) => {
   if (e.target.tagName !== "BUTTON") return;
@@ -79,7 +107,6 @@ document.querySelector(".langs").addEventListener("click", (e) => {
   if (!b) return;
   state.lang = b.dataset.lang; persist(); paintLangs();
 });
-paintLangs();
 
 // ---------- recording ----------
 let rec = null, chunks = [], stream = null, stopTimer = null;
@@ -94,7 +121,7 @@ $("mic").addEventListener("click", async () => {
   clearError();
   if (!navigator.mediaDevices || !window.MediaRecorder) { showError("This browser can't record. Please type instead."); return; }
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-  catch (_) { showError("Microphone access was blocked. Allow it in your browser settings, or type instead."); return; }
+  catch (_) { showError("Microphone access was blocked. Allow it in your settings, or type instead."); return; }
   const mime = pickMime();
   rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
   chunks = [];
@@ -111,20 +138,34 @@ $("mic").addEventListener("click", async () => {
   };
   rec.start();
   $("mic").classList.add("live");
-  $("micHint").textContent = "Listening… tap again when you're done.";
+  $("micHint").textContent = "Listening… tap when done";
+  if (navigator.vibrate) navigator.vibrate(10);
   stopTimer = setTimeout(() => rec.state === "recording" && rec.stop(), 45000);
 });
 
-// ---------- confirmation card ----------
+// ---------- confirmation sheet ----------
+function openSheet() {
+  $("scrim").hidden = false; $("card").hidden = false;
+  requestAnimationFrame(() => document.body.classList.add("sheet-open"));
+}
+function closeCard() {
+  draft = null;
+  document.body.classList.remove("sheet-open");
+  setTimeout(() => { $("scrim").hidden = true; $("card").hidden = true; }, 260);
+}
+$("scrim").addEventListener("click", closeCard);
+$("discard").addEventListener("click", closeCard);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && draft) closeCard(); });
+
 function showCard(res) {
   draft = res.expense;
   $("heard").hidden = !res.transcript;
-  $("heard").textContent = res.transcript ? "We heard: “" + res.transcript + "”" : "";
+  $("heard").textContent = res.transcript ? "“" + res.transcript + "”" : "";
   $("desc").value = draft.description || "";
   $("total").value = draft.total || "";
   paintCard(res);
-  $("card").hidden = false;
-  $("card").scrollIntoView({ behavior: "smooth", block: "start" });
+  $("card").scrollTop = 0;
+  openSheet();
 }
 
 function cardPeople() {
@@ -133,16 +174,15 @@ function cardPeople() {
 
 function paintCard(res) {
   const people = cardPeople();
-  const payer = $("payer");
-  payer.replaceChildren(...people.map((p) => { const o = el("option", null, p); o.value = p; o.selected = p === draft.payer; return o; }));
+  $("payer").replaceChildren(...people.map((p) => { const o = el("option", null, p); o.value = p; o.selected = p === draft.payer; return o; }));
 
-  const sharers = $("sharers");
-  sharers.replaceChildren(...people.map((p) => {
-    const b = el("button", "chip" + (draft.participants.includes(p) ? " on" : ""), p);
+  $("sharers").replaceChildren(...people.map((p) => {
+    const on = draft.participants.includes(p);
+    const b = el("button", "chip" + (on ? " on" : ""), p);
     b.type = "button";
-    b.setAttribute("aria-pressed", draft.participants.includes(p));
+    b.setAttribute("aria-pressed", on);
     b.onclick = () => {
-      draft.participants = draft.participants.includes(p) ? draft.participants.filter((x) => x !== p) : [...draft.participants, p];
+      draft.participants = on ? draft.participants.filter((x) => x !== p) : [...draft.participants, p];
       if (draft.mode !== "equal") { draft.mode = "equal"; draft.values = {}; }
       recheck();
     };
@@ -156,7 +196,7 @@ function paintCard(res) {
   $("items").replaceChildren(...draft.items.map((it, i) => {
     const who = it.only.length ? "only " + it.only.join(", ") : "everyone except " + it.excluded.join(", ");
     const li = el("li", null, `${rupees(it.amount)} ${it.description || "item"}: ${who}`);
-    const x = el("button", "quiet", "Remove");
+    const x = el("button", "link", "Remove");
     x.type = "button";
     x.onclick = () => { draft.items.splice(i, 1); recheck(); };
     li.append(x);
@@ -173,7 +213,9 @@ function paintCard(res) {
     for (const [name, amount] of Object.entries(res.owed)) {
       if (!amount) continue;
       const li = el("li");
-      li.append(el("span", null, name === ME ? "Your share" : name), el("strong", null, rupees(amount)));
+      const who = el("span", "who");
+      who.append(initial(name), el("span", null, name === ME ? "Your share" : name));
+      li.append(who, el("strong", null, rupees(amount)));
       owed.append(li);
     }
   }
@@ -194,6 +236,7 @@ function recheck() {
   }, 150);
 }
 ["desc", "total"].forEach((id) => $(id).addEventListener("input", recheck));
+$("payer").addEventListener("change", recheck);
 $("addSharer").addEventListener("submit", (e) => {
   e.preventDefault();
   if (!draft) return;
@@ -205,57 +248,90 @@ $("addSharer").addEventListener("submit", (e) => {
   if (draft.mode !== "equal") { draft.mode = "equal"; draft.values = {}; }
   recheck();
 });
-$("payer").addEventListener("change", recheck);
 
 $("save").addEventListener("click", () => {
   if (!draft || $("save").disabled) return;
   for (const p of cardPeople()) if (!state.people.includes(p) && (p === draft.payer || draft.participants.includes(p))) state.people.push(p);
   state.expenses.unshift({ ...draft, id: Date.now(), at: new Date().toISOString() });
   persist();
+  const what = draft.description;
   closeCard();
   $("typed").value = "";
   render();
+  toast(`Saved ${what}`);
+  if (navigator.vibrate) navigator.vibrate(15);
 });
-$("discard").addEventListener("click", closeCard);
-function closeCard() { draft = null; $("card").hidden = true; }
 
-// ---------- group ----------
+// ---------- balances, history, group ----------
+function when(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}
+
 async function render() {
   $("upi").value = state.upi || "";
-  $("people").replaceChildren(...state.people.map((p) => {
-    const c = el("span", "chip on", p);
-    if (p !== ME && !state.expenses.some((e) => e.payer === p || e.participants.includes(p))) {
-      const x = el("button", "x", "×"); x.type = "button"; x.setAttribute("aria-label", "Remove " + p);
-      x.onclick = () => { state.people = state.people.filter((q) => q !== p); persist(); render(); };
-      c.append(x);
-    }
-    return c;
-  }));
 
-  $("expenses").replaceChildren(...state.expenses.map((e) => {
+  // Group
+  $("people").replaceChildren(...state.people.map((p) => {
     const li = el("li");
-    const who = e.payer === ME ? "You paid" : e.payer + " paid";
-    li.append(el("div", "what", e.description), el("div", "meta", `${who} · ${e.participants.join(", ")}`), el("strong", null, rupees(e.total)));
-    const del = el("button", "quiet", "Delete"); del.type = "button";
-    del.onclick = () => { if (confirm(`Delete "${e.description}"?`)) { state.expenses = state.expenses.filter((x) => x.id !== e.id); persist(); render(); } };
-    li.append(del);
+    const who = el("span", "who");
+    who.append(initial(p), el("span", null, p === ME ? "You" : p));
+    li.append(who);
+    if (p !== ME && !state.expenses.some((e) => e.payer === p || e.participants.includes(p))) {
+      const x = el("button", "link", "Remove"); x.type = "button";
+      x.onclick = () => { state.people = state.people.filter((q) => q !== p); persist(); render(); };
+      li.append(x);
+    }
     return li;
   }));
 
+  // History
+  $("historyEmpty").hidden = state.expenses.length > 0;
+  $("expenses").replaceChildren(...state.expenses.map((e) => {
+    const li = el("li", "exp");
+    const left = el("div", "who");
+    const icon = el("span", "avatar cat", (e.description || "E").slice(0, 1).toUpperCase());
+    const text = el("div");
+    text.append(el("div", "what", e.description), el("div", "meta", `${e.payer === ME ? "You paid" : e.payer + " paid"} · ${when(e.at)} · ${e.participants.length} ${e.participants.length === 1 ? "person" : "people"}`));
+    left.append(icon, text);
+    const right = el("div", "right");
+    const del = el("button", "link", "Delete"); del.type = "button";
+    del.onclick = () => {
+      if (!confirm(`Delete "${e.description}"?`)) return;
+      state.expenses = state.expenses.filter((x) => x.id !== e.id); persist(); render(); toast("Deleted");
+    };
+    right.append(el("strong", null, rupees(e.total)), del);
+    li.append(left, right);
+    return li;
+  }));
+
+  // Balances
   const settle = $("settle");
   settle.replaceChildren();
   $("settleEmpty").hidden = state.expenses.length > 0;
+  $("getBack").textContent = "₹0"; $("youOwe").textContent = "₹0";
+  $("getBack").classList.add("zero"); $("youOwe").classList.add("zero");
+  $("badge").hidden = true;
   if (!state.expenses.length) return;
   try {
     const b = await post("/api/balances", { expenses: state.expenses });
+    const mine = b.net[ME] || 0;
+    $("getBack").textContent = rupees(Math.max(mine, 0));
+    $("youOwe").textContent = rupees(Math.max(-mine, 0));
+    $("getBack").classList.toggle("zero", mine <= 0);
+    $("youOwe").classList.toggle("zero", mine >= 0);
+    const toMe = b.payments.filter((p) => p.to === ME).length;
+    $("badge").hidden = !toMe; $("badge").textContent = toMe;
     if (!b.payments.length) { settle.append(el("li", "even", "Everyone is even.")); return; }
     for (const p of b.payments) {
-      const li = el("li");
+      const li = el("li", "pay");
+      const who = el("span", "who");
       const line = p.to === ME ? `${p.from} pays you` : p.from === ME ? `You pay ${p.to}` : `${p.from} pays ${p.to}`;
-      li.append(el("span", null, line), el("strong", null, rupees(p.amount)));
+      who.append(initial(p.from), el("span", null, line));
+      li.append(who, el("strong", p.to === ME ? "get" : p.from === ME ? "owe" : "", rupees(p.amount)));
       const msg = settleMessage(p);
       if (msg) {
-        const a = el("a", "share", "Send on WhatsApp");
+        const a = el("a", "wa", "Remind on WhatsApp");
         a.href = "https://wa.me/?text=" + encodeURIComponent(msg);
         a.target = "_blank"; a.rel = "noopener";
         li.append(a);
@@ -269,27 +345,30 @@ function settleMessage(p) {
   if (p.to !== ME) return null;
   let msg = `Hi ${p.from}, your share for our expenses comes to ${rupees(p.amount)}.`;
   const upi = (state.upi || "").trim();
-  if (/^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(upi)) {
-    // WhatsApp only makes web links tappable, so the UPI ID is given as text to pay from any UPI app.
-    msg += ` You can pay to my UPI ID: ${upi}`;
-  }
+  // WhatsApp only makes web links tappable, so the UPI ID is given as text to pay from any UPI app.
+  if (/^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(upi)) msg += ` You can pay to my UPI ID: ${upi}`;
   return msg;
 }
 
 $("addPerson").addEventListener("submit", (e) => {
   e.preventDefault();
   const raw = $("newPerson").value.trim().replace(/\s+/g, " ");
+  $("newPerson").value = "";
   if (!raw) return;
   const name = raw[0].toUpperCase() + raw.slice(1);
-  if (name.toLowerCase() === "you" || state.people.some((p) => p.toLowerCase() === name.toLowerCase())) { $("newPerson").value = ""; return; }
-  state.people.push(name); persist(); $("newPerson").value = ""; render();
+  if (name.toLowerCase() === "you" || state.people.some((p) => p.toLowerCase() === name.toLowerCase())) return;
+  state.people.push(name); persist(); render(); toast(`Added ${name}`);
 });
-$("upi").addEventListener("change", () => { state.upi = $("upi").value.trim(); persist(); render(); });
+$("upi").addEventListener("change", () => { state.upi = $("upi").value.trim(); persist(); render(); toast("UPI ID saved"); });
 $("reset").addEventListener("click", () => {
   if (!state.expenses.length && state.people.length === 1) return;
-  if (confirm("Delete all expenses and people on this phone?")) { state = { people: [ME], expenses: [], upi: state.upi }; persist(); closeCard(); render(); }
+  if (confirm("Delete all expenses and people on this phone?")) {
+    state = { people: [ME], expenses: [], upi: state.upi, lang: state.lang }; persist(); closeCard(); render(); toast("Everything deleted");
+  }
 });
 
+paintLangs();
+go((location.hash || "#add").slice(1));
 render();
 
 // Lets the phone install this as an app from the browser's "Add to Home Screen".
