@@ -35,4 +35,4 @@ for c in cases:
     time.sleep(1.5)
 
 print(f"\n{passed}/{len(cases)} read correctly")
-json.dump(rows, open("results_reading.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+json.dump(rows, open("test-outputs/ai-reading-results.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
