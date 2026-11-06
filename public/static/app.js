@@ -17,7 +17,7 @@ function load() {
     const s = JSON.parse(localStorage.getItem(KEY));
     if (s && Array.isArray(s.groups) && s.groups.length) return s;
   } catch (_) {}
-  const fresh = { profile: { name: "", phone: "", upi: "", lang: "" }, groups: [blankGroup("Friends")], current: null };
+  const fresh = { profile: { name: "", phone: "", upi: "", lang: "" }, friends: [], groups: [blankGroup("Friends")], current: null };
   try { // bring over data from the first version
     const old = JSON.parse(localStorage.getItem(OLD_KEY));
     if (old && Array.isArray(old.expenses)) {
@@ -34,7 +34,7 @@ function persist() { localStorage.setItem(KEY, JSON.stringify(state)); }
 const group = (id) => state.groups.find((g) => g.id === id);
 const current = () => group(state.current) || state.groups[0];
 const allExpenses = () => state.groups.flatMap((g) => g.expenses.map((e) => ({ ...e, _group: g.name, _gid: g.id })));
-const allPeople = () => [...new Set(state.groups.flatMap((g) => g.people))];
+const allPeople = () => [...new Set([...state.groups.flatMap((g) => g.people), ...(state.friends || [])])];
 
 // ---------- helpers ----------
 const rupees = (n) => "₹" + Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: Number(n) % 1 ? 2 : 0 });
@@ -48,8 +48,10 @@ function who(name, sub, extra) {
   return w;
 }
 const shortDate = (iso) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-function showError(msg) { $("error").textContent = msg; $("error").hidden = false; }
-function clearError() { $("error").hidden = true; }
+// Errors show on the listening screen while it is open, otherwise under the typing box.
+const errorBox = () => ($("listen").hidden ? $("error") : $("listenError"));
+function showError(msg) { const b = errorBox(); b.textContent = msg; b.hidden = false; }
+function clearError() { $("error").hidden = true; $("listenError").hidden = true; }
 let toastTimer = null;
 function toast(msg) {
   const t = $("toast");
@@ -90,6 +92,7 @@ function go(view, gid) {
     if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
   });
   $("back").hidden = view !== "group";
+  $("meBtn").hidden = view !== "home";
   document.body.classList.toggle("home", view === "home");
   $("title").textContent = view === "group" ? group(openGroupId).name : $("view-" + view).dataset.title;
   $("views").scrollTop = 0;
@@ -108,8 +111,26 @@ $("back").addEventListener("click", () => go("groups"));
 function busy(on, label) {
   document.body.classList.toggle("busy", on);
   document.body.classList.toggle("checking", on);
-  $("micHint").textContent = on ? label : "Tap and say the expense";
+  $("micHint").textContent = on ? label : "Tap the mic and say the expense";
 }
+
+// ---------- listening screen ----------
+function openListen() {
+  clearError();
+  $("listenGroup").textContent = "Adding to " + current().name;
+  $("listen").hidden = false;
+  requestAnimationFrame(() => document.body.classList.add("listen-open"));
+  startRecording();
+}
+function closeListen() {
+  document.body.classList.remove("listen-open");
+  setTimeout(() => { $("listen").hidden = true; }, 300);
+}
+document.addEventListener("click", (e) => { if (e.target.closest("[data-listen]")) openListen(); });
+$("listenClose").addEventListener("click", () => {
+  if (rec && rec.state === "recording") { cancelled = true; rec.stop(); }
+  closeListen();
+});
 
 // A faint sound wave behind the mic, the same as the earlier design: it follows the voice while recording.
 const WAVE = 34;
@@ -160,9 +181,13 @@ async function readAudio(blob, name) {
   form.append("file", blob, name);
   form.append("people", knownNames().join("|"));
   form.append("language", state.profile.lang || "");
-  try { showCard(await post("/api/read-audio", form, true), state.current); }
-  catch (e) { showError(e.message); }
-  finally { busy(false); }
+  try {
+    const res = await post("/api/read-audio", form, true);
+    closeListen();
+    showCard(res, state.current);
+  }
+  catch (e) { showError(e.message); $("micHint").textContent = "Tap the mic to try again"; }
+  finally { busy(false); if (!$("listen").hidden && $("listenError").hidden) $("micHint").textContent = "Tap the mic and say the expense"; }
 }
 $("typeForm").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -170,31 +195,24 @@ $("typeForm").addEventListener("submit", (e) => {
   if (t) { $("typed").blur(); readText(t); } else showError("Type or say an expense first.");
 });
 
-function paintLangs() {
-  document.querySelectorAll(".langs button").forEach((b) => {
-    const on = b.dataset.lang === (state.profile.lang || "");
-    b.classList.toggle("on", on);
-    b.setAttribute("aria-checked", on);
-  });
-  $("pLang").value = state.profile.lang || "";
-}
-document.querySelector(".langs").addEventListener("click", (e) => {
-  const b = e.target.closest("button");
-  if (!b) return;
-  state.profile.lang = b.dataset.lang; persist(); paintLangs();
-});
+function paintLangs() { $("pLang").value = state.profile.lang || ""; }
 
 // ---------- recording ----------
-let rec = null, chunks = [], stream = null, stopTimer = null;
+let rec = null, chunks = [], stream = null, stopTimer = null, cancelled = false;
 function pickMime() {
   for (const m of ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"]) {
     if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
   }
   return "";
 }
-$("mic").addEventListener("click", async () => {
+$("mic").addEventListener("click", () => {
   if (rec && rec.state === "recording") { rec.stop(); return; }
+  startRecording();
+});
+async function startRecording() {
+  if (rec && rec.state === "recording") return;
   clearError();
+  cancelled = false;
   if (!navigator.mediaDevices || !window.MediaRecorder) { showError("This browser can't record. Please type instead."); return; }
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
   catch (_) { showError("Microphone access was blocked. Allow it in your settings, or type instead."); return; }
@@ -208,6 +226,7 @@ $("mic").addEventListener("click", async () => {
     stream.getTracks().forEach((t) => t.stop());
     if (meterStop) meterStop();
     document.body.classList.remove("recording");
+    if (cancelled) { busy(false); return; }
     const type = rec.mimeType || "audio/webm";
     if (Date.now() - started < 800) { showError("That was too short. Tap, speak, then tap again."); busy(false); return; }
     const ext = type.includes("mp4") ? "m4a" : type.includes("ogg") ? "ogg" : "webm";
@@ -219,7 +238,7 @@ $("mic").addEventListener("click", async () => {
   $("micHint").textContent = "Listening… tap when done";
   if (navigator.vibrate) navigator.vibrate(10);
   stopTimer = setTimeout(() => rec.state === "recording" && rec.stop(), 45000);
-});
+}
 
 // ---------- confirmation sheet ----------
 function openSheet() {
@@ -365,10 +384,19 @@ function remindLink(name, amount) {
 }
 
 async function renderHome(friends) {
+  const first = (state.profile.name || "").split(" ")[0];
+  $("greet").textContent = first ? `Hello, ${first}` : "Hello";
+  $("meInitial").textContent = (state.profile.name || "You").slice(0, 1).toUpperCase();
   const get = Object.values(friends).filter((v) => v > 0).reduce((a, b) => a + b, 0);
   const owe = Math.abs(Object.values(friends).filter((v) => v < 0).reduce((a, b) => a + b, 0));
   $("getBack").textContent = rupees(get); $("youOwe").textContent = rupees(owe);
   $("getBack").className = get ? "get" : "zero"; $("youOwe").className = owe ? "owe" : "zero";
+  const net = get - owe;
+  $("heroLabel").textContent = net > 0 ? "Overall, you get back" : net < 0 ? "Overall, you owe" : "Overall";
+  $("heroValue").textContent = rupees(Math.abs(net));
+  $("heroSub").textContent = !allExpenses().length ? "Add your first expense to get started"
+    : net === 0 ? "You're all settled up" : `${Object.values(friends).filter((v) => v).length} open ${Object.values(friends).filter((v) => v).length === 1 ? "balance" : "balances"} with friends`;
+  document.querySelector(".hero").classList.toggle("neg", net < 0);
   const recent = allExpenses().sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 5);
   $("recent").replaceChildren(...recent.map((e) => {
     const li = el("li", "tap");
@@ -378,20 +406,29 @@ async function renderHome(friends) {
   }));
   $("recentEmpty").hidden = recent.length > 0;
   renderSpendChart();
+  renderGroupChart();
 }
 
 function renderFriends(friends) {
-  const names = Object.keys(friends).sort((a, b) => Math.abs(friends[b]) - Math.abs(friends[a]));
+  // Everyone you know: people in your groups, friends you added, and anyone with a balance.
+  const names = [...new Set([...allPeople(), ...Object.keys(friends)])].filter((n) => n !== ME)
+    .sort((a, b) => Math.abs(friends[b] || 0) - Math.abs(friends[a] || 0) || a.localeCompare(b));
   $("friendsEmpty").hidden = names.length > 0;
   let owingMe = 0;
   $("friends").replaceChildren(...names.map((n) => {
-    const v = friends[n];
+    const v = friends[n] || 0;
     const groups = state.groups.filter((g) => g.people.includes(n)).map((g) => g.name).join(", ");
     const li = el("li", "pay");
-    const amt = el("span", "amt " + (v > 0 ? "get" : "owe"));
-    amt.append(el("small", null, v > 0 ? "owes you" : "you owe"), el("strong", null, rupees(Math.abs(v))));
-    li.append(who(n, groups), amt);
+    const amt = el("span", "amt " + (v > 0 ? "get" : v < 0 ? "owe" : "zero"));
+    amt.append(el("small", null, v > 0 ? "owes you" : v < 0 ? "you owe" : "settled up"), el("strong", null, v ? rupees(Math.abs(v)) : ""));
+    li.append(who(n, groups || "Not in a group yet"), amt);
     if (v > 0) { owingMe++; li.append(remindLink(n, v)); }
+    const used = state.groups.some((g) => g.expenses.some((e) => e.payer === n || e.participants.includes(n)));
+    if (!used && (state.friends || []).includes(n)) {
+      const x = el("button", "link removeFriend", "Remove"); x.type = "button";
+      x.onclick = () => { state.friends = state.friends.filter((f) => f !== n); persist(); renderAll(); toast(`Removed ${n}`); };
+      li.append(x);
+    }
     return li;
   }));
   $("badge").hidden = !owingMe; $("badge").textContent = owingMe;
@@ -481,6 +518,16 @@ $("gDelete").addEventListener("click", () => {
   state.groups = state.groups.filter((x) => x.id !== g.id);
   if (state.current === g.id) state.current = state.groups[0].id;
   persist(); go("groups"); renderAll(); toast("Group deleted");
+});
+$("addFriend").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const raw = $("friendName").value.trim().replace(/\s+/g, " ");
+  $("friendName").value = "";
+  if (!raw) return;
+  const name = raw[0].toUpperCase() + raw.slice(1);
+  if (name.toLowerCase() === "you" || allPeople().some((p) => p.toLowerCase() === name.toLowerCase())) { toast(`${name} is already a friend`); return; }
+  state.friends = [...(state.friends || []), name];
+  persist(); renderAll(); toast(`Added ${name}`);
 });
 $("newGroup").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -650,8 +697,7 @@ async function myShares() {
 async function renderSpendChart() {
   const card = $("spendCard"), box = $("spendChart");
   let data;
-  try { data = await myShares(); } catch (_) { card.hidden = true; return; }
-  if (!data.exps.length) { card.hidden = true; return; }
+  try { data = await myShares(); } catch (_) { data = { exps: [], list: [] }; }
   const now = new Date();
   const months = [];
   for (let i = 5; i >= 0; i--) {
@@ -665,6 +711,8 @@ async function renderSpendChart() {
   });
   card.hidden = false;
   const W = 320, H = 150, top = 22, base = H - 24, slot = W / months.length, bw = Math.min(24, slot * 0.5);
+  const empty = months.every((m) => !m.total);
+  if (empty) { box.replaceChildren(placeholderColumns(months.map((m) => m.label), "Your monthly share will show here")); $("spendNote").textContent = "Last 6 months"; return; }
   const max = Math.max(...months.map((m) => m.total), 1);
   const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Your share of spending for the last six months: " + months.map((m) => `${m.label} ${rupees(m.total)}`).join(", ") });
   root.append(svg("line", { x1: 0, x2: W, y1: base + 0.5, y2: base + 0.5, class: "axis" }));
@@ -731,4 +779,52 @@ async function renderGroupShare(g) {
     root.append(svg("text", { x: labelW + w + 6, y: y + 13, class: "val" }, rupees(v)));
   });
   box.replaceChildren(root);
+}
+
+
+// Empty charts: faint placeholder marks and a short note, so the layout is the same before and after data.
+function placeholderColumns(labels, note) {
+  const W = 320, H = 150, base = H - 24, slot = W / labels.length, bw = Math.min(24, slot * 0.5);
+  const heights = [0.35, 0.55, 0.3, 0.7, 0.45, 0.6];
+  const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": note });
+  root.append(svg("line", { x1: 0, x2: W, y1: base + 0.5, y2: base + 0.5, class: "axis" }));
+  labels.forEach((l, i) => {
+    const x = slot * i + (slot - bw) / 2, h = (base - 30) * heights[i % heights.length];
+    root.append(svg("path", { d: barPath(x, base - h, bw, h, "up"), class: "ghostBar" }));
+    root.append(svg("text", { x: x + bw / 2, y: H - 6, "text-anchor": "middle", class: "tick" }, l));
+  });
+  root.append(svg("text", { x: W / 2, y: 56, "text-anchor": "middle", class: "ghostNote" }, note));
+  return root;
+}
+function placeholderRows(n, note) {
+  const W = 320, row = 30, H = n * row + 34;
+  const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": note });
+  [0.8, 0.55, 0.35].slice(0, n).forEach((f, i) => {
+    const y = i * row + 6;
+    root.append(svg("rect", { x: 0, y: y + 4, width: 64, height: 10, rx: 5, class: "ghostBar" }));
+    root.append(svg("path", { d: barPath(80, y, (W - 140) * f, 18, "right"), class: "ghostBar" }));
+  });
+  root.append(svg("text", { x: W / 2, y: H - 6, "text-anchor": "middle", class: "ghostNote" }, note));
+  return root;
+}
+
+async function renderGroupChart() {
+  const box = $("groupChart");
+  let data;
+  try { data = await myShares(); } catch (_) { data = { exps: [], list: [] }; }
+  const totals = {};
+  data.exps.forEach((e, i) => { totals[e._group] = (totals[e._group] || 0) + (data.list[i][ME] || 0); });
+  const rows = Object.entries(totals).filter(([, v]) => v).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  if (!rows.length) { box.replaceChildren(placeholderRows(3, "Your share in each group will show here")); $("groupNote").textContent = "Your share"; return; }
+  const W = 320, row = 34, H = rows.length * row + 4, labelW = 96, span = W - labelW - 64;
+  const max = Math.max(...rows.map(([, v]) => v), 1);
+  const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Your share by group: " + rows.map(([n, v]) => `${n} ${rupees(v)}`).join(", ") });
+  rows.forEach(([n, v], i) => {
+    const y = i * row + 8, w = Math.max(3, span * v / max);
+    root.append(svg("text", { x: 0, y: y + 13, class: "lbl" }, n.length > 12 ? n.slice(0, 11) + "…" : n));
+    root.append(svg("path", { d: barPath(labelW, y, w, 18, "right"), class: "bar hbar", style: `--d:${i * 60}ms` }));
+    root.append(svg("text", { x: labelW + w + 6, y: y + 13, class: "val" }, rupees(v)));
+  });
+  box.replaceChildren(root);
+  $("groupNote").textContent = `Your share: ${rupees(rows.reduce((a, [, v]) => a + v, 0))}`;
 }

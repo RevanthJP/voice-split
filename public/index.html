@@ -13,53 +13,54 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Voice Split">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="/static/style.css?v=6">
+<link rel="stylesheet" href="/static/style.css?v=7">
 </head>
 <body>
 <div class="app">
   <header class="bar">
     <button id="back" class="back" type="button" hidden aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 5.4 14 4l-8 8 8 8 1.4-1.4L8.8 12z"/></svg></button>
-    <h1 id="title">Home</h1>
+    <h1 id="title">Voice Split</h1>
+    <button id="meBtn" class="meBtn" type="button" data-go="account" aria-label="Account"><span id="meInitial">Y</span></button>
   </header>
 
   <main id="views">
     <!-- Home -->
-    <section class="view" id="view-home" data-title="Home">
-      <div class="add">
-        <div class="wave" id="wave" aria-hidden="true"></div>
-        <button id="mic" class="mic" type="button" aria-label="Tap to speak">
-          <span class="mic-core">
-            <svg class="i-mic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
-            <svg class="i-stop" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>
-            <span class="spinner" aria-hidden="true"></span>
-          </span>
-        </button>
-        <p id="micHint" class="hint">Tap and say the expense</p>
-        <div class="seg langs" role="radiogroup" aria-label="Language you'll speak">
-          <button type="button" role="radio" data-lang="" aria-checked="true" class="on">Auto</button>
-          <button type="button" role="radio" data-lang="ta" aria-checked="false" lang="ta">தமிழ்</button>
-          <button type="button" role="radio" data-lang="hi" aria-checked="false" lang="hi">हिंदी</button>
-          <button type="button" role="radio" data-lang="en" aria-checked="false">English</button>
+    <section class="view" id="view-home" data-title="Voice Split">
+      <p class="greet" id="greet">Hello</p>
+
+      <div class="hero">
+        <span class="heroLabel" id="heroLabel">Overall</span>
+        <strong class="heroValue" id="heroValue">₹0</strong>
+        <span class="heroSub" id="heroSub">You're all settled up</span>
+        <div class="heroSplit">
+          <button type="button" data-go="friends"><span>You get back</span><b id="getBack">₹0</b></button>
+          <button type="button" data-go="friends"><span>You owe</span><b id="youOwe">₹0</b></button>
         </div>
-        <p id="error" class="error" role="alert" hidden></p>
       </div>
-      <form id="typeForm" class="compose">
-        <input id="typed" type="text" autocomplete="off" maxlength="1000" placeholder="Or type: Petrol 1200, split with Arun and Ravi" enterkeyhint="go">
+
+      <form id="typeForm" class="compose quick">
+        <input id="typed" type="text" autocomplete="off" maxlength="1000" placeholder="Type in English, தமிழ் or हिंदी" enterkeyhint="go" aria-label="Type an expense">
+        <button type="button" class="ghostMic" data-listen aria-label="Speak instead"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-2.07A7 7 0 0 0 19 12h-2Z"/></svg></button>
         <button type="submit" aria-label="Read"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11h13.2l-5.6-5.6L13 4l8 8-8 8-1.4-1.4 5.6-5.6H4z"/></svg></button>
       </form>
+      <p class="langNote">Speak or type in English, Tamil, Hindi, or a mix like Tanglish</p>
+      <p id="error" class="error" role="alert" hidden></p>
 
-      <div class="totals">
-        <button type="button" data-go="friends"><span>You get back</span><strong id="getBack">₹0</strong></button>
-        <button type="button" data-go="friends"><span>You owe</span><strong id="youOwe">₹0</strong></button>
-      </div>
-      <div class="chartCard" id="spendCard" hidden>
-        <div class="chartHead"><h3>Last 6 months</h3><span class="muted" id="spendNote"></span></div>
+      <div class="chartCard" id="spendCard">
+        <div class="chartHead"><h3>Your spending</h3><span class="muted" id="spendNote">Last 6 months</span></div>
         <div id="spendChart" class="chart"></div>
+      </div>
+      <div class="chartCard" id="groupCard">
+        <div class="chartHead"><h3>By group</h3><span class="muted" id="groupNote">Your share</span></div>
+        <div id="groupChart" class="chart"></div>
       </div>
 
       <div class="sectionHead"><h2>Recent</h2><button type="button" class="link" data-go="groups">All groups</button></div>
       <ul id="recent" class="list"></ul>
-      <p id="recentEmpty" class="muted small centre">Your expenses will show up here.</p>
+      <div id="recentEmpty" class="emptyCard">
+        <span class="emptyIcon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-2.07A7 7 0 0 0 19 12h-2Z"/></svg></span>
+        <p><b>No expenses yet</b><br>Tap the mic and say something like “Petrol 1,200, split with Arun and Ravi”.</p>
+      </div>
     </section>
 
     <!-- Friends -->
@@ -69,8 +70,12 @@
         <div id="friendsChart" class="chart"></div>
         <div class="legend"><span><i class="sw-get"></i>Owes you</span><span><i class="sw-owe"></i>You owe</span></div>
       </div>
+      <form id="addFriend" class="compose inline addFriend">
+        <input id="friendName" maxlength="30" placeholder="Add a friend's name" autocomplete="off" enterkeyhint="done" aria-label="Friend's name">
+        <button type="submit" aria-label="Add friend"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg></button>
+      </form>
       <ul id="friends" class="list"></ul>
-      <div id="friendsEmpty" class="empty"><p>Friends appear here once you split an expense with them.</p><button type="button" class="link" data-go="home">Add an expense</button></div>
+      <div id="friendsEmpty" class="emptyCard"><span class="emptyIcon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5Z"/></svg></span><p><b>No friends yet</b><br>Add a friend above, or just say their name when you add an expense.</p></div>
     </section>
 
     <!-- Groups -->
@@ -118,7 +123,7 @@
         <label>Name<input id="pName" maxlength="40" placeholder="Your name" autocomplete="name"></label>
         <label>Phone<input id="pPhone" maxlength="15" placeholder="Optional" inputmode="tel" autocomplete="tel"></label>
         <label>UPI ID<input id="pUpi" maxlength="60" placeholder="name@bank" autocomplete="off"></label>
-        <label>Usual language
+        <label>Speaking language
           <select id="pLang"><option value="">Auto</option><option value="ta">தமிழ் Tamil</option><option value="hi">हिंदी Hindi</option><option value="en">English</option></select>
         </label>
       </div>
@@ -163,9 +168,28 @@
   <nav class="tabs" aria-label="Sections">
     <button type="button" data-go="home" class="on"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 10.5V21h6v-6h6v6h6V10.5z"/></svg>Home</button>
     <button type="button" data-go="friends"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5Z"/></svg>Friends<span id="badge" class="badge" hidden></span></button>
+    <button type="button" class="fab" data-listen aria-label="Add an expense by voice"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-2.07A7 7 0 0 0 19 12h-2Z"/></svg></span></button>
     <button type="button" data-go="groups"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13Zm8 0c-.29 0-.62.02-.97.05A4.22 4.22 0 0 1 17 16.5V19h6v-2.5c0-2.33-4.67-3.5-7-3.5Z"/></svg>Groups</button>
     <button type="button" data-go="account"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 4a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Zm0 14a8 8 0 0 1-6.1-2.8C7 15.5 9.4 14.5 12 14.5s5 1 6.1 2.7A8 8 0 0 1 12 20Z"/></svg>Account</button>
   </nav>
+
+  <section id="listen" class="listen" hidden role="dialog" aria-modal="true" aria-label="Add an expense by voice">
+    <button id="listenClose" class="listenClose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.3 5.7 16.9 4.3 12 9.2 7.1 4.3 5.7 5.7 10.6 12l-4.9 4.9 1.4 1.4 4.9-4.9 4.9 4.9 1.4-1.4-4.9-4.9z"/></svg></button>
+    <p class="listenGroup" id="listenGroup"></p>
+    <div class="listenStage">
+      <div class="wave" id="wave" aria-hidden="true"></div>
+      <button id="mic" class="mic" type="button" aria-label="Tap to stop">
+        <span class="mic-core">
+          <svg class="i-mic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+          <svg class="i-stop" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>
+          <span class="spinner" aria-hidden="true"></span>
+        </span>
+      </button>
+    </div>
+    <p id="micHint" class="hint">Tap the mic and say the expense</p>
+    <p class="listenTip" id="listenTip">“Dinner 1,500, I paid, split with Arun and Ravi”</p>
+    <p id="listenError" class="error" role="alert" hidden></p>
+  </section>
 
   <div id="scrim" class="scrim" hidden></div>
   <section id="card" class="sheet" hidden aria-live="polite" role="dialog" aria-modal="true" aria-label="Check the expense">
@@ -202,6 +226,6 @@
   <div id="toast" class="toast" role="status" hidden></div>
 </div>
 <div id="print" class="print" aria-hidden="true"></div>
-<script src="/static/app.js?v=6"></script>
+<script src="/static/app.js?v=7"></script>
 </body>
 </html>
