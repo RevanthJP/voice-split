@@ -68,26 +68,18 @@ try {
   await run(`document.getElementById("introNext").click()`);
   await waitFor(`document.getElementById("langTag").textContent === "Tanglish" && document.querySelector(".artSay").classList.contains("done")`);
   await shot("02-tour-tanglish.jpg");
-  await run(`showSlide(4)`);
+  // Order: tour -> Find friends -> How it works -> Set up -> app
+  await run(`showSlide(3)`);
   await sleep(900);
-  await shot("09-setup.jpg");
-
-  // Leaving the name empty must be blocked for a new user
   await run(`document.getElementById("introNext").click()`);
-  const blocked = await run(`!document.getElementById("oError").hidden && !document.getElementById("intro").hidden`);
-  console.log("empty name blocked:", blocked);
-  if (!blocked) throw new Error("Empty name was not blocked");
-
-  // Finish setup with a sample name: the Find friends screen comes next
-  await run(`document.getElementById("oName").value = "Asha"; document.getElementById("introNext").click()`);
   await waitFor(`!document.getElementById("findFriends").hidden && document.querySelectorAll("#sampleList li").length === 5`);
   await sleep(900);
   await shot("15-find-friends.jpg");
 
-  // How it works: four illustrated steps
+  // How it works: six illustrated steps
   await run(`document.getElementById("howBtn").click()`);
   await waitFor(`!document.getElementById("how").hidden`);
-  const howShots = ["16-how-1-contacts.jpg", "16-how-2-group.jpg", "16-how-3-voice.jpg", "16-how-4-names.jpg", "16-how-5-whatsapp.jpg"];
+  const howShots = ["16-how-1-contacts.jpg", "16-how-2-group.jpg", "16-how-3-voice.jpg", "16-how-4-names.jpg", "16-how-5-whatsapp.jpg", "16-how-6-tally.jpg"];
   for (let i = 0; i < howShots.length; i++) {
     if (i === 1) { await sleep(2900); await shot("16-how-2-group-form.jpg"); await sleep(2700); } // mid-way, then the end
     else await sleep(i === 2 ? 4200 : 3400); // let each step's animation finish
@@ -95,11 +87,24 @@ try {
     await shot(howShots[i]);
     await run(`document.getElementById("howNext").click()`);
   }
-  await waitFor(`document.getElementById("how").hidden && document.getElementById("findFriends").hidden`);
+
+  // Set up comes after How it works
+  await waitFor(`!document.getElementById("setup").hidden && document.getElementById("how").hidden`);
+  await sleep(700);
+  await shot("09-setup.jpg");
+  await run(`document.getElementById("setupDone").click()`);
+  const blocked = await run(`!document.getElementById("oError").hidden && !document.getElementById("setup").hidden`);
+  console.log("empty name blocked:", blocked);
+  if (!blocked) throw new Error("Empty name was not blocked");
+  await run(`document.getElementById("oName").value = "asha kumar"; document.getElementById("setupDone").click()`);
+  await waitFor(`document.getElementById("setup").hidden && document.getElementById("findFriends").hidden`);
+  const saved = await run(`JSON.parse(localStorage.getItem("voice-split-v2")).profile.name`);
+  console.log("name saved as:", saved);
+  if (saved !== "Asha Kumar") throw new Error("Name was not capitalised");
   const after = await run(`(() => { const s = JSON.parse(localStorage.getItem("voice-split-v2"));
     return { friends: s.friends, samples: s.samples, onboarded: s.onboarded, typed: document.getElementById("typed").value }; })()`);
   console.log("after onboarding", JSON.stringify(after));
-  if (after.friends.length || after.onboarded !== 3 || after.typed) throw new Error("Sample friends or example text were left in the app");
+  if (after.friends.length || after.onboarded !== 4 || after.typed) throw new Error("Sample friends or example text were left in the app");
 
   // The contacts prompt shows in the main app
   await waitFor(`!document.getElementById("contactsAsk").hidden`, 5000);
@@ -124,12 +129,25 @@ try {
   await sleep(1500);
   await shot("10-home.jpg");
 
+  // Empty box: the new message
+  await run(`document.getElementById("typed").value = ""; document.getElementById("typeForm").requestSubmit()`);
+  console.log("empty box says:", await run(`document.getElementById("error").textContent`));
+  // A stray word from silence must not open the expense sheet
+  await run(`readText("E aí")`);
+  const stray = await run(`({ sheetOpen: !document.getElementById("card").hidden, error: document.getElementById("error").textContent })`);
+  console.log("stray word:", JSON.stringify(stray));
+  if (stray.sheetOpen) throw new Error("The expense sheet opened for a stray word");
+  await run(`clearError()`);
+
   // The example split, read by the AI, with Share on WhatsApp at the bottom
   await run(`document.getElementById("typed").value = "Dinner yesterday ₹1,500 split with Arun and Ravi"; document.getElementById("typeForm").requestSubmit()`);
   await waitFor(`!document.getElementById("card").hidden && !document.getElementById("shareWa").disabled`, 40000);
   await sleep(900);
   const share = await run(`({ msg: splitMessage(), owed: lastOwed })`);
   console.log("share message:", JSON.stringify(share));
+  const noSplitwise = await run(`!document.body.innerText.toLowerCase().includes("splitwise") && !document.getElementById("listenTip")`);
+  console.log("no Splitwise text, no tip under the mic:", noSplitwise);
+  if (!noSplitwise) throw new Error("Splitwise text or the mic tip is still there");
   await run(`document.getElementById("shareWa").scrollIntoView({ block: "center" })`);
   await shot("21-split-share.jpg");
   await run(`closeCard()`);
@@ -138,11 +156,19 @@ try {
   await run(`document.querySelector('[data-go=friends]').click()`);
   await sleep(700);
   await shot("22-friends-after-tour.jpg");
+  // Friends: + with nothing typed asks to add from contacts, with the privacy note
+  await run(`document.querySelector("#addFriend button").click()`);
+  await waitFor(`!document.getElementById("contactsAsk").hidden`);
+  await sleep(700);
+  console.log("friends + opens:", await run(`document.getElementById("contactsTitle").textContent`));
+  await shot("23-friends-add-contacts.jpg");
+  await run(`document.getElementById("contactsLater").click()`);
+  await waitFor(`document.getElementById("contactsAsk").hidden`);
   await run(`document.querySelector('[data-go=account]').click()`);
   await sleep(600);
   const account = await run(`({ name: document.getElementById("pName").value, hasLanguageRow: document.body.innerText.includes("Speaking language") })`);
   console.log("account", JSON.stringify(account));
-  if (account.hasLanguageRow) throw new Error("Speaking language row is still there");
+  if (account.name !== "Asha Kumar" || account.hasLanguageRow) throw new Error("Speaking language row is still there");
   await shot("13-account.jpg");
 
   // A returning user who replays the tour must type the name again; nothing is pre-filled
@@ -157,7 +183,7 @@ try {
 
   // Someone who got sample friends saved by the earlier build: they're removed on the next load
   await run(`(() => { const s = JSON.parse(localStorage.getItem("voice-split-v2"));
-    s.friends = ["Arun", "Ravi", "Meena"]; s.samples = ["Arun", "Ravi", "Suresh"]; s.onboarded = 3;
+    s.friends = ["Arun", "Ravi", "Meena"]; s.samples = ["Arun", "Ravi", "Suresh"]; s.onboarded = 4;
     localStorage.setItem("voice-split-v2", JSON.stringify(s)); })()`);
   await send("Page.navigate", { url: "about:blank" });
   await sleep(400);

@@ -400,7 +400,7 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 .howStage{flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:safe center;padding:44px 24px 8px;text-align:center}
 .phone{position:relative;width:250px;height:300px;border-radius:34px;background:var(--gray);border:8px solid #1D1D1F;box-shadow:0 30px 60px -30px rgba(14,26,51,.6);overflow:hidden}
 .scene{position:absolute;inset:0;padding:22px 14px;display:none;flex-direction:column;align-items:center;gap:12px}
-.phone[data-step="0"] .s0,.phone[data-step="1"] .s1,.phone[data-step="2"] .s2,.phone[data-step="3"] .s3,.phone[data-step="4"] .s4{display:flex}
+.phone[data-step="0"] .s0,.phone[data-step="1"] .s1,.phone[data-step="2"] .s2,.phone[data-step="3"] .s3,.phone[data-step="4"] .s4,.phone[data-step="5"] .s5{display:flex}
 /* step 1: permission, then the list */
 .perm{width:100%;background:var(--card);border-radius:18px;padding:14px;display:grid;justify-items:center;gap:4px;box-shadow:0 10px 24px -16px rgba(0,0,0,.4)}
 .perm b{font-size:.92rem}.perm small{color:var(--muted);font-size:.78rem}
@@ -489,3 +489,31 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 .gRow .avatar{width:32px;height:32px}
 .play .gRow{animation:pop .45s 4.7s var(--ease) both}
 .gTag{font-size:.72rem;font-weight:700;color:var(--blue-deep);background:var(--blue-soft);border-radius:999px;padding:4px 10px}
+
+.setup-open #setup{opacity:1}
+.setupBody{display:flex;flex-direction:column;justify-content:safe center}
+.setupBody .form{margin-top:1.4rem;text-align:left}
+/* How it works: the group keeps the tally */
+.s5{gap:8px;padding-top:16px}
+.tally{width:100%;background:var(--card);border-radius:14px;padding:2px 10px}
+.tally p{display:flex;align-items:center;gap:8px;margin:0;padding:5px 0;border-bottom:1px solid var(--hair);font-size:.8rem;text-align:left;opacity:0}
+.tally p:last-child{border-bottom:0}
+.tally p>span:nth-child(2){flex:1;font-weight:600;line-height:1.2}
+.tally small{display:block;font-weight:400;color:var(--muted);font-size:.68rem}
+.tally .avatar{width:24px;height:24px;font-size:.68rem}
+.play .tally p{animation:rise .35s var(--ease) both}
+.play .tally p:nth-child(1){animation-delay:.2s}.play .tally p:nth-child(2){animation-delay:.6s}.play .tally p:nth-child(3){animation-delay:1s}
+.settle{width:100%;background:var(--card);border-radius:14px;padding:6px 10px;text-align:left;opacity:0}
+.play .settle{animation:rise .4s 1.6s var(--ease) both}
+.settle small{color:var(--muted);font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.settle p{display:flex;justify-content:space-between;margin:0;padding:2px 0;font-size:.76rem}
+.settle b{color:var(--green)}
+.remindChip{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:5px;padding:5px;border-radius:9px;background:var(--green-soft);color:var(--green);font-weight:600;font-size:.72rem;opacity:0}
+.remindChip svg{width:14px;height:14px;fill:currentColor}
+.play .remindChip{animation:pop .4s 2.4s var(--ease) both}
+.phone{height:350px}
+.s5 .howHead{padding:8px 12px;font-size:.92rem}
+.s5{gap:6px;padding-top:14px}
+.tally p{padding:4px 0}
+.contactsSheet .actions{grid-template-columns:1fr 1.4fr}
+.contactsSheet .actions button{white-space:nowrap}
