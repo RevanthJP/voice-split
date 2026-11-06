@@ -46,6 +46,7 @@ Rules:
 - Read number words as digits. Tamil hundreds: nooru 100, irunooru 200, munnooru 300, naanooru 400, ainooru/ainnooru 500, arunooru 600, ezhunooru 700, ennooru 800, tholaayiram 900. Tamil thousands: aayiram 1000, rendaayiram 2000, moovaayiram 3000, naalaayiram 4000, ainthaayiram 5000, pathaayiram 10000; aayirathi irunooru 1200. Tamil tens: pathu 10, irubathu 20, aimbadhu 50, nooru 100. Hindi: sau 100, do sau 200, paanch sau 500, hazaar 1000, dedh hazaar 1500, dhai sau 250, dhai hazaar 2500. Also 1.2k = 1200. The same words in Tamil or Hindi script mean the same numbers.
 - "split with A and B" or "A B kooda split" means the speaker shares too: participants = [{ME}, A, B].
 - Indians often list friends without "and": "Arun Ravi kooda", "Arun Ravi ke saath", "with Arun Ravi Kavya" are separate people, one name each. Only treat two words as one person if it is clearly a full name (a known person, or a surname like Kumar, Sharma, Iyer, Reddy).
+- Pronouns such as avan, aval, avanga, him, her, woh refer to someone already named. Never list a pronoun as a person: "Prathi kuduthaa, naanum avalum share" means {ME} and Prathi.
 - "paid for A and B", "A B-kku kuduthen", "treat" means only A and B share and the payer does not.
 - If no payer is said, the payer is "{ME}". The payer is always a person, never a place or thing: in "Hotel-ku 2000 Prathi kuduthaa", Hotel is what was paid for and Prathi paid.
 - Unnamed family who came with someone ("my wife came", "his two kids") are never separate people. Give that person extra shares instead, with mode "shares", and list every sharer in participants.
@@ -150,10 +151,34 @@ def _one_edit(a, b):
     return any(long_[:i] + long_[i + 1:] == short for i in range(len(long_)))
 
 
+# Words for "him", "her" or "them" refer to someone already named, so they are never new people.
+_PRONOUNS = {"aval", "avan", "avar", "avanga", "avargal", "ival", "ivan", "ivar", "avalum", "avanum",
+             "he", "she", "him", "her", "they", "them", "woh", "wo", "unhe", "usne", "uske", "inhe", "unko"}
+# A second word from this list makes it one person's full name ("Arun Kumar"), not two people.
+_SURNAMES = {"kumar", "sharma", "iyer", "iyengar", "reddy", "singh", "nair", "pillai", "rao", "gupta", "verma",
+             "patel", "das", "menon", "raj", "krishnan", "shetty", "jain", "khan", "naidu", "mehta", "joshi"}
+
+
+def _people(raw_names, known):
+    """Clean a list of names: drop pronouns, and split "Arun Ravi" into two people unless it is a
+    known person or looks like a full name."""
+    out = []
+    for raw in raw_names or []:
+        name = _name(raw, known)
+        if not name or name.lower() in _PRONOUNS:
+            continue
+        words = name.split()
+        if len(words) > 1 and name not in known and words[-1].lower() not in _SURNAMES:
+            out.extend(n for n in (_name(w, known) for w in words) if n and n.lower() not in _PRONOUNS)
+        else:
+            out.append(name)
+    return list(dict.fromkeys(out))
+
+
 def to_expense(data, known_people=()):
     """Turn the model's JSON into an Expense, cleaning names. Returns (expense, missing)."""
     known = [ME, *[p for p in known_people if p != ME]]
-    names = lambda xs: list(dict.fromkeys(n for n in (_name(x, known) for x in (xs or [])) if n))
+    names = lambda xs: _people(xs, known)
     payer = _name(data.get("payer"), known) or ME
     participants = names(data.get("participants"))
     mode = data.get("mode") if data.get("mode") in ("equal", "exact", "shares", "percent") else "equal"

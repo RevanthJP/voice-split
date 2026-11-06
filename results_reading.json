@@ -1,100 +1,18 @@
 [
  {
-  "id": "en-equal",
-  "lang": "en",
-  "ok": true,
-  "text": "I paid 1200 for petrol, split with Arun and Ravi",
-  "got": "payer=You owed={'You': 400.0, 'Arun': 400.0, 'Ravi': 400.0} missing=[]",
-  "ai": {
-   "description": "Petrol",
-   "total": 1200,
-   "payer": "You",
-   "participants": [
-    "You",
-    "Arun",
-    "Ravi"
-   ],
-   "mode": "equal",
-   "values": {},
-   "items": [],
-   "missing": []
-  }
- },
- {
-  "id": "tg-digits",
+  "id": "h-tg-cab",
   "lang": "tanglish",
-  "ok": true,
-  "text": "Petrol-ku naan 1,200 kuduthen, Arun Ravi kooda split pannu",
-  "got": "payer=You owed={'You': 400.0, 'Arun': 400.0, 'Ravi': 400.0} missing=[]",
+  "ok": false,
+  "text": "Cab-ku Kavya 900 pay panna, naan Arun Kavya moonu perum share",
+  "got": "payer=You owed={'You': 300.0, 'Arun': 300.0, 'Kavya': 300.0} missing=[]",
   "ai": {
-   "description": "Petrol",
-   "total": 1200,
-   "payer": "You",
-   "participants": [
-    "You",
-    "Arun",
-    "Ravi"
-   ],
-   "mode": "equal",
-   "values": {},
-   "items": [],
-   "missing": []
-  }
- },
- {
-  "id": "tg-words",
-  "lang": "tanglish",
-  "ok": true,
-  "text": "Naan aayiram roobai saapaduku spend panninen, adha Prathi kooda split pannu",
-  "got": "payer=You owed={'You': 500.0, 'Prathi': 500.0} missing=[]",
-  "ai": {
-   "description": "Dinner",
-   "total": 1000,
-   "payer": "You",
-   "participants": [
-    "You",
-    "Prathi"
-   ],
-   "mode": "equal",
-   "values": {},
-   "items": [],
-   "missing": []
-  }
- },
- {
-  "id": "ta-script",
-  "lang": "tamil",
-  "ok": true,
-  "text": "நான் சாப்பாட்டுக்கு ஆயிரம் ரூபாய் கொடுத்தேன், பிரதி கூட பிரிச்சுக்கோ",
-  "got": "payer=You owed={'You': 500.0, 'Prathi': 500.0} missing=[]",
-  "ai": {
-   "description": "Food",
-   "total": 1000,
-   "payer": "You",
-   "participants": [
-    "You",
-    "Prathi"
-   ],
-   "mode": "equal",
-   "values": {},
-   "items": [],
-   "missing": []
-  }
- },
- {
-  "id": "hg-equal",
-  "lang": "hinglish",
-  "ok": true,
-  "text": "Maine dinner ke 900 diye, Arun aur Ravi ke saath split karo",
-  "got": "payer=You owed={'You': 300.0, 'Arun': 300.0, 'Ravi': 300.0} missing=[]",
-  "ai": {
-   "description": "Dinner",
+   "description": "Cab",
    "total": 900,
    "payer": "You",
    "participants": [
     "You",
     "Arun",
-    "Ravi"
+    "Kavya"
    ],
    "mode": "equal",
    "values": {},
@@ -103,58 +21,17 @@
   }
  },
  {
-  "id": "hi-script",
-  "lang": "hindi",
+  "id": "h-tg-ainooru",
+  "lang": "tanglish",
   "ok": true,
-  "text": "मैंने ऑटो के लिए तीन सौ रुपये दिए, अरुण के साथ बाँट दो",
-  "got": "payer=You owed={'You': 150.0, 'Arun': 150.0} missing=[]",
-  "ai": {
-   "description": "Auto",
-   "total": 300,
-   "payer": "You",
-   "participants": [
-    "You",
-    "Arun"
-   ],
-   "mode": "equal",
-   "values": {},
-   "items": [],
-   "missing": []
-  }
- },
- {
-  "id": "en-other-payer",
-  "lang": "en",
-  "ok": true,
-  "text": "Arun paid 600 for movie tickets for me, him and Ravi",
-  "got": "payer=Arun owed={'You': 200.0, 'Arun': 200.0, 'Ravi': 200.0} missing=[]",
+  "text": "Movie tickets-ku naan ainooru kuduthen, Ravi kooda split",
+  "got": "payer=You owed={'You': 250.0, 'Ravi': 250.0} missing=[]",
   "ai": {
    "description": "Movie tickets",
-   "total": 600,
-   "payer": "Arun",
-   "participants": [
-    "You",
-    "Arun",
-    "Ravi"
-   ],
-   "mode": "equal",
-   "values": {},
-   "items": [],
-   "missing": []
-  }
- },
- {
-  "id": "en-treat",
-  "lang": "en",
-  "ok": true,
-  "text": "I paid 500 for Arun and Ravi's lunch, I didn't eat",
-  "got": "payer=You owed={'Arun': 250.0, 'Ravi': 250.0} missing=[]",
-  "ai": {
-   "description": "Lunch",
    "total": 500,
    "payer": "You",
    "participants": [
-    "Arun",
+    "You",
     "Ravi"
    ],
    "mode": "equal",
@@ -164,277 +41,58 @@
   }
  },
  {
-  "id": "en-drinks",
-  "lang": "en",
+  "id": "h-hg-hazaar",
+  "lang": "hinglish",
   "ok": true,
-  "text": "Dinner was 1500, I paid, split with Arun and Ravi, but Arun didn't have drinks, that was 300",
-  "got": "payer=You owed={'You': 550.0, 'Arun': 400.0, 'Ravi': 550.0} missing=[]",
+  "text": "Do hazaar ka grocery maine liya, Arun aur Kavya ke saath barabar baanto",
+  "got": "payer=You owed={'You': 666.67, 'Arun': 666.67, 'Kavya': 666.66} missing=[]",
   "ai": {
-   "description": "Dinner",
-   "total": 1500,
+   "description": "Grocery",
+   "total": 2000,
    "payer": "You",
    "participants": [
     "You",
     "Arun",
-    "Ravi"
+    "Kavya"
    ],
    "mode": "equal",
    "values": {},
-   "items": [
-    {
-     "amount": 300,
-     "description": "Drinks",
-     "only": [],
-     "excluded": [
-      "Arun"
-     ]
-    }
-   ],
+   "items": [],
    "missing": []
   }
  },
  {
-  "id": "tg-drinks",
-  "lang": "tanglish",
-  "ok": false,
-  "text": "Dinner 1500 naan pay pannen, Arun Ravi kooda, aana Arun drinks edukala, adhu 300",
-  "got": "payer=You owed={'You': 900.0, 'Arun Ravi': 600.0} missing=[]",
-  "ai": {
-   "description": "Dinner",
-   "total": 1500,
-   "payer": "You",
-   "participants": [
-    "You",
-    "Arun Ravi"
-   ],
-   "mode": "equal",
-   "values": {},
-   "items": [
-    {
-     "amount": 300,
-     "description": "drinks",
-     "only": [],
-     "excluded": [
-      "Arun Ravi"
-     ]
-    }
-   ],
-   "missing": []
-  }
- },
- {
-  "id": "en-own-shopping",
+  "id": "h-en-kids",
   "lang": "en",
   "ok": true,
-  "text": "Ravi paid 2000 for groceries for me, Arun and himself, but 500 of it was his own shopping",
-  "got": "payer=Ravi owed={'You': 500.0, 'Arun': 500.0, 'Ravi': 1000.0} missing=[]",
+  "text": "Lunch 1600, Ravi paid, Ravi had his two kids with him so count him as three, and me as one",
+  "got": "payer=Ravi owed={'Ravi': 1200.0, 'You': 400.0} missing=[]",
   "ai": {
-   "description": "Groceries",
-   "total": 2000,
+   "description": "Lunch",
+   "total": 1600,
    "payer": "Ravi",
    "participants": [
-    "You",
-    "Arun",
-    "Ravi"
-   ],
-   "mode": "equal",
-   "values": {},
-   "items": [
-    {
-     "amount": 500,
-     "description": "Shopping",
-     "only": [
-      "Ravi"
-     ],
-     "excluded": []
-    }
-   ],
-   "missing": []
-  }
- },
- {
-  "id": "en-shares",
-  "lang": "en",
-  "ok": true,
-  "text": "Hotel was 6000, I paid, count me as two shares because my wife came, Arun is one share",
-  "got": "payer=You owed={'You': 4000.0, 'Arun': 2000.0} missing=[]",
-  "ai": {
-   "description": "Hotel",
-   "total": 6000,
-   "payer": "You",
-   "participants": [
-    "You",
-    "Arun"
+    "Ravi",
+    "You"
    ],
    "mode": "shares",
    "values": {
-    "You": 2,
-    "Arun": 1
+    "Ravi": 3,
+    "You": 1
    },
    "items": [],
    "missing": []
   }
  },
  {
-  "id": "en-percent",
+  "id": "h-en-dessert",
   "lang": "en",
   "ok": true,
-  "text": "Rent 20000, I paid, I take 60 percent and Arun takes 40 percent",
-  "got": "payer=You owed={'You': 12000.0, 'Arun': 8000.0} missing=[]",
+  "text": "I paid 2400 for dinner with Arun, Ravi and Kavya, Kavya skipped dessert which was 400",
+  "got": "payer=You owed={'You': 633.34, 'Arun': 633.33, 'Ravi': 633.33, 'Kavya': 500.0} missing=[]",
   "ai": {
-   "description": "Rent",
-   "total": 20000,
-   "payer": "You",
-   "participants": [
-    "You",
-    "Arun"
-   ],
-   "mode": "percent",
-   "values": {
-    "You": 60,
-    "Arun": 40
-   },
-   "items": [],
-   "missing": []
-  }
- },
- {
-  "id": "en-exact",
-  "lang": "en",
-  "ok": true,
-  "text": "Shopping 900, I paid, my part was 600 and Ravi's part was 300",
-  "got": "payer=You owed={'You': 600.0, 'Ravi': 300.0} missing=[]",
-  "ai": {
-   "description": "Shopping",
-   "total": 900,
-   "payer": "You",
-   "participants": [
-    "You",
-    "Ravi"
-   ],
-   "mode": "exact",
-   "values": {
-    "You": 600,
-    "Ravi": 300
-   },
-   "items": [],
-   "missing": []
-  }
- },
- {
-  "id": "en-no-amount",
-  "lang": "en",
-  "ok": true,
-  "text": "I paid for petrol, split with Arun",
-  "got": "missing=['amount']",
-  "ai": {
-   "description": "Petrol",
-   "total": null,
-   "payer": "You",
-   "participants": [
-    "You",
-    "Arun"
-   ],
-   "mode": "equal",
-   "values": {},
-   "items": [],
-   "missing": [
-    "amount"
-   ]
-  }
- },
- {
-  "id": "tg-no-amount",
-  "lang": "tanglish",
-  "ok": true,
-  "text": "Auto-ku naan kuduthen, Kavya kooda split pannu",
-  "got": "missing=['amount']",
-  "ai": {
-   "description": "Auto",
-   "total": null,
-   "payer": "You",
-   "participants": [
-    "You",
-    "Kavya"
-   ],
-   "mode": "equal",
-   "values": {},
-   "items": [],
-   "missing": [
-    "amount"
-   ]
-  }
- },
- {
-  "id": "tg-750",
-  "lang": "tanglish",
-  "ok": true,
-  "text": "Auto-ku ezhunooru aimbadhu naan kuduthen, Kavya kooda split",
-  "got": "payer=You owed={'You': 375.0, 'Kavya': 375.0} missing=[]",
-  "ai": {
-   "description": "Auto",
-   "total": 750,
-   "payer": "You",
-   "participants": [
-    "You",
-    "Kavya"
-   ],
-   "mode": "equal",
-   "values": {},
-   "items": [],
-   "missing": []
-  }
- },
- {
-  "id": "tg-other-payer",
-  "lang": "tanglish",
-  "ok": false,
-  "text": "Hotel-ku rendaayiram Prathi kuduthaa, naanum avalum share pannanum",
-  "got": "payer=Prathi owed={'You': 666.67, 'Prathi': 666.67, 'Aval': 666.66} missing=[]",
-  "ai": {
-   "description": "Hotel",
-   "total": 2000,
-   "payer": "Prathi",
-   "participants": [
-    "You",
-    "Prathi",
-    "Aval"
-   ],
-   "mode": "equal",
-   "values": {},
-   "items": [],
-   "missing": []
-  }
- },
- {
-  "id": "hg-dedh",
-  "lang": "hinglish",
-  "ok": true,
-  "text": "Dedh hazaar ka cab Ravi ne pay kiya, main aur Ravi split karenge",
-  "got": "payer=Ravi owed={'You': 750.0, 'Ravi': 750.0} missing=[]",
-  "ai": {
-   "description": "Cab",
-   "total": 1500,
-   "payer": "Ravi",
-   "participants": [
-    "You",
-    "Ravi"
-   ],
-   "mode": "equal",
-   "values": {},
-   "items": [],
-   "missing": []
-  }
- },
- {
-  "id": "en-1.2k",
-  "lang": "en",
-  "ok": true,
-  "text": "Paid 1.2k for snacks, split between me, Arun, Ravi and Kavya",
-  "got": "payer=You owed={'You': 300.0, 'Arun': 300.0, 'Ravi': 300.0, 'Kavya': 300.0} missing=[]",
-  "ai": {
-   "description": "snacks",
-   "total": 1200,
+   "description": "Dinner",
+   "total": 2400,
    "payer": "You",
    "participants": [
     "You",
@@ -444,63 +102,54 @@
    ],
    "mode": "equal",
    "values": {},
-   "items": [],
-   "missing": []
-  }
- },
- {
-  "id": "en-known-case",
-  "lang": "en",
-  "ok": true,
-  "text": "paid 800 for pizza with prathi",
-  "got": "payer=You owed={'You': 400.0, 'Prathi': 400.0} missing=[]",
-  "ai": {
-   "description": "Pizza",
-   "total": 800,
-   "payer": "You",
-   "participants": [
-    "You",
-    "Prathi"
+   "items": [
+    {
+     "amount": 2000,
+     "description": "Dinner"
+    },
+    {
+     "amount": 400,
+     "description": "Dessert",
+     "excluded": [
+      "Kavya"
+     ]
+    }
    ],
-   "mode": "equal",
-   "values": {},
-   "items": [],
    "missing": []
   }
  },
  {
-  "id": "ta-script-payer",
+  "id": "h-ta-script",
   "lang": "tamil",
   "ok": true,
-  "text": "அருண் டீக்கு 400 ரூபாய் கொடுத்தான், நானும் அவனும் பிரிச்சுக்கணும்",
-  "got": "payer=Arun owed={'You': 200.0, 'Arun': 200.0} missing=[]",
-  "ai": {
-   "description": "Tea",
-   "total": 400,
-   "payer": "Arun",
-   "participants": [
-    "You",
-    "Arun"
-   ],
-   "mode": "equal",
-   "values": {},
-   "items": [],
-   "missing": []
-  }
- },
- {
-  "id": "ta-two-names",
-  "lang": "tamil",
-  "ok": true,
-  "text": "petrol-க்கு ஆயிரத்து இரண்ணூறு ரூபாய் கொடுத்தேன், Arun Ravi கூட split பண்ணு.",
-  "got": "payer=You owed={'You': 400.0, 'Arun': 400.0, 'Ravi': 400.0} missing=[]",
+  "text": "காவ்யா பெட்ரோலுக்கு ஐநூறு ரூபாய் போட்டா, நானும் அவளும்",
+  "got": "payer=Kavya owed={'You': 250.0, 'Kavya': 250.0} missing=[]",
   "ai": {
    "description": "Petrol",
-   "total": 1200,
-   "payer": "You",
+   "total": 500,
+   "payer": "Kavya",
    "participants": [
     "You",
-    "Arun",
+    "Kavya"
+   ],
+   "mode": "equal",
+   "values": {},
+   "items": [],
+   "missing": []
+  }
+ },
+ {
+  "id": "h-hi-script",
+  "lang": "hindi",
+  "ok": true,
+  "text": "रवि ने चाय के लिए दो सौ रुपये दिए, मेरे और रवि के बीच",
+  "got": "payer=Ravi owed={'You': 100.0, 'Ravi': 100.0} missing=[]",
+  "ai": {
+   "description": "Tea",
+   "total": 200,
+   "payer": "Ravi",
+   "participants": [
+    "You",
     "Ravi"
    ],
    "mode": "equal",
@@ -510,18 +159,17 @@
   }
  },
  {
-  "id": "en-full-name",
+  "id": "h-en-no-people",
   "lang": "en",
   "ok": true,
-  "text": "I paid 600 for lunch with Arun Kumar",
-  "got": "payer=You owed={'You': 300.0, 'Arun Kumar': 300.0} missing=[]",
+  "text": "Paid 450 for the parking",
+  "got": "payer=You owed={'You': 450.0} missing=[]",
   "ai": {
-   "description": "Lunch",
-   "total": 600,
+   "description": "Parking",
+   "total": 450,
    "payer": "You",
    "participants": [
-    "You",
-    "Arun Kumar"
+    "You"
    ],
    "mode": "equal",
    "values": {},
