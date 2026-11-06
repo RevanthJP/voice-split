@@ -196,7 +196,7 @@ $("typeForm").addEventListener("submit", (e) => {
   if (t) { $("typed").blur(); readText(t); } else showError("Type or say an expense first.");
 });
 
-function paintLangs() { $("pLang").value = state.profile.lang || ""; }
+function paintLangs() { state.profile.lang = ""; } // the language is always detected automatically
 
 // ---------- recording ----------
 let rec = null, chunks = [], stream = null, stopTimer = null, cancelled = false;
@@ -595,7 +595,6 @@ function renderAccount() {
 for (const [id, key] of [["pName", "name"], ["pPhone", "phone"], ["pUpi", "upi"]]) {
   $(id).addEventListener("change", () => { state.profile[key] = $(id).value.trim(); persist(); renderAccount(); toast("Saved"); });
 }
-$("pLang").addEventListener("change", () => { state.profile.lang = $("pLang").value; persist(); paintLangs(); toast("Saved"); });
 $("reset").addEventListener("click", () => {
   if (!confirm("Delete all groups, expenses and your details on this phone?")) return;
   localStorage.removeItem(KEY); localStorage.removeItem(OLD_KEY);
@@ -954,11 +953,11 @@ function finishIntro() {
 }
 $("introNext").addEventListener("click", () => {
   if (slideAt < slides().length - 1) { showSlide(slideAt + 1); return; }
-  // Someone who already set a name can leave it empty here and keep the old one.
-  const name = $("oName").value.trim().replace(/\s+/g, " ") || state.profile.name;
+  // The name is always what the person types here, never one saved earlier.
+  const name = $("oName").value.trim().replace(/\s+/g, " ");
   if (!name) { $("oError").hidden = false; $("oName").focus(); return; }
   state.profile.name = name;
-  if ($("oUpi").value.trim()) state.profile.upi = $("oUpi").value.trim();
+  state.profile.upi = $("oUpi").value.trim();
   paintLangs();
   finishIntro();
   toast(`Welcome, ${name.split(" ")[0]}`);

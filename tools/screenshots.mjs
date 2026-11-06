@@ -77,6 +77,31 @@ try {
   const blocked = await run(`!document.getElementById("oError").hidden && !document.getElementById("intro").hidden`);
   console.log("empty name blocked:", blocked);
   if (!blocked) throw new Error("Empty name was not blocked");
+
+  // Finish setup with a sample name, then capture Home and Account as a new user sees them
+  await run(`document.getElementById("oName").value = "Asha"; document.getElementById("introNext").click()`);
+  await waitFor(`document.getElementById("intro").hidden`);
+  await waitFor(`document.getElementById("greet").textContent.includes("Asha")`);
+  const home = await run(`({ greet: document.getElementById("greet").textContent, upi: JSON.parse(localStorage.getItem("voice-split-v2")).profile.upi })`);
+  console.log("home", JSON.stringify(home));
+  await sleep(2600); // wait for the "Welcome" message to fade
+  await shot("10-home.jpg");
+  await run(`document.querySelector('[data-go=account]').click()`);
+  await sleep(600);
+  const account = await run(`({ name: document.getElementById("pName").value, upi: document.getElementById("pUpi").value,
+    hasLanguageRow: document.body.innerText.includes("Speaking language") })`);
+  console.log("account", JSON.stringify(account));
+  if (account.hasLanguageRow) throw new Error("Speaking language row is still there");
+  await shot("13-account.jpg");
+
+  // A returning user who replays the tour must type the name again; nothing is pre-filled
+  await send("Page.navigate", { url: "http://localhost:8502/#welcome" });
+  await send("Page.reload", { ignoreCache: true }); // a hash change alone does not reload the page
+  await sleep(1500);
+  await waitFor(`!document.getElementById("intro").hidden`);
+  const replay = await run(`({ nameEmpty: document.getElementById("oName").value === "" })`);
+  console.log("replay", JSON.stringify(replay));
+  if (!replay.nameEmpty) throw new Error("Name was pre-filled on replay");
 } finally {
   ws.close();
   chrome.kill();
