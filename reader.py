@@ -26,7 +26,8 @@ _SPEECH_HINT = {
 _LANG_CODE = {"tamil": "ta", "ta": "ta", "hindi": "hi", "hi": "hi"}
 _NATIVE_SCRIPT = {"ta": re.compile(r"[஀-௿]"), "hi": re.compile(r"[ऀ-ॿ]")}
 _SILENCE = {"thank you", "thanks", "thank you very much", "thanks for watching", "you", "bye", "okay", "ok",
-            "நன்றி", "धन्यवाद", "शुक्रिया"}
+            "நன்றி", "धन्यवाद", "शुक्रिया",
+            "subtitles by the amara org community"}  # Whisper invented this on digital silence (Stage B probe)
 
 SYSTEM = f"""You read one spoken or typed expense from a person in India and return JSON for a bill-splitting app.
 The text may be English, Tamil, Hindi, Tanglish or Hinglish, in any script. Speech recognition sometimes writes Tamil words in Hindi script (for example आईरम = aayiram = 1000), so read words by their sound. You do not do any arithmetic beyond reading numbers.

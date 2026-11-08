@@ -56,6 +56,17 @@ class AiPaths(unittest.TestCase):
         self.assertTrue(any("Meena wasn't in what was said" in c for c in r["checks"]))
         self.assertEqual(r["expense"]["total"], 1500)  # never changed, only flagged
 
+    def test_amara_silence_gets_the_no_speech_message_without_a_reading_call(self):
+        speech = mock.Mock()
+        speech.audio.transcriptions.create.return_value = mock.Mock(
+            text="Subtitles by the Amara.org community", language="english", segments=[])
+        with mock.patch.object(reader, "_client", return_value=speech), \
+             mock.patch.object(reader, "read_expense") as read:
+            r = client.post("/api/read-audio", files={"file": ("a.webm", b"xx", "audio/webm")})
+        self.assertEqual(r.status_code, 422)
+        self.assertIn("couldn't hear anything", r.json()["detail"])
+        read.assert_not_called()
+
     def test_check_clears_after_fix(self):
         fixed = {**self.answer, "total": 1200, "payer": "You", "participants": ["You", "Arun"]}
         r = client.post("/api/check", json={"expense": fixed, "people": ["Arun"],

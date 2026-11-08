@@ -1,6 +1,9 @@
 """Tests for cleaning the AI's answer into an expense. No network: they use made-up AI answers."""
+import types
 import unittest
+from unittest import mock
 
+import reader
 from reader import PROMPT_TOKEN_LIMIT, _echoes_prompt, _is_silence, _number, _tokens, review, speech_prompt, to_expense
 from splits import ME
 
@@ -211,6 +214,86 @@ class Echo(unittest.TestCase):
 
     def test_long_sentence_reusing_hint_words_out_of_order_is_kept(self):
         self.assertFalse(_echoes_prompt(self.prompt(), "I paid for petrol and dinner, split with Ravi and Arun, rent too"))
+
+
+AMARA = "Subtitles by the Amara.org community"
+
+
+class AmaraHallucination(unittest.TestCase):
+    """Whisper invented this phrase on digital silence. Only the whole phrase counts as silence."""
+    friends = ["Arun", "Ravi", "Senthil", "Pooja"]
+
+    def silent(self, text, friends=None):
+        resp = types.SimpleNamespace(segments=[])
+        return _is_silence(resp, text, speech_prompt(None, self.friends if friends is None else friends))
+
+    def listen(self, *replies, language="english"):
+        client = mock.Mock()
+        client.audio.transcriptions.create.side_effect = [
+            types.SimpleNamespace(text=t, language=language, segments=[]) for t in replies]
+        with mock.patch.object(reader, "_client", return_value=client):
+            text = reader.transcribe(b"audio", "clip.wav", None, self.friends)
+        return text, client.audio.transcriptions.create.call_count
+
+    def test_exact_phrase(self):
+        self.assertTrue(self.silent(AMARA))
+
+    def test_capitals_and_punctuation(self):
+        for text in ("subtitles by the amara.org community", "SUBTITLES BY THE AMARA.ORG COMMUNITY",
+                     "Subtitles by the Amara.org community.", "Subtitles, by the Amara.org community!",
+                     '"Subtitles by the Amara.org community"', "Subtitles by the Amara org community"):
+            self.assertTrue(self.silent(text), text)
+
+    def test_repeated_whitespace(self):
+        for text in ("  Subtitles   by  the Amara.org   community  ", "Subtitles\tby the\nAmara.org community"):
+            self.assertTrue(self.silent(text), repr(text))
+
+    def test_no_filler_variants_until_one_is_observed(self):
+        for text in (f"{AMARA} thanks", f"Thanks {AMARA}", f"{AMARA} {AMARA}", "Subtitles by Amara.org community"):
+            self.assertFalse(self.silent(text), text)
+
+    def test_silent_clip_returns_nothing_and_makes_no_second_call(self):
+        self.assertEqual(self.listen(AMARA), ("", 1))
+
+    def test_second_pass_phrase_keeps_the_first_transcript(self):
+        self.assertEqual(self.listen("I gave 500 to Ravi", AMARA, language="tamil"), ("I gave 500 to Ravi", 2))
+
+    def test_expense_sentences_are_kept(self):
+        for text in ("Dinner with Arun and Ravi, I paid.", "Dinner 1,200, split with Senthil and Pooja.", "Thanks Ravi, 500."):
+            self.assertFalse(self.silent(text), text)
+
+    def test_community_in_a_real_expense(self):
+        for text in ("Community hall booking 5000, split with Arun", "Paid 800 to the community", "community"):
+            self.assertFalse(self.silent(text), text)
+
+    def test_subtitles_in_a_real_expense(self):
+        for text in ("Subtitles work 800, I paid, split with Divya", "subtitles", "Subtitles by Arun 500"):
+            self.assertFalse(self.silent(text), text)
+
+    def test_amara_as_a_person(self):
+        for text in ("Amara paid 500 for dinner", "Split with Amara", "Amara", "Amara 500"):
+            self.assertFalse(self.silent(text), text)
+
+    def test_partial_resemblance_with_an_amount_or_name(self):
+        for text in (f"{AMARA} 500", f"{AMARA} Ravi", "Subtitles by the Amara.org", "by the Amara.org community",
+                     "Paid Amara.org 900 for subtitles, community plan"):
+            self.assertFalse(self.silent(text), text)
+
+    def test_nine_friend_names(self):
+        friends = ["Karthik", "Divya", "Senthil", "Pooja", "Ankit", "Lakshmi", "Meena", "Akash", "Vijay"]
+        self.assertFalse(self.silent(", ".join(friends), friends))
+
+    def test_empty_transcript_is_still_silence(self):
+        for text in ("", "   ", "...", None):
+            self.assertTrue(self.silent(text), repr(text))
+
+    def test_ordinary_short_utterances(self):
+        for text in ("Ravi 500", "Arun paid", "Petrol 200", "Pooja", "500"):
+            self.assertFalse(self.silent(text), text)
+
+    def test_existing_silence_phrases_still_work(self):
+        for text in ("Thank you.", "நன்றி", "धन्यवाद", "thanks for watching"):
+            self.assertTrue(self.silent(text), text)
 
 
 if __name__ == "__main__":
