@@ -1,0 +1,16 @@
+INVALID COMPARISON: the runs used different models (openai/gpt-oss-20b × 29, openai/gpt-oss-120b × 2). Check the screen log for why the backup was used: a rate limit means repeat on a day with fresh quota; a one-off error (such as BadRequestError) means simply run that version again.
+The numbers below are shown for diagnosis only. Do not present them as a before/after result.
+
+| Measure | stageB-baseline-synth-audio | stageB-current-synth-audio |
+|---|---|---|
+| Final | 77% (23/30) | 73% (22/30) |
+| Amount | 96% (27/28) | 93% (27/29) |
+| Payer | 93% (26/28) | 97% (28/29) |
+| Participants | 79% (22/28) | 79% (23/29) |
+| Names | 82% (23/28) | 90% (26/29) |
+| WER | 0.307 (n=30) | 0.302 (n=30) |
+| CER | 0.235 (n=30) | 0.247 (n=30) |
+| Names heard | 0.929 (n=28) | 0.929 (n=28) |
+  changed: synthetic/b-hi-grocery.wav: True -> False [openai/gpt-oss-20b -> openai/gpt-oss-20b]
+  changed: synthetic/b-tg-soundalike.wav: True -> False [openai/gpt-oss-20b -> openai/gpt-oss-20b]
+  changed: synthetic/b-en-payer-unsaid.wav: False -> True [openai/gpt-oss-20b -> openai/gpt-oss-20b]

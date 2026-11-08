@@ -1,0 +1,56 @@
+"""Stage B probe: silence, exact prompt echo and nine friend names, through the CURRENT speech step.
+
+Not part of the benchmark and not in the project: it makes three clips in its own folder and calls
+reader.transcribe on each (Whisper only, no reading-model calls). 3 speech calls in total, plus a
+second pass if Whisper thinks a clip is Tamil or Hindi.
+
+Run from ~/voice-split with GROQ_API_KEY loaded:
+  ./.venv/bin/python /path/to/stageB_probe.py
+"""
+import json
+import subprocess
+import sys
+import time
+import wave
+from pathlib import Path
+
+sys.path.insert(0, str(Path.cwd()))
+import reader  # noqa: E402  (the current app code)
+
+OUT = Path(__file__).parent / "stageB_probe_clips"
+OUT.mkdir(exist_ok=True)
+FRIENDS = ["Karthik", "Divya", "Senthil", "Pooja", "Ankit", "Lakshmi", "Meena", "Akash", "Vijay"]
+
+# 1. Genuine silence: 3 seconds of digital silence at 16 kHz mono.
+with wave.open(str(OUT / "silence.wav"), "wb") as w:
+    w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000)
+    w.writeframes(b"\x00\x00" * 16000 * 3)
+
+# 2. Exact echo of the English hint, spoken by the Mac's Indian English voice.
+hint = reader.speech_prompt(None, [])
+subprocess.run(["say", "-v", "Rishi", "-o", str(OUT / "hint-echo.wav"), "--data-format=LEI16@16000", hint], check=True)
+
+# 3. Nine friend names in a row (a real utterance that must NOT be rejected).
+names = ", ".join(FRIENDS)
+subprocess.run(["say", "-v", "Rishi", "-o", str(OUT / "nine-names.wav"), "--data-format=LEI16@16000", names], check=True)
+
+probes = [("silence", "silence.wav", "should be rejected (empty result)"),
+          ("hint echo", "hint-echo.wav", "should be rejected (exact copy of the hint)"),
+          ("nine names", "nine-names.wav", "should be KEPT (returns the names)")]
+results = []
+for label, file, expect in probes:
+    start = time.time()
+    try:
+        text = reader.transcribe((OUT / file).read_bytes(), file, None, FRIENDS)
+        err = None
+    except Exception as e:  # report the type only
+        text, err = None, type(e).__name__
+    secs = round(time.time() - start, 2)
+    verdict = "error: " + err if err else ("rejected as silence/echo" if text == "" else "kept")
+    results.append({"probe": label, "expect": expect, "verdict": verdict, "transcript": text, "secs": secs,
+                    "prompt_used": reader.speech_prompt(None, FRIENDS)})
+    print(f"{label:11} | {verdict:26} | {expect} | {secs}s | {text!r}", flush=True)
+    time.sleep(3)
+
+(OUT / "results.json").write_text(json.dumps(results, ensure_ascii=False, indent=1), encoding="utf-8")
+print("\nSaved", OUT / "results.json")

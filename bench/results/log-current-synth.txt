@@ -1,0 +1,35 @@
+PASS synthetic/b-inen-petrol-exclude.wav [openai/gpt-oss-20b] | I paid 1,800 for petrol yesterday, split it between me, Arun | 0.0 
+PASS synthetic/b-tg-dinner.wav [openai/gpt-oss-20b] | Yesterday dinner ku 2,500 achu, naan pe panan, Ravi and Sure | 0.357 
+PASS synthetic/b-hg-dinner.wav [openai/gpt-oss-20b] | कल डिनर के लिए 2,500 दियादर, में पे किया, राहुल और अमित के स | 0.947 
+PASS synthetic/b-en-other-payer.wav [openai/gpt-oss-20b] | Ravi paid 3,000 for the cab to the airport, split between hi | 0.0 
+PASS synthetic/b-hi-hotel.wav [openai/gpt-oss-20b] | Raviwar ने होटेल के लिए 6000 रुपये दिए, मेरे और Amit के साथ  | 0.375 
+PASS synthetic/b-ta-petrol.wav [openai/gpt-oss-20b] | Suresh Petrol-க்கு 500 ரூபாய் கொடுத்தான், நானும் அவனும் பிரி | 0.5 
+PASS synthetic/b-en-treat.wav [openai/gpt-oss-20b] | I paid 900 for Arun and Ravi's movie tickets as a treat. I d | 0.0 
+FAIL synthetic/b-hg-dedh-hazaar.wav [openai/gpt-oss-20b] | Main Dead Hazard का ग्रोसरी लाय प्रिया के साथ आधा आधा. | 1.0 {'missing_sharers': ['Priya', 'You'], 'amount_error': 'from number words'}
+read attempt failed: openai/gpt-oss-20b BadRequestError
+PASS synthetic/b-en-exact.wav [openai/gpt-oss-120b] | Groceries 1,000, I paid, Ravi owes 600 and I owe 400. | 0.0 
+FAIL synthetic/b-en-no-amount.wav [None] |  | 1.0 
+PASS synthetic/b-inen-chai.wav [openai/gpt-oss-20b] | Paid 450 for chai and samosa for the team. Me, Karthik and D | 0.0 
+FAIL synthetic/b-hg-party-exclude.wav [openai/gpt-oss-20b] | Party का 4000 मेन दिया, मेन, रोहित, नेहा और विक्रम मेन स्प्ल | 0.87 {'extra_sharers': ['Mena'], 'missing_sharers': ['You'], 'payer_error': 'wrong person (Mena)'}
+PASS synthetic/b-en-percent.wav [openai/gpt-oss-20b] | Rent, 20,000, I paid, Meena pays 60% and I pay 40%. | 0.154 
+PASS synthetic/b-en-solo.wav [openai/gpt-oss-20b] | Spent 350 on a Heiara cut. | 0.4 
+FAIL synthetic/b-hi-grocery.wav [openai/gpt-oss-20b] | मैंने किराने पर आज सौ रुपये खर्च के, Neha के साथ ढातो। | 0.333 {'amount_error': 'from number words'}
+read attempt failed: openai/gpt-oss-20b BadRequestError
+FAIL synthetic/b-tg-swiggy-k.wav [openai/gpt-oss-120b] | Swiggy order 1.2k non-pay pannan, Akash Priya Kudas split. | 0.273 {'missing_sharers': ['Akash', 'Priya', 'You']}
+PASS synthetic/b-en-known-names.wav [openai/gpt-oss-20b] | VENKAT paid 2,400 for the train tickets for me, him and Laks | 0.0 
+PASS synthetic/b-ta-digits.wav [openai/gpt-oss-20b] | நான் 1500 ரூபாய் சாப்பாட்டுக்கு கொடுத்தேன், Arun Ravi கூட பி | 0.222 
+PASS synthetic/b-hg-other-payer.wav [openai/gpt-oss-20b] | राहुल ने पेटरल के 2,000 दियाए, राहुल, मेन और समीर मेन बैंट द | 0.923 
+PASS synthetic/b-inen-rs.wav [openai/gpt-oss-20b] | 750 rupees for the Ola, I paid, split with Sneha. | 0.2 
+PASS synthetic/b-inen-lakh.wav [openai/gpt-oss-20b] | Paid 1.5 lakh for the Vedind Hall, split equally with Arjun  | 0.071 
+PASS synthetic/b-hg-chhod-ke.wav [openai/gpt-oss-20b] | Movie Tickets के 1200 Main Day, Main, अंकित और पूजा के लिए,  | 0.688 
+FAIL synthetic/b-inen-myself.wav [openai/gpt-oss-20b] | Myself paid 600 for breakfast. Divide among myself, Ganesh a | 0.091 {'extra_sharers': ['Satish'], 'missing_sharers': ['Sathish']}
+PASS synthetic/b-en-pronoun-her.wav [openai/gpt-oss-20b] | Anjali paid 900 for the pizza, split it between her, me and  | 0.0 
+PASS synthetic/b-hi-drinks.wav [openai/gpt-oss-20b] | मैंने दिनर के 3000 दिए, Rahul, Amit और Sumit के साथ, पर Sumi | 0.522 
+PASS synthetic/b-en-group-unsaid.wav [openai/gpt-oss-20b] | I paid 500 for snacks, split with Mena. | 0.125 
+PASS synthetic/b-en-soundalike.wav [openai/gpt-oss-20b] | I paid 800 for pizza, split with Priya and Karthik. | 0.0 
+PASS synthetic/b-tg-soundalike.wav [openai/gpt-oss-20b] | Dinner Kunaan 1,500 QD. Karthika Divya Kura split Pannu. | 0.4 
+PASS synthetic/b-hg-friends-unsaid.wav [openai/gpt-oss-20b] | में 600 का Auto Lie, Rohit के साथ split करो। | 0.6 
+FAIL synthetic/b-en-payer-unsaid.wav [None] |  | 1.0 
+
+Models that answered: openai/gpt-oss-20b × 26, openai/gpt-oss-120b × 2. Main model failed and backup was tried: 2. **Mixed models: results are not comparable with a single-model run.**
+Saved bench/results/current-synth-audio.md

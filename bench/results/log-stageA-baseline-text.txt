@@ -1,0 +1,39 @@
+Sat Nov  7 23:19:36 IST 2026
+PASS b-inen-petrol-exclude [openai/gpt-oss-20b] 
+PASS b-tg-dinner [openai/gpt-oss-20b] 
+PASS b-hg-dinner [openai/gpt-oss-20b] 
+PASS b-en-other-payer [openai/gpt-oss-20b] 
+PASS b-tg-drinks-exclude [openai/gpt-oss-20b] 
+PASS b-hi-hotel [openai/gpt-oss-20b] 
+PASS b-ta-petrol [openai/gpt-oss-20b] 
+PASS b-en-treat [openai/gpt-oss-20b] 
+PASS b-hg-dedh-hazaar [openai/gpt-oss-20b] 
+PASS b-tg-munnooru [openai/gpt-oss-20b] 
+PASS b-en-exact [openai/gpt-oss-20b] 
+PASS b-en-no-amount [openai/gpt-oss-20b] 
+FAIL b-inen-chai [None] BadRequestError: Error code: 400 - {'error': {'message': "Failed to validate JSON. Please adjust your prompt. See 'failed_generation' for more details.", 'type': 'invalid_reques
+PASS b-hg-party-exclude [openai/gpt-oss-20b] 
+PASS b-tg-shares [openai/gpt-oss-20b] 
+PASS b-en-percent [openai/gpt-oss-20b] 
+PASS b-en-solo [openai/gpt-oss-20b] 
+PASS b-hi-grocery [openai/gpt-oss-20b] 
+PASS b-tg-swiggy-k [openai/gpt-oss-20b] 
+PASS b-en-known-names [openai/gpt-oss-20b] 
+PASS b-ta-digits [openai/gpt-oss-20b] 
+PASS b-hg-other-payer [openai/gpt-oss-20b] 
+PASS b-inen-rs [openai/gpt-oss-20b] 
+PASS b-inen-lakh [openai/gpt-oss-20b] 
+PASS b-hg-chhod-ke [openai/gpt-oss-20b] 
+PASS b-inen-myself [openai/gpt-oss-20b] 
+PASS b-en-pronoun-her [openai/gpt-oss-20b] 
+PASS b-tg-absent [openai/gpt-oss-20b] 
+PASS b-hi-drinks [openai/gpt-oss-20b] 
+PASS b-en-group-unsaid [openai/gpt-oss-20b] 
+PASS b-en-soundalike [openai/gpt-oss-20b] 
+PASS b-tg-soundalike [openai/gpt-oss-20b] 
+PASS b-hg-friends-unsaid [openai/gpt-oss-20b] 
+PASS b-en-payer-unsaid [openai/gpt-oss-20b] {'expected_check_shown': False}
+
+Models that answered: openai/gpt-oss-20b × 33. Main model failed on: 1. Rate-limit waits by the benchmark: 0.
+Saved bench/results/stageA-baseline-text.md
+Sat Nov  7 23:24:45 IST 2026

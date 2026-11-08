@@ -1,0 +1,7 @@
+Sat Nov  7 23:48:45 IST 2026
+silence     | kept                       | should be rejected (empty result) | 1.25s | 'Subtitles by the Amara.org community'
+hint echo   | rejected as silence/echo   | should be rejected (exact copy of the hint) | 0.9s | ''
+nine names  | kept                       | should be KEPT (returns the names) | 1.91s | 'कार्थिक, दिव्यया, सेन्थिल, पूजा, अन्कित, लक्ष्मी, मीना, आकाश, विजय'
+
+Saved [local path]
+Sat Nov  7 23:49:00 IST 2026

@@ -1,0 +1,35 @@
+Sat Nov  7 23:37:48 IST 2026
+PASS synthetic/b-inen-petrol-exclude.wav [openai/gpt-oss-20b] | I paid 1,800 for petrol yesterday, split it between me, Arun | 0.0 
+PASS synthetic/b-tg-dinner.wav [openai/gpt-oss-20b] | Yesterday dinner ku 2,500 achu, naan pe panan, Ravi and Sure | 0.357 
+PASS synthetic/b-hg-dinner.wav [openai/gpt-oss-20b] | कल डिनर के लिए 2,500 दिया दर, में पे किया, राहुल और अमित के  | 0.947 
+PASS synthetic/b-en-other-payer.wav [openai/gpt-oss-20b] | Ravi paid 3,000 for the cab to the airport, split between hi | 0.0 
+FAIL synthetic/b-hi-hotel.wav [openai/gpt-oss-20b] | रविवार ने होतेल के लिए 6,000 रुपए दिये, मेरे और अमित के साथ  | 0.438 {'missing_sharers': ['Ravi'], 'payer_error': 'assumed You'}
+PASS synthetic/b-ta-petrol.wav [openai/gpt-oss-20b] | சுரேஷ் பெட்ரோலுக்கு 500 ரூபாய் கொதுத்தான் நானும் அவனும் பிரி | 0.25 
+PASS synthetic/b-en-treat.wav [openai/gpt-oss-20b] | I paid 900 for Arun and Ravi's movie tickets as a treat. I d | 0.0 
+FAIL synthetic/b-hg-dedh-hazaar.wav [openai/gpt-oss-20b] | Main Dead Hazard का ग्रोसरी लिया, प्रिया के साथ आधा आधा. | 1.0 {'missing_sharers': ['Priya', 'You'], 'amount_error': 'from number words'}
+PASS synthetic/b-en-exact.wav [openai/gpt-oss-20b] | Groceries 1,000, I paid, Ravi owes 600 and I owe 400. | 0.0 
+PASS synthetic/b-en-no-amount.wav [openai/gpt-oss-20b] | Dinner with Arun and Ravi, I paid. | 0.0 
+PASS synthetic/b-inen-chai.wav [openai/gpt-oss-20b] | Paid 450 for chai and samosa for the team. Me, Karthik and D | 0.0 
+PASS synthetic/b-hg-party-exclude.wav [openai/gpt-oss-20b] | Party का 4000 मेन दिया, मेन, रोहित, नेहा और विक्रम मेन स्प्ल | 0.87 
+PASS synthetic/b-en-percent.wav [openai/gpt-oss-20b] | Rent, 20,000, I paid, Meena pays 60% and I pay 40%. | 0.154 
+PASS synthetic/b-en-solo.wav [openai/gpt-oss-20b] | Spent 350 on a hayara cut. | 0.4 
+PASS synthetic/b-hi-grocery.wav [openai/gpt-oss-20b] | मैंने किराने पर 800 रुपए खर्च के नेहा के साथ नातो. | 0.417 
+FAIL synthetic/b-tg-swiggy-k.wav [None] | Swiggy order 1.2k non-pay pannan, Akash Priya Kudas split. | 0.273 
+PASS synthetic/b-en-known-names.wav [openai/gpt-oss-20b] | Venkat paid 2,400 for the train tickets for me, him and Laks | 0.0 
+PASS synthetic/b-ta-digits.wav [openai/gpt-oss-20b] | நான் 1,500 ரூபாய் சாப்பாட்டுக்கு கொடுத்தேன் Arun, Ravi கூட ப | 0.222 
+FAIL synthetic/b-hg-other-payer.wav [openai/gpt-oss-20b] | राहुल ने पेटरल के 2,000 दियाए, राहुल, मेन और समीर मेन बैंट द | 0.923 {'extra_sharers': ['Meen'], 'missing_sharers': ['You']}
+PASS synthetic/b-inen-rs.wav [openai/gpt-oss-20b] | 750 rupees for the Ola, I paid, split with Sneha. | 0.2 
+PASS synthetic/b-inen-lakh.wav [openai/gpt-oss-20b] | Paid 1.5 lakh for the Vedind Hall, split equally with Arjun  | 0.071 
+FAIL synthetic/b-hg-chhod-ke.wav [openai/gpt-oss-20b] | Movie tickets के 1200 मेन दियाए, मेन, अंकित और पूजा के लिए,  | 0.812 {'extra_sharers': ['Puja'], 'missing_sharers': ['Pooja'], 'payer_error': 'wrong person (Rajat)'}
+FAIL synthetic/b-inen-myself.wav [openai/gpt-oss-20b] | Myself paid 600 for breakfast. Divide among myself, Ganesh a | 0.091 {'extra_sharers': ['Satish'], 'missing_sharers': ['Sathish']}
+PASS synthetic/b-en-pronoun-her.wav [openai/gpt-oss-20b] | Anjali paid 900 for the pizza. Split it between her, me and  | 0.0 
+PASS synthetic/b-hi-drinks.wav [openai/gpt-oss-20b] | मैंने दिनर के 3,000 दिये, राहुल, अमित और सुमित के साथ, पर सु | 0.304 
+PASS synthetic/b-en-group-unsaid.wav [openai/gpt-oss-20b] | I paid 500 for snacks, split with Meena. | 0.0 
+PASS synthetic/b-en-soundalike.wav [openai/gpt-oss-20b] | I paid 800 for pizza, split with Priya and Karthik. | 0.0 
+PASS synthetic/b-tg-soundalike.wav [openai/gpt-oss-20b] | Dinner kunaan 1,500 kudathan, karthika devya kuda split pann | 0.5 
+PASS synthetic/b-hg-friends-unsaid.wav [openai/gpt-oss-20b] | Main 600 का auto लाए, रोहित के साथ split करो. | 0.7 
+FAIL synthetic/b-en-payer-unsaid.wav [openai/gpt-oss-20b] | Dinner 1,200, split with Saint Thil and Pooja. | 0.286 {'extra_sharers': ['Saint', 'Thil'], 'missing_sharers': ['Senthil'], 'expected_check_shown': False}
+
+Models that answered: openai/gpt-oss-20b × 29. Main model failed on: 1. Rate-limit waits by the benchmark: 0.
+Saved bench/results/stageB-baseline-synth-audio.md
+Sat Nov  7 23:42:54 IST 2026

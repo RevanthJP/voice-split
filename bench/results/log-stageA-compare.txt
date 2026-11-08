@@ -1,0 +1,12 @@
+INVALID COMPARISON: the runs used different models (openai/gpt-oss-20b × 33, openai/gpt-oss-120b × 1). Check the screen log for why the backup was used: a rate limit means repeat on a day with fresh quota; a one-off error (such as BadRequestError) means simply run that version again.
+The numbers below are shown for diagnosis only. Do not present them as a before/after result.
+
+| Measure | stageA-baseline-text | stageA-current-text |
+|---|---|---|
+| Final | 97% (33/34) | 97% (33/34) |
+| Amount | 100% (32/32) | 97% (32/33) |
+| Payer | 100% (32/32) | 100% (33/33) |
+| Participants | 100% (32/32) | 100% (33/33) |
+| Names | 100% (32/32) | 100% (33/33) |
+  changed: b-ta-petrol: True -> False [openai/gpt-oss-20b -> openai/gpt-oss-20b]
+  changed: b-inen-chai: False -> True [None -> openai/gpt-oss-20b]
