@@ -1,0 +1,57 @@
+[
+ {
+  "file": "real/en1.m4a",
+  "kind": "real",
+  "lang": "english",
+  "speaker": "",
+  "reference": "",
+  "people": [],
+  "payer": "You",
+  "owed": null,
+  "note": "Fill in: the exact words spoken (reference), known people, payer and owed. Until then only the transcript is shown, not scored."
+ },
+ {
+  "file": "real/hi1.m4a",
+  "kind": "real",
+  "lang": "hindi",
+  "speaker": "",
+  "reference": "",
+  "people": [],
+  "payer": "You",
+  "owed": null,
+  "note": "Fill in: the exact words spoken (reference), known people, payer and owed. Until then only the transcript is shown, not scored."
+ },
+ {
+  "file": "real/ta1.m4a",
+  "kind": "real",
+  "lang": "tamil",
+  "speaker": "",
+  "reference": "",
+  "people": [],
+  "payer": "You",
+  "owed": null,
+  "note": "Fill in: the exact words spoken (reference), known people, payer and owed. Until then only the transcript is shown, not scored."
+ },
+ {
+  "file": "real/ta2.m4a",
+  "kind": "real",
+  "lang": "tamil",
+  "speaker": "",
+  "reference": "",
+  "people": [],
+  "payer": "You",
+  "owed": null,
+  "note": "Fill in: the exact words spoken (reference), known people, payer and owed. Until then only the transcript is shown, not scored."
+ },
+ {
+  "file": "real/tg1.m4a",
+  "kind": "real",
+  "lang": "tanglish",
+  "speaker": "",
+  "reference": "",
+  "people": [],
+  "payer": "You",
+  "owed": null,
+  "note": "Fill in: the exact words spoken (reference), known people, payer and owed. Until then only the transcript is shown, not scored."
+ }
+]

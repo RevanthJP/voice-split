@@ -8,3 +8,10 @@ __pycache__/
 .claude/
 results/audio/
 .env*
+
+# Benchmark audio and raw results stay on this computer (voices are personal)
+bench/audio/real/
+bench/audio/synthetic/
+bench/.baseline/
+bench/results/*.json
+bench/results/archive-*/*.json

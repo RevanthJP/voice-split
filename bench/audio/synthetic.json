@@ -1,0 +1,212 @@
+[
+ {
+  "file": "synthetic/b-inen-petrol-exclude.wav",
+  "case": "b-inen-petrol-exclude",
+  "kind": "synthetic",
+  "voice": "Rishi",
+  "reference": "I paid 1,800 for petrol yesterday. Split it between me, Arun and Ravi, but exclude Suresh."
+ },
+ {
+  "file": "synthetic/b-tg-dinner.wav",
+  "case": "b-tg-dinner",
+  "kind": "synthetic",
+  "voice": "Rishi",
+  "reference": "Yesterday dinner ku 2500 aachu. Naan pay pannen. Ravi and Suresh kooda split pannu."
+ },
+ {
+  "file": "synthetic/b-hg-dinner.wav",
+  "case": "b-hg-dinner",
+  "kind": "synthetic",
+  "voice": "Lekha",
+  "reference": "Kal dinner ke liye 2500 diye the. Maine pay kiya. Rahul aur Amit ke saath equally split kar do."
+ },
+ {
+  "file": "synthetic/b-en-other-payer.wav",
+  "case": "b-en-other-payer",
+  "kind": "synthetic",
+  "voice": "Rishi",
+  "reference": "Ravi paid 3000 for the cab to the airport, split between him, me and Kavya."
+ },
+ {
+  "file": "synthetic/b-hi-hotel.wav",
+  "case": "b-hi-hotel",
+  "kind": "synthetic",
+  "voice": "Lekha",
+  "reference": "रवि ने होटल के लिए छह हज़ार रुपये दिए, मेरे और अमित के साथ बराबर बाँटो"
+ },
+ {
+  "file": "synthetic/b-ta-petrol.wav",
+  "case": "b-ta-petrol",
+  "kind": "synthetic",
+  "voice": "Vani",
+  "reference": "சுரேஷ் பெட்ரோலுக்கு ஐநூறு ரூபாய் கொடுத்தான், நானும் அவனும் பிரிச்சுக்கலாம்"
+ },
+ {
+  "file": "synthetic/b-en-treat.wav",
+  "case": "b-en-treat",
+  "kind": "synthetic",
+  "voice": "Rishi",
+  "reference": "I paid 900 for Arun and Ravi's movie tickets as a treat. I didn't watch it."
+ },
+ {
+  "file": "synthetic/b-hg-dedh-hazaar.wav",
+  "case": "b-hg-dedh-hazaar",
+  "kind": "synthetic",
+  "voice": "Lekha",
+  "reference": "Maine dedh hazaar ka grocery liya, Priya ke saath aadha aadha."
+ },
+ {
+  "file": "synthetic/b-en-exact.wav",
+  "case": "b-en-exact",
+  "kind": "synthetic",
+  "voice": "Rishi",
+  "reference": "Groceries 1000, I paid. Ravi owes 600 and I owe 400."
+ },
+ {
+  "file": "synthetic/b-en-no-amount.wav",
+  "case": "b-en-no-amount",
+  "kind": "synthetic",
+  "voice": "Rishi",
+  "reference": "Dinner with Arun and Ravi, I paid."
+ },
+ {
+  "file": "synthetic/b-inen-chai.wav",
+  "case": "b-inen-chai",
+  "kind": "synthetic",
+  "voice": "Rishi",
+  "reference": "Paid 450 for chai and samosa for the team, me, Karthik and Divya."
+ },
+ {
+  "file": "synthetic/b-hg-party-exclude.wav",
+  "case": "b-hg-party-exclude",
+  "kind": "synthetic",
+  "voice": "Lekha",
+  "reference": "Party ka 4000 maine diya, main, Rohit, Neha aur Vikram mein split karo. Lekin Vikram ne drinks nahi li, drinks 1000 ki thi."
+ },
+ {
+  "file": "synthetic/b-en-percent.wav",
+  "case": "b-en-percent",
+  "kind": "synthetic",
+  "voice": "Rishi",
+  "reference": "Rent 20000, I paid. Meena pays 60 percent and I pay 40 percent."
+ },
+ {
+  "file": "synthetic/b-en-solo.wav",
+  "case": "b-en-solo",
+  "kind": "synthetic",
+  "voice": "Rishi",
+  "reference": "Spent 350 on a haircut."
+ },
+ {
+  "file": "synthetic/b-hi-grocery.wav",
+  "case": "b-hi-grocery",
+  "kind": "synthetic",
+  "voice": "Lekha",
+  "reference": "मैंने किराने पर आठ सौ रुपये खर्च किए, नेहा के साथ बाँटो"
+ },
+ {
+  "file": "synthetic/b-tg-swiggy-k.wav",
+  "case": "b-tg-swiggy-k",
+  "kind": "synthetic",
+  "voice": "Rishi",
+  "reference": "Swiggy order 1.2k naan pay pannen, Akash Priya kooda split."
+ },
+ {
+  "file": "synthetic/b-en-known-names.wav",
+  "case": "b-en-known-names",
+  "kind": "synthetic",
+  "voice": "Rishi",
+  "reference": "Venkat paid 2400 for the train tickets for me, him and Lakshmi."
+ },
+ {
+  "file": "synthetic/b-ta-digits.wav",
+  "case": "b-ta-digits",
+  "kind": "synthetic",
+  "voice": "Vani",
+  "reference": "நான் 1500 ரூபாய் சாப்பாட்டுக்கு கொடுத்தேன், அருண் ரவி கூட பிரிச்சுக்கோ"
+ },
+ {
+  "file": "synthetic/b-hg-other-payer.wav",
+  "case": "b-hg-other-payer",
+  "kind": "synthetic",
+  "voice": "Lekha",
+  "reference": "Rahul ne petrol ke 2000 diye, Rahul, main aur Sameer mein baant do."
+ },
+ {
+  "file": "synthetic/b-inen-rs.wav",
+  "case": "b-inen-rs",
+  "kind": "synthetic",
+  "voice": "Rishi",
+  "reference": "Rs. 750 for the Ola, I paid, split with Sneha."
+ },
+ {
+  "file": "synthetic/b-inen-lakh.wav",
+  "case": "b-inen-lakh",
+  "kind": "synthetic",
+  "voice": "Rishi",
+  "reference": "Paid 1.5 lakh for the wedding hall, split equally with Arjun and Karthik."
+ },
+ {
+  "file": "synthetic/b-hg-chhod-ke.wav",
+  "case": "b-hg-chhod-ke",
+  "kind": "synthetic",
+  "voice": "Lekha",
+  "reference": "Movie tickets ke 1200 maine diye, main, Ankit aur Pooja ke liye. Rajat ko chhod ke."
+ },
+ {
+  "file": "synthetic/b-inen-myself.wav",
+  "case": "b-inen-myself",
+  "kind": "synthetic",
+  "voice": "Rishi",
+  "reference": "Myself paid 600 for breakfast, divide among myself, Ganesh and Sathish."
+ },
+ {
+  "file": "synthetic/b-en-pronoun-her.wav",
+  "case": "b-en-pronoun-her",
+  "kind": "synthetic",
+  "voice": "Rishi",
+  "reference": "Anjali paid 900 for the pizza. Split it between her, me and Rohan."
+ },
+ {
+  "file": "synthetic/b-hi-drinks.wav",
+  "case": "b-hi-drinks",
+  "kind": "synthetic",
+  "voice": "Lekha",
+  "reference": "मैंने डिनर के तीन हज़ार दिए, राहुल, अमित और सुमित के साथ, पर सुमित ने ड्रिंक्स नहीं ली, ड्रिंक्स छह सौ की थीं"
+ },
+ {
+  "file": "synthetic/b-en-group-unsaid.wav",
+  "case": "b-en-group-unsaid",
+  "kind": "synthetic",
+  "voice": "Rishi",
+  "reference": "I paid 500 for snacks, split with Meena."
+ },
+ {
+  "file": "synthetic/b-en-soundalike.wav",
+  "case": "b-en-soundalike",
+  "kind": "synthetic",
+  "voice": "Rishi",
+  "reference": "I paid 800 for pizza, split with Priya and Karthik."
+ },
+ {
+  "file": "synthetic/b-tg-soundalike.wav",
+  "case": "b-tg-soundalike",
+  "kind": "synthetic",
+  "voice": "Rishi",
+  "reference": "Dinner ku naan 1500 kuduthen, Karthika Divya kooda split pannu."
+ },
+ {
+  "file": "synthetic/b-hg-friends-unsaid.wav",
+  "case": "b-hg-friends-unsaid",
+  "kind": "synthetic",
+  "voice": "Lekha",
+  "reference": "Maine 600 ka auto liya, Rohit ke saath split karo."
+ },
+ {
+  "file": "synthetic/b-en-payer-unsaid.wav",
+  "case": "b-en-payer-unsaid",
+  "kind": "synthetic",
+  "voice": "Rishi",
+  "reference": "Dinner 1200, split with Senthil and Pooja."
+ }
+]

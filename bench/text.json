@@ -1,0 +1,646 @@
+[
+ {
+  "id": "b-inen-petrol-exclude",
+  "lang": "indian-english",
+  "categories": [
+   "exclusion",
+   "names"
+  ],
+  "text": "I paid 1,800 for petrol yesterday. Split it between me, Arun and Ravi, but exclude Suresh.",
+  "people": [
+   "Arun",
+   "Ravi",
+   "Suresh"
+  ],
+  "payer": "You",
+  "owed": {
+   "You": 600,
+   "Arun": 600,
+   "Ravi": 600
+  },
+  "voice": "Rishi"
+ },
+ {
+  "id": "b-tg-dinner",
+  "lang": "tanglish",
+  "categories": [
+   "split",
+   "names"
+  ],
+  "text": "Yesterday dinner ku 2500 aachu. Naan pay pannen. Ravi and Suresh kooda split pannu.",
+  "people": [],
+  "payer": "You",
+  "owed": {
+   "You": 833.33,
+   "Ravi": 833.33,
+   "Suresh": 833.33
+  },
+  "voice": "Rishi"
+ },
+ {
+  "id": "b-hg-dinner",
+  "lang": "hinglish",
+  "categories": [
+   "split",
+   "names"
+  ],
+  "text": "Kal dinner ke liye 2500 diye the. Maine pay kiya. Rahul aur Amit ke saath equally split kar do.",
+  "people": [],
+  "payer": "You",
+  "owed": {
+   "You": 833.33,
+   "Rahul": 833.33,
+   "Amit": 833.33
+  },
+  "voice": "Lekha"
+ },
+ {
+  "id": "b-en-other-payer",
+  "lang": "english",
+  "categories": [
+   "payer",
+   "pronoun"
+  ],
+  "text": "Ravi paid 3000 for the cab to the airport, split between him, me and Kavya.",
+  "people": [],
+  "payer": "Ravi",
+  "owed": {
+   "You": 1000,
+   "Ravi": 1000,
+   "Kavya": 1000
+  },
+  "voice": "Rishi"
+ },
+ {
+  "id": "b-tg-drinks-exclude",
+  "lang": "tanglish",
+  "categories": [
+   "exclusion",
+   "items"
+  ],
+  "text": "Lunch ku 1600 naan pay panninen. Naan, Arun, Ravi, Kavya naalu peru. Kavya drinks edukkala, drinks 400.",
+  "people": [],
+  "payer": "You",
+  "owed": {
+   "You": 433.33,
+   "Arun": 433.33,
+   "Ravi": 433.33,
+   "Kavya": 300
+  }
+ },
+ {
+  "id": "b-hi-hotel",
+  "lang": "hindi",
+  "categories": [
+   "payer",
+   "script",
+   "amount-words"
+  ],
+  "text": "रवि ने होटल के लिए छह हज़ार रुपये दिए, मेरे और अमित के साथ बराबर बाँटो",
+  "people": [
+   "Ravi",
+   "Amit"
+  ],
+  "payer": "Ravi",
+  "owed": {
+   "You": 2000,
+   "Ravi": 2000,
+   "Amit": 2000
+  },
+  "name_forms": {
+   "Ravi": [
+    "रवि"
+   ],
+   "Amit": [
+    "अमित"
+   ]
+  },
+  "voice": "Lekha"
+ },
+ {
+  "id": "b-ta-petrol",
+  "lang": "tamil",
+  "categories": [
+   "payer",
+   "script",
+   "amount-words",
+   "pronoun"
+  ],
+  "text": "சுரேஷ் பெட்ரோலுக்கு ஐநூறு ரூபாய் கொடுத்தான், நானும் அவனும் பிரிச்சுக்கலாம்",
+  "people": [
+   "Suresh"
+  ],
+  "payer": "Suresh",
+  "owed": {
+   "You": 250,
+   "Suresh": 250
+  },
+  "name_forms": {
+   "Suresh": [
+    "சுரேஷ்"
+   ]
+  },
+  "voice": "Vani"
+ },
+ {
+  "id": "b-en-treat",
+  "lang": "english",
+  "categories": [
+   "treat",
+   "payer-not-sharing"
+  ],
+  "text": "I paid 900 for Arun and Ravi's movie tickets as a treat. I didn't watch it.",
+  "people": [],
+  "payer": "You",
+  "owed": {
+   "Arun": 450,
+   "Ravi": 450
+  },
+  "voice": "Rishi"
+ },
+ {
+  "id": "b-hg-dedh-hazaar",
+  "lang": "hinglish",
+  "categories": [
+   "amount-words"
+  ],
+  "text": "Maine dedh hazaar ka grocery liya, Priya ke saath aadha aadha.",
+  "people": [],
+  "payer": "You",
+  "owed": {
+   "You": 750,
+   "Priya": 750
+  },
+  "voice": "Lekha"
+ },
+ {
+  "id": "b-tg-munnooru",
+  "lang": "tanglish",
+  "categories": [
+   "amount-words"
+  ],
+  "text": "Auto ku munnooru rubai naan kuduthen, Deepak kooda split.",
+  "people": [],
+  "payer": "You",
+  "owed": {
+   "You": 150,
+   "Deepak": 150
+  }
+ },
+ {
+  "id": "b-en-exact",
+  "lang": "english",
+  "categories": [
+   "unequal"
+  ],
+  "text": "Groceries 1000, I paid. Ravi owes 600 and I owe 400.",
+  "people": [],
+  "payer": "You",
+  "owed": {
+   "You": 400,
+   "Ravi": 600
+  },
+  "voice": "Rishi"
+ },
+ {
+  "id": "b-en-no-amount",
+  "lang": "english",
+  "categories": [
+   "missing"
+  ],
+  "text": "Dinner with Arun and Ravi, I paid.",
+  "people": [],
+  "missing": "amount",
+  "voice": "Rishi"
+ },
+ {
+  "id": "b-inen-chai",
+  "lang": "indian-english",
+  "categories": [
+   "names",
+   "split"
+  ],
+  "text": "Paid 450 for chai and samosa for the team, me, Karthik and Divya.",
+  "people": [],
+  "payer": "You",
+  "owed": {
+   "You": 150,
+   "Karthik": 150,
+   "Divya": 150
+  },
+  "voice": "Rishi"
+ },
+ {
+  "id": "b-hg-party-exclude",
+  "lang": "hinglish",
+  "categories": [
+   "exclusion",
+   "items"
+  ],
+  "text": "Party ka 4000 maine diya, main, Rohit, Neha aur Vikram mein split karo. Lekin Vikram ne drinks nahi li, drinks 1000 ki thi.",
+  "people": [],
+  "payer": "You",
+  "owed": {
+   "You": 1083.33,
+   "Rohit": 1083.33,
+   "Neha": 1083.33,
+   "Vikram": 750
+  },
+  "voice": "Lekha"
+ },
+ {
+  "id": "b-tg-shares",
+  "lang": "tanglish",
+  "categories": [
+   "unequal",
+   "shares"
+  ],
+  "text": "Hotel room 6000 naan pay panninen. Arun um avan wife um vandhaanga, so Arun ku rendu share. Ravi ku oru share, enakku oru share.",
+  "people": [],
+  "payer": "You",
+  "owed": {
+   "You": 1500,
+   "Ravi": 1500,
+   "Arun": 3000
+  }
+ },
+ {
+  "id": "b-en-percent",
+  "lang": "english",
+  "categories": [
+   "unequal",
+   "percent"
+  ],
+  "text": "Rent 20000, I paid. Meena pays 60 percent and I pay 40 percent.",
+  "people": [],
+  "payer": "You",
+  "owed": {
+   "You": 8000,
+   "Meena": 12000
+  },
+  "voice": "Rishi"
+ },
+ {
+  "id": "b-en-solo",
+  "lang": "english",
+  "categories": [
+   "no-people"
+  ],
+  "text": "Spent 350 on a haircut.",
+  "people": [],
+  "payer": "You",
+  "owed": {
+   "You": 350
+  },
+  "voice": "Rishi"
+ },
+ {
+  "id": "b-hi-grocery",
+  "lang": "hindi",
+  "categories": [
+   "script",
+   "amount-words"
+  ],
+  "text": "मैंने किराने पर आठ सौ रुपये खर्च किए, नेहा के साथ बाँटो",
+  "people": [
+   "Neha"
+  ],
+  "payer": "You",
+  "owed": {
+   "You": 400,
+   "Neha": 400
+  },
+  "name_forms": {
+   "Neha": [
+    "नेहा"
+   ]
+  },
+  "voice": "Lekha"
+ },
+ {
+  "id": "b-tg-swiggy-k",
+  "lang": "tanglish",
+  "categories": [
+   "amount-k",
+   "names"
+  ],
+  "text": "Swiggy order 1.2k naan pay pannen, Akash Priya kooda split.",
+  "people": [],
+  "payer": "You",
+  "owed": {
+   "You": 400,
+   "Akash": 400,
+   "Priya": 400
+  },
+  "voice": "Rishi"
+ },
+ {
+  "id": "b-en-known-names",
+  "lang": "english",
+  "categories": [
+   "payer",
+   "names",
+   "pronoun"
+  ],
+  "text": "Venkat paid 2400 for the train tickets for me, him and Lakshmi.",
+  "people": [
+   "Lakshmi",
+   "Venkat"
+  ],
+  "payer": "Venkat",
+  "owed": {
+   "You": 800,
+   "Venkat": 800,
+   "Lakshmi": 800
+  },
+  "voice": "Rishi"
+ },
+ {
+  "id": "b-ta-digits",
+  "lang": "tamil",
+  "categories": [
+   "script",
+   "names"
+  ],
+  "text": "நான் 1500 ரூபாய் சாப்பாட்டுக்கு கொடுத்தேன், அருண் ரவி கூட பிரிச்சுக்கோ",
+  "people": [
+   "Arun",
+   "Ravi"
+  ],
+  "payer": "You",
+  "owed": {
+   "You": 500,
+   "Arun": 500,
+   "Ravi": 500
+  },
+  "name_forms": {
+   "Arun": [
+    "அருண்"
+   ],
+   "Ravi": [
+    "ரவி"
+   ]
+  },
+  "voice": "Vani"
+ },
+ {
+  "id": "b-hg-other-payer",
+  "lang": "hinglish",
+  "categories": [
+   "payer"
+  ],
+  "text": "Rahul ne petrol ke 2000 diye, Rahul, main aur Sameer mein baant do.",
+  "people": [],
+  "payer": "Rahul",
+  "owed": {
+   "You": 666.67,
+   "Rahul": 666.67,
+   "Sameer": 666.67
+  },
+  "voice": "Lekha"
+ },
+ {
+  "id": "b-inen-rs",
+  "lang": "indian-english",
+  "categories": [
+   "currency-format"
+  ],
+  "text": "Rs. 750 for the Ola, I paid, split with Sneha.",
+  "people": [],
+  "payer": "You",
+  "owed": {
+   "You": 375,
+   "Sneha": 375
+  },
+  "voice": "Rishi"
+ },
+ {
+  "id": "b-inen-lakh",
+  "lang": "indian-english",
+  "categories": [
+   "amount-words",
+   "lakh"
+  ],
+  "text": "Paid 1.5 lakh for the wedding hall, split equally with Arjun and Karthik.",
+  "people": [],
+  "payer": "You",
+  "owed": {
+   "You": 50000,
+   "Arjun": 50000,
+   "Karthik": 50000
+  },
+  "voice": "Rishi"
+ },
+ {
+  "id": "b-hg-chhod-ke",
+  "lang": "hinglish",
+  "categories": [
+   "exclusion"
+  ],
+  "text": "Movie tickets ke 1200 maine diye, main, Ankit aur Pooja ke liye. Rajat ko chhod ke.",
+  "people": [
+   "Rajat"
+  ],
+  "payer": "You",
+  "owed": {
+   "You": 400,
+   "Ankit": 400,
+   "Pooja": 400
+  },
+  "voice": "Lekha"
+ },
+ {
+  "id": "b-inen-myself",
+  "lang": "indian-english",
+  "categories": [
+   "names"
+  ],
+  "text": "Myself paid 600 for breakfast, divide among myself, Ganesh and Sathish.",
+  "people": [],
+  "payer": "You",
+  "owed": {
+   "You": 200,
+   "Ganesh": 200,
+   "Sathish": 200
+  },
+  "voice": "Rishi"
+ },
+ {
+  "id": "b-en-pronoun-her",
+  "lang": "english",
+  "categories": [
+   "payer",
+   "pronoun"
+  ],
+  "text": "Anjali paid 900 for the pizza. Split it between her, me and Rohan.",
+  "people": [],
+  "payer": "Anjali",
+  "owed": {
+   "You": 300,
+   "Anjali": 300,
+   "Rohan": 300
+  },
+  "voice": "Rishi"
+ },
+ {
+  "id": "b-tg-absent",
+  "lang": "tanglish",
+  "categories": [
+   "payer",
+   "exclusion",
+   "known-not-present"
+  ],
+  "text": "Cab 750 Suresh pay pannan. Naan, Suresh, Vijay share. Akash vara la.",
+  "people": [
+   "Suresh",
+   "Vijay",
+   "Akash"
+  ],
+  "payer": "Suresh",
+  "owed": {
+   "You": 250,
+   "Suresh": 250,
+   "Vijay": 250
+  }
+ },
+ {
+  "id": "b-hi-drinks",
+  "lang": "hindi",
+  "categories": [
+   "script",
+   "exclusion",
+   "items",
+   "amount-words"
+  ],
+  "text": "मैंने डिनर के तीन हज़ार दिए, राहुल, अमित और सुमित के साथ, पर सुमित ने ड्रिंक्स नहीं ली, ड्रिंक्स छह सौ की थीं",
+  "people": [
+   "Rahul",
+   "Amit",
+   "Sumit"
+  ],
+  "payer": "You",
+  "owed": {
+   "You": 800,
+   "Rahul": 800,
+   "Amit": 800,
+   "Sumit": 600
+  },
+  "name_forms": {
+   "Rahul": [
+    "राहुल"
+   ],
+   "Amit": [
+    "अमित"
+   ],
+   "Sumit": [
+    "सुमित"
+   ]
+  },
+  "voice": "Lekha"
+ },
+ {
+  "id": "b-en-group-unsaid",
+  "lang": "english",
+  "categories": [
+   "known-not-present",
+   "assumption"
+  ],
+  "text": "I paid 500 for snacks, split with Meena.",
+  "people": [
+   "Meena",
+   "Arun",
+   "Ravi",
+   "Kavya"
+  ],
+  "payer": "You",
+  "owed": {
+   "You": 250,
+   "Meena": 250
+  },
+  "voice": "Rishi"
+ },
+ {
+  "id": "b-en-soundalike",
+  "lang": "english",
+  "categories": [
+   "names",
+   "sound-alike"
+  ],
+  "text": "I paid 800 for pizza, split with Priya and Karthik.",
+  "people": [
+   "Priya",
+   "Priyanka",
+   "Karthik"
+  ],
+  "payer": "You",
+  "owed": {
+   "You": 266.67,
+   "Priya": 266.67,
+   "Karthik": 266.67
+  },
+  "voice": "Rishi"
+ },
+ {
+  "id": "b-tg-soundalike",
+  "lang": "tanglish",
+  "categories": [
+   "names",
+   "sound-alike"
+  ],
+  "text": "Dinner ku naan 1500 kuduthen, Karthika Divya kooda split pannu.",
+  "people": [
+   "Karthik",
+   "Karthika",
+   "Divya"
+  ],
+  "payer": "You",
+  "owed": {
+   "You": 500,
+   "Karthika": 500,
+   "Divya": 500
+  },
+  "voice": "Rishi"
+ },
+ {
+  "id": "b-hg-friends-unsaid",
+  "lang": "hinglish",
+  "categories": [
+   "known-not-present",
+   "prompt-insertion"
+  ],
+  "text": "Maine 600 ka auto liya, Rohit ke saath split karo.",
+  "people": [
+   "Neha",
+   "Sneha",
+   "Rohit",
+   "Ankit"
+  ],
+  "payer": "You",
+  "owed": {
+   "You": 300,
+   "Rohit": 300
+  },
+  "voice": "Lekha"
+ },
+ {
+  "id": "b-en-payer-unsaid",
+  "lang": "english",
+  "categories": [
+   "payer",
+   "payer-unstated"
+  ],
+  "text": "Dinner 1200, split with Senthil and Pooja.",
+  "people": [
+   "Senthil",
+   "Pooja"
+  ],
+  "payer": "You",
+  "owed": {
+   "You": 400,
+   "Senthil": 400,
+   "Pooja": 400
+  },
+  "expect_check": "who paid",
+  "voice": "Rishi"
+ }
+]
