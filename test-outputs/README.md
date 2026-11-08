@@ -14,7 +14,7 @@ Every tour screen after Welcome has a back arrow at the top left, and you can sw
 |---|---|
 | `01-welcome.jpg` | Welcome |
 | `02-how-1-say.jpg` | 1 Just say it: types Tanglish, Hinglish, Tamil and Hindi examples, then stops on the English dinner |
-| `02-how-1-say-laptop-window.jpg` | The same step in a laptop-size window: the phone frame grows (300 × 470) instead of looking small |
+| `02-how-1-say-laptop-window.jpg` | The same step in a laptop-size window: the app keeps the same 430px phone width it has everywhere (full screen on phones up to 430px), and the tour's phone drawing sizes from the app, not the window |
 | `03-how-2-friends-1-contacts.jpg` | 2 Find your friends: allow contacts, then each person flips from Add to ✓ Added |
 | `03-how-2-friends-2-by-number.jpg` | 2, same screen: adding Priya by name and a WhatsApp number shown as 987xxxxxxx |
 | `03-how-2-friends-3-added.jpg` | 2, end: Priya joins the list |
@@ -43,8 +43,12 @@ Every tour screen after Welcome has a back arrow at the top left, and you can sw
 | `17-groups.jpg` | Groups for a new user: one-tap group ideas and "How groups work" |
 | `17-group-people.jpg` | A new Goa trip: Meena added by tapping her chip, Priya added by number (she also becomes a friend) |
 | `18-account.jpg` | Account |
+| `19-card-checks.jpg` | The confirmation card after a reading that doesn't match what was said ("Petrol 1200 split with Arun" read as ₹1,500 with Ravi and Meena): four "Check …" notes, nothing changed automatically |
+| `19-card-checks-fixed.jpg` | The same card after fixing the amount and unticking Ravi: those notes clear, the shares update, and only "Check who paid" stays. Save stores the expense in the same format as before |
 
 The same run also checks: a stray word from silence ("E aí") doesn't open the expense sheet; no Splitwise text and no example under the mic; a spoken "Meena" is matched to the contact "Meena Sharma" in the browser with nothing written to storage; search finds people by name or by part of their number; sending by SMS is remembered on that friend; "Add number" saves a number for someone known only by name and refuses a made-up one like 987xxxxxxx; sample friends saved by an older version are removed; replaying the tour (`/#welcome`) never pre-fills the name.
+
+The card-checks screenshots were made in the browser by feeding the card a known answer through `/api/check`, which runs the same checks without an AI call. The checks themselves are covered by `test_reader.py` and `test_server.py`.
 
 Not covered: recording with a real microphone, the phone's contact picker, opening WhatsApp or the Messages app, and installing on a phone. Those need a real phone.
 
