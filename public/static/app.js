@@ -8,6 +8,8 @@ const $ = (id) => document.getElementById(id);
 let state = load();
 let draft = null;      // the expense on the confirmation sheet
 let draftGroup = null; // which group it will be saved to
+let draftHeard = null;  // what was said, so the checks can run again after edits
+let draftChecks = [];   // the AI reading's doubts; edits can clear them but never add new ones
 let openGroupId = null;
 
 // ---------- storage ----------
@@ -66,7 +68,7 @@ function toast(msg) {
 async function post(url, body, isForm, raw) {
   // Never leave someone waiting on a spinner: give up after 40 seconds with a clear message.
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 40000);
+  const timer = setTimeout(() => ctl.abort(), 45000); // the server gives up first, at about 38 s
   let res;
   try {
     res = await fetch(url, Object.assign(isForm ? { method: "POST", body } :
@@ -274,6 +276,8 @@ function fillGroupSelect(sel, value, withAll) {
 function showCard(res, gid) {
   draft = res.expense;
   draftGroup = gid;
+  draftHeard = res.transcript || null;
+  draftChecks = res.checks || [];
   fillGroupSelect($("sheetGroup"), gid);
   $("heard").hidden = !res.transcript;
   $("heard").textContent = res.transcript ? "“" + res.transcript + "”" : "";
@@ -327,6 +331,9 @@ function paintCard(res) {
   const problem = missing.includes("amount") ? "Add the amount." : missing.includes("people") ? "Choose who shares it." : res.problem;
   $("problem").hidden = !problem;
   $("problem").textContent = problem || "";
+  const checks = (res.checks || []).filter((c) => draftChecks.includes(c));
+  $("checks").replaceChildren(...checks.map((c) => el("li", null, c)));
+  $("checks").hidden = !checks.length;
   if (res.owed) {
     for (const [name, amount] of Object.entries(res.owed)) {
       if (!amount) continue;
@@ -347,7 +354,7 @@ function recheck() {
   draft.payer = $("payer").value || draft.payer;
   clearTimeout(checkTimer);
   checkTimer = setTimeout(async () => {
-    try { paintCard(await post("/api/check", { expense: draft, people: group(draftGroup).people })); }
+    try { paintCard(await post("/api/check", { expense: draft, people: group(draftGroup).people, transcript: draftHeard })); }
     catch (e) { $("problem").hidden = false; $("problem").textContent = e.message; $("save").disabled = true; }
   }, 150);
 }

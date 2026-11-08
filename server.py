@@ -51,8 +51,9 @@ def _expense(e: ExpenseIn):
                    [Item(i.amount, i.description, i.only, i.excluded) for i in e.items])
 
 
-def _card(expense, missing=(), transcript=None, known=()):
-    """Everything the confirmation card needs. If the split can't be worked out, say why."""
+def _card(expense, missing=(), transcript=None, known=(), data=None):
+    """Everything the confirmation card needs. If the split can't be worked out, say why.
+    "checks" are doubts about the AI's reading, compared with what was said, for the person to confirm."""
     out = {
         "expense": {"description": expense.description, "total": expense.total, "payer": expense.payer,
                     "participants": expense.participants, "mode": expense.mode, "values": expense.values,
@@ -61,6 +62,7 @@ def _card(expense, missing=(), transcript=None, known=()):
         "transcript": transcript,
         "new_people": sorted({p for p in [expense.payer, *expense.participants] if p != ME and p not in known}),
         "owed": None, "splitwise": None, "problem": None,
+        "checks": ai.review(expense, list(missing), transcript, known, data),
     }
     if not missing:
         try:
@@ -69,6 +71,21 @@ def _card(expense, missing=(), transcript=None, known=()):
         except SplitError as err:
             out["problem"] = str(err)
     return out
+
+
+def _ai_error(err, step):
+    """A plain message for a failed AI call. Only the error's type is logged, never keys or content."""
+    name = type(err).__name__
+    print(f"{step} failed:", name, flush=True)
+    if name == "RateLimitError":
+        return HTTPException(429, "Kitty's free AI limit is used up for the moment. Wait a minute and try again, or add it by hand.")
+    if name in ("APITimeoutError", "TooSlow"):
+        return HTTPException(504, "The AI took too long to answer. Try again, or add it by hand.")
+    if name == "APIConnectionError":
+        return HTTPException(502, "Kitty couldn't reach the AI. Check back in a moment, or add it by hand.")
+    if step == "speech" and name in ("BadRequestError", "UnprocessableEntityError"):
+        return HTTPException(400, "That recording couldn't be read. Please record it again, or type it.")
+    return HTTPException(502, "The AI couldn't read that right now. Try again, or add it by hand.")
 
 
 class TextIn(BaseModel):
@@ -83,12 +100,11 @@ def read_text(body: TextIn):
         raise HTTPException(400, "Type or say an expense first.")
     _spend()
     try:
-        data = ai.read_expense(text, body.people)
+        data = ai.read_expense(text, body.people, ai.Deadline())
     except Exception as err:
-        print("read failed:", type(err).__name__, flush=True)
-        raise HTTPException(502, "The AI couldn't read that right now. Try again, or add it by hand.")
+        raise _ai_error(err, "read")
     expense, missing = ai.to_expense(data, body.people)
-    return _card(expense, missing, text, body.people)
+    return _card(expense, missing, text, body.people, data)
 
 
 @app.post("/api/read-audio")
@@ -98,35 +114,36 @@ def read_audio(file: UploadFile = File(...), people: str = Form(""), language: s
         raise HTTPException(413, "That recording is too long. Keep it under a minute.")
     if not audio:
         raise HTTPException(400, "No audio arrived. Please try again.")
-    known = [p for p in people.split("|") if p]
+    known = [p for p in people.split("|") if p][:200]
     _spend()
+    deadline = ai.Deadline()
     try:
-        text = ai.transcribe(audio, Path(file.filename or "clip.webm").name, language or None)
+        text = ai.transcribe(audio, Path(file.filename or "clip.webm").name, language or None, known, deadline)
     except Exception as err:
-        print("speech failed:", type(err).__name__, flush=True)
-        raise HTTPException(502, "We couldn't process that audio. Try again, or type it.")
+        raise _ai_error(err, "speech")
     if not text:
         raise HTTPException(422, "We couldn't hear anything. Tap the mic and speak, or type it.")
     try:
-        data = ai.read_expense(text, known)
+        data = ai.read_expense(text, known, deadline)
     except Exception as err:
-        print("read failed:", type(err).__name__, flush=True)
-        raise HTTPException(502, "The AI couldn't read that right now. Try again, or type it.")
+        raise _ai_error(err, "read")
     expense, missing = ai.to_expense(data, known)
-    return _card(expense, missing, text, known)
+    return _card(expense, missing, text, known, data)
 
 
 class CheckIn(BaseModel):
     expense: ExpenseIn
     people: list[str] = []
+    transcript: Optional[str] = Field(None, max_length=2000)
 
 
 @app.post("/api/check")
 def check(body: CheckIn):
-    """Recalculate after the person edits the card. No AI call."""
+    """Recalculate after the person edits the card. No AI call. With the transcript, the checks are
+    run again on the edited expense, so a check clears once the person has fixed it."""
     e = body.expense
     missing = [m for m, bad in (("amount", not e.total), ("people", not e.participants)) if bad]
-    return _card(_expense(e), missing, None, body.people)
+    return _card(_expense(e), missing, body.transcript, body.people)
 
 
 class GroupIn(BaseModel):

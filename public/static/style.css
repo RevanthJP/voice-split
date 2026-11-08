@@ -684,3 +684,7 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 .addLabel{margin:14px 0 6px;color:var(--muted);font-size:.85rem}
 .addChip{background:var(--blue-soft);color:var(--blue-deep);font-weight:600}
 .gAddBtns{margin-top:10px}
+
+/* Doubts about the AI's reading, shown on the confirmation card for the person to check */
+.checks{margin:0 0 .9rem;padding:10px 14px 10px 30px;border-radius:12px;background:var(--orange-soft);color:var(--ink);font-size:.9rem;line-height:1.4}
+.checks li+li{margin-top:4px}
