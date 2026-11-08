@@ -67,6 +67,26 @@ class AiPaths(unittest.TestCase):
         self.assertIn("couldn't hear anything", r.json()["detail"])
         read.assert_not_called()
 
+    def test_payer_warning_does_not_block_or_change_the_split(self):
+        answer = {**self.answer, "total": 1200, "participants": ["Arun", "Ravi"]}
+        with mock.patch.object(reader, "read_expense", return_value=answer):
+            r = client.post("/api/read-text", json={"text": "I paid 1200, Arun and Ravi share", "people": ["Arun", "Ravi"]}).json()
+        self.assertIn("You paid but aren't sharing this. Check who shares it.", r["checks"])
+        self.assertEqual(r["owed"], {"Arun": 600, "Ravi": 600})  # the browser enables Save whenever owed is present
+        self.assertIsNone(r["problem"])
+        self.assertEqual(r["missing"], [])
+        self.assertEqual((r["expense"]["payer"], r["expense"]["participants"]), ("You", ["Arun", "Ravi"]))
+
+    def test_payer_warning_after_edits(self):
+        expense = {"description": "Dinner", "total": 1200, "payer": "You", "participants": ["Arun", "Ravi"]}
+        said = "I paid 1200, Arun and Ravi share"
+        r = client.post("/api/check", json={"expense": expense, "people": ["Arun", "Ravi"], "transcript": said}).json()
+        self.assertIn("You paid but aren't sharing this. Check who shares it.", r["checks"])
+        self.assertEqual(r["owed"], {"Arun": 600, "Ravi": 600})
+        fixed = {**expense, "participants": ["You", "Arun", "Ravi"]}
+        r = client.post("/api/check", json={"expense": fixed, "people": ["Arun", "Ravi"], "transcript": said}).json()
+        self.assertEqual(r["checks"], [])
+
     def test_check_clears_after_fix(self):
         fixed = {**self.answer, "total": 1200, "payer": "You", "participants": ["You", "Arun"]}
         r = client.post("/api/check", json={"expense": fixed, "people": ["Arun"],

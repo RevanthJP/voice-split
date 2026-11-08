@@ -5,7 +5,7 @@ from unittest import mock
 
 import reader
 from reader import PROMPT_TOKEN_LIMIT, _echoes_prompt, _is_silence, _number, _tokens, review, speech_prompt, to_expense
-from splits import ME
+from splits import ME, owed_shares
 
 
 def read(data, known=()):
@@ -294,6 +294,128 @@ class AmaraHallucination(unittest.TestCase):
     def test_existing_silence_phrases_still_work(self):
         for text in ("Thank you.", "நன்றி", "धन्यवाद", "thanks for watching"):
             self.assertTrue(self.silent(text), text)
+
+
+class PayerNotSharing(unittest.TestCase):
+    you, other = "You paid but aren't sharing this. Check who shares it.", "Ravi paid but isn't sharing this. Check who shares it."
+
+    def warned(self, data, transcript, known=()):
+        return checks(data, transcript, known)[2]
+
+    def test_payer_among_sharers(self):
+        notes = self.warned({"participants": ["me", "Arun", "Ravi"]}, "I paid 1200, split with Arun and Ravi")
+        self.assertNotIn(self.you, notes)
+        notes = self.warned({"payer": "Ravi", "participants": ["me", "Ravi"]}, "Ravi paid 1200, split with me")
+        self.assertNotIn(self.other, notes)
+
+    def test_you_paid_but_are_not_sharing(self):
+        self.assertIn(self.you, self.warned({"participants": ["Arun", "Ravi"]}, "I paid 1200, Arun and Ravi share"))
+
+    def test_someone_else_paid_but_is_not_sharing(self):
+        self.assertIn(self.other, self.warned({"payer": "Ravi", "participants": ["me", "Arun"]}, "Ravi paid 1200, me and Arun"))
+
+    def test_clear_treat_or_payer_left_out(self):
+        for text in ("I paid 1200 for Arun and Ravi, my treat", "1200 for Arun and Ravi as a treat, I paid", "It's on me, I paid 1200 for Arun and Ravi",
+                     "That is on me, 1200 for Arun and Ravi", "I treated Arun and Ravi, 1200", "I am treating Arun and Ravi 1200",
+                     "I paid 1200 for Arun and Ravi, I didn't eat", "I paid 1200, I did not watch, Arun and Ravi share",
+                     "I paid 1200, not for me, Arun and Ravi", "Arun and Ravi 1200 without me", "1200 split Arun Ravi, leave me out",
+                     "Naan treat 1200 Arun Ravi", "Meri taraf se 1200 Arun Ravi", "Maine 1200 diye, mujhe chhod ke Arun Ravi",
+                     "என் ட்ரீட் 1200 Arun Ravi", "मेरी तरफ से 1200 Arun Ravi", "मुझे छोड़कर 1200 Arun Ravi"):
+            self.assertNotIn(self.you, self.warned({"participants": ["Arun", "Ravi"]}, text), text)
+
+    def test_someone_elses_clear_treat(self):
+        for text in ("Ravi's treat, 1200 for me and Arun", "Ravi treated me and Arun, 1200", "Treat by Ravi 1200, me and Arun",
+                     "Ravi ka treat 1200", "Ravi paid 1200, Ravi didn't eat, me and Arun share"):
+            self.assertNotIn(self.other, self.warned({"payer": "Ravi", "participants": ["me", "Arun"]}, text), text)
+
+    def test_vague_or_treat_like_wording_still_warns(self):
+        for text in ("I paid 1200 for them, Arun and Ravi", "Arun aur Ravi ke liye 1200 diye", "Arun Ravi-kku 1200 kuduthen",
+                     "The dinner was a treat, 1200, Arun and Ravi", "Hospital treatment 1200, Arun and Ravi", "Dog treat 1200 for Arun and Ravi",
+                     "Treat 1200 Arun Ravi", "Not my treat, 1200, Arun and Ravi", "This isn't my treat, 1200 Arun Ravi",
+                     "My treat illa, 1200 Arun Ravi", "No treat this time, 1200 Arun Ravi"):
+            self.assertIn(self.you, self.warned({"participants": ["Arun", "Ravi"]}, text), text)
+
+    def test_i_paid_for_arun_and_ravi_is_not_suppressed(self):
+        e, _, notes = checks({"participants": ["Arun", "Ravi"]}, "I paid for Arun and Ravi, 1200")
+        self.assertEqual((e.payer, e.participants), (ME, ["Arun", "Ravi"]))  # the reading rule's own representation
+        self.assertIn(self.you, notes)
+
+    def test_first_person_wording_does_not_excuse_another_payer(self):
+        notes = self.warned({"payer": "Ravi", "participants": ["me", "Arun"]}, "Ravi paid 1200 for me and Arun, my treat")
+        self.assertIn(self.other, notes)
+
+    def test_another_persons_treat_does_not_excuse_the_payer(self):
+        notes = self.warned({"payer": "Ravi", "participants": ["me", "Arun"]}, "Arun's treat, Ravi paid 1200, me and Arun")
+        self.assertIn(self.other, notes)
+
+    def test_missing_payer_keeps_existing_behaviour(self):
+        for raw in (None, "", "   ", 5):
+            e, _, notes = checks({"payer": raw, "participants": ["Arun"]}, "Petrol 1200 split with Arun")
+            self.assertEqual(e.payer, ME)
+            self.assertNotIn(self.you, notes, raw)
+            self.assertTrue(any("Kitty put you" in n for n in notes), raw)
+
+    def test_model_says_payer_unclear(self):
+        notes = self.warned({"missing": ["payer"], "participants": ["me", "Arun"]}, "1200 with Arun")
+        self.assertIn("Check who paid.", notes)
+        self.assertNotIn(self.you, notes)
+
+    def test_payer_spelling_variations(self):
+        for payer in ("me", "I", "You", "naan", "Main"):
+            self.assertNotIn(self.you, self.warned({"payer": payer, "participants": ["You", "Arun"]}, "I paid 1200 with Arun"), payer)
+            self.assertIn(self.you, self.warned({"payer": payer, "participants": ["Arun", "Ravi"]}, "I paid 1200, Arun, Ravi"), payer)
+        self.assertNotIn(self.other, self.warned({"payer": "ravi", "participants": ["RAVI", "me"]}, "Ravi paid 1200, Ravi and me"))
+
+    def test_many_sharers(self):
+        people = ["Arun", "Divya", "Karthik", "Pooja", "Meena"]
+        self.assertIn(self.you, self.warned({"participants": people}, "I paid 1200, Arun Divya Karthik Pooja Meena"))
+        self.assertNotIn(self.you, self.warned({"participants": ["me", *people]}, "I paid 1200, me Arun Divya Karthik Pooja Meena"))
+
+    def test_payer_sharing_one_item_counts_as_sharing(self):
+        items = [{"amount": 300, "description": "drinks", "only": ["me"], "excluded": []}]
+        self.assertNotIn(self.you, self.warned({"participants": ["Arun", "Ravi"], "items": items}, "I paid 1200, drinks 300 mine, Arun Ravi"))
+
+    def test_empty_sharers_left_to_the_people_prompt(self):
+        e, missing, notes = checks({"participants": []}, "I paid 1200")
+        self.assertIn("people", missing)
+        self.assertNotIn(self.you, notes)
+
+    def test_typed_by_hand_has_no_warning(self):
+        e, missing = read({"participants": ["Arun"]})
+        self.assertEqual(review(e, missing, None, (), {}), [])
+
+    def test_warning_survives_the_note_limit(self):
+        names = ["Akhil", "Bala", "Chitra", "Dinesh", "Ezhil", "Farah"]
+        notes = self.warned({"participants": names}, "நான் 1200 கொடுத்தேன்")
+        self.assertIn(self.you, notes)
+        self.assertLessEqual(len(notes), 5)
+
+    def test_warning_changes_nothing_in_the_expense(self):
+        data = {"participants": ["Arun", "Ravi"]}
+        before, _ = read(data)
+        e, _, notes = checks(data, "I paid 1200, Arun and Ravi share")
+        self.assertIn(self.you, notes)
+        self.assertEqual((e.payer, e.participants, e.total, e.mode), (before.payer, before.participants, before.total, before.mode))
+        self.assertEqual(owed_shares(e), {"Arun": 60000, "Ravi": 60000})
+
+    def test_saved_audit_examples(self):
+        """The model's answers and transcripts saved by the Stage B runs."""
+        answer = {"mode": "equal", "values": {}, "items": [], "missing": []}
+        warned = [("Ravi", ["You", "Amit"], "Raviwar ने होटेल के लिए 6000 रुपये दिए, मेरे और Amit के साथ बराबर गातो।", 6000, ["Ravi", "Amit"],
+                   "Ravi paid but isn't sharing this. Check who shares it."),
+                  ("Rajat", ["You", "Ankit", "Pooja"], "Movie Tickets के 1200 Main Day, Main, अंकित और पूजा के लिए, Rajat को छाद के।", 1200,
+                   ["Rajat", "Ankit", "Pooja"], "Rajat paid but isn't sharing this. Check who shares it."),
+                  ("You", ["Karthika", "Divya"], "Dinner Kunaan 1,500 QD. Karthika Divya Kura split Pannu.", 1500,
+                   ["Karthik", "Karthika", "Divya"], self.you),
+                  ("Rajat", ["You", "Ankit", "Puja"], "Movie tickets के 1200 मेन दियाए, मेन, अंकित और पूजा के लिए, रजत को छाद के.", 1200,
+                   ["Rajat", "Ankit", "Pooja"], "Rajat paid but isn't sharing this. Check who shares it.")]
+        for payer, people, transcript, total, known, expected in warned:
+            data = {**answer, "total": total, "payer": payer, "participants": people}
+            e, missing = to_expense(data, known)
+            self.assertIn(expected, review(e, missing, transcript, known, data), transcript)
+        data = {**answer, "total": 900, "payer": "You", "participants": ["Arun", "Ravi"]}
+        e, missing = to_expense(data, ["Arun", "Ravi"])
+        self.assertNotIn(self.you, review(e, missing, "I paid 900 for Arun and Ravi's movie tickets as a treat. I didn't watch it.", ["Arun", "Ravi"], data))
 
 
 if __name__ == "__main__":

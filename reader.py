@@ -373,6 +373,54 @@ def _said(name, words):
     return all(hit(p) for p in parts)
 
 
+# Clear statements that the payer isn't meant to share. Vague wording ("for them", "ke liye", "kku kuduthen",
+# "paid for A and B") is deliberately absent: those cases get the warning, which the person can ignore.
+_NEGATED_BEFORE = {"not", "no", "never", "t", "nahi", "नहीं"}
+_NEGATED_AFTER = {"illa", "illai", "nahi", "இல்ல", "இல்லை", "नहीं"}
+_LEFT_OUT_VERBS = ("eat", "have", "drink", "watch", "go", "come", "join", "share", "attend")
+_ANY_PAYER_OUT = [p.split() for p in ("as a treat",)]
+_I_AM_OUT = [p.split() for p in (
+    "my treat", "i treated", "i am treating", "i m treating", "treat from me", "is on me", "s on me",
+    "naan treat", "en treat", "enoda treat", "meri treat", "mera treat", "meri taraf se", "mere taraf se",
+    "என் ட்ரீட்", "நான் ட்ரீட்", "मेरी ट्रीट", "मेरी तरफ से", "मेरी तरफ़ से",
+    "exclude me", "excluding me", "not including me", "don t include me", "leave me out", "without me", "except me",
+    "not for me", "i am not sharing", "i m not sharing", "mujhe chhod ke", "mujhe chhodkar", "mere bina",
+    "enakku illa", "enakku vendam", "मुझे छोड़ के", "मुझे छोड़कर", "मेरे बिना", "எனக்கு இல்ல", "எனக்கு வேண்டாம்",
+    *[f"i didn t {v}" for v in _LEFT_OUT_VERBS], *[f"i did not {v}" for v in _LEFT_OUT_VERBS])]
+
+
+def _says(words, phrase):
+    """The words contain this phrase, and it isn't negated ("not my treat", "my treat illa")."""
+    n = len(phrase)
+    return any(words[i:i + n] == phrase and (i == 0 or words[i - 1] not in _NEGATED_BEFORE)
+               and (i + n == len(words) or words[i + n] not in _NEGATED_AFTER) for i in range(len(words) - n + 1))
+
+
+def _payer_is_clearly_out(payer, words):
+    """The speaker clearly said the payer isn't sharing: a treat, or the payer left out in so many words."""
+    if payer == ME:
+        phrases = [*_ANY_PAYER_OUT, *_I_AM_OUT]
+    else:
+        who = _words(payer)
+        phrases = [*_ANY_PAYER_OUT, [*who, "s", "treat"], [*who, "treat"], [*who, "treated"], ["treat", "by", *who],
+                   ["treat", "from", *who], [*who, "ka", "treat"], [*who, "ki", "treat"], [*who, "oda", "treat"],
+                   *[[*who, a, b, v] for a, b in (("didn", "t"), ("did", "not")) for v in _LEFT_OUT_VERBS]]
+    return any(_says(words, p) for p in phrases)
+
+
+def _payer_not_sharing_note(expense, words, data):
+    """A warning when the payer isn't among the sharers and nobody said that was intended. Advisory only.
+    With no payer in the model's answer the payer is just the default, so the existing checks cover it."""
+    if data and not (isinstance(data.get("payer"), str) and data["payer"].strip()):
+        return None
+    payer = (expense.payer or "").strip()
+    sharers = {p.lower() for p in expense.participants} | {p.lower() for i in expense.items for p in i.only}
+    if not payer or not sharers or payer.lower() in sharers or _payer_is_clearly_out(payer, words):
+        return None
+    return ("You paid but aren't sharing this. Check who shares it." if payer == ME
+            else f"{payer} paid but isn't sharing this. Check who shares it.")
+
+
 def _rupees(value):
     return f"₹{value:,.2f}".replace(".00", "")
 
@@ -396,6 +444,10 @@ def review(expense, missing, transcript, known_people=(), data=None):
             notes.append(f"Check the amount: {_rupees(float(expense.total))} isn't a number that was said.")
         elif not said:
             notes.append(f"{_rupees(float(expense.total))} was worked out from the words said. Check the amount.")
+
+    payer_note = _payer_not_sharing_note(expense, words, data)
+    if payer_note:
+        notes.append(payer_note)
 
     # Names the cleaning step snapped to a friend ("Ravivar" → Ravi) are shown, never changed silently.
     raw_people = data.get("participants") if isinstance(data.get("participants"), list) else []
