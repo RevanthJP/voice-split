@@ -1,0 +1,39 @@
+{
+ "_note": "Frozen before any fresh clip was generated. Do not edit: the experiment refuses to run if the checksum in FREEZE.txt does not match.",
+ "A": {
+  "what": "Pre-Phase-2 hint, no friend names",
+  "hints": {
+   "auto": "Petrol, dinner, auto, split with Arun and Ravi, I paid 1,200 rupees.",
+   "ta": "நான் petrol-க்கு ஆயிரத்து இருநூறு ரூபாய் கொடுத்தேன், Arun Ravi கூட split பண்ணு. ஐநூறு, ஆயிரம், இரண்டாயிரம், dinner, auto.",
+   "hi": "मैंने petrol के लिए बारह सौ रुपये दिए, Arun और Ravi के साथ split करो। पाँच सौ, हज़ार, दो हज़ार।"
+  },
+  "names": "none"
+ },
+ "B": {
+  "what": "Current prompt: Phase 2 hint, then friend names",
+  "hints": {
+   "auto": "Petrol, dinner, auto, Swiggy, Ola, rent, split with Arun and Ravi, I paid 1,200 rupees.",
+   "ta": "நான் petrol-க்கு ஆயிரத்து இருநூறு ரூபாய் கொடுத்தேன், Arun Ravi கூட split பண்ணு. ஐநூறு, ஆயிரம், இரண்டாயிரம், dinner, auto.",
+   "hi": "मैंने petrol के लिए बारह सौ रुपये दिए, Arun और Ravi के साथ split करो। पाँच सौ, हज़ार, दो हज़ार।"
+  },
+  "names": "after"
+ },
+ "B2": {
+  "what": "Current prompt without 'Swiggy, Ola, rent'",
+  "hints": {
+   "auto": "Petrol, dinner, auto, split with Arun and Ravi, I paid 1,200 rupees.",
+   "ta": "நான் petrol-க்கு ஆயிரத்து இருநூறு ரூபாய் கொடுத்தேன், Arun Ravi கூட split பண்ணு. ஐநூறு, ஆயிரம், இரண்டாயிரம், dinner, auto.",
+   "hi": "मैंने petrol के लिए बारह सौ रुपये दिए, Arun और Ravi के साथ split करो। पाँच सौ, हज़ार, दो हज़ार।"
+  },
+  "names": "after"
+ },
+ "C": {
+  "what": "Friend names first, prompt ends on digit amounts",
+  "hints": {
+   "auto": "Petrol, dinner, auto, Swiggy, Ola, rent, split with Arun and Ravi, I paid 1,200 rupees, 2,750, 640.",
+   "ta": "நான் petrol-க்கு ஆயிரத்து இருநூறு ரூபாய் கொடுத்தேன், Arun Ravi கூட split பண்ணு. ஐநூறு, ஆயிரம், இரண்டாயிரம், dinner, auto.",
+   "hi": "मैंने petrol के लिए बारह सौ रुपये दिए, Arun और Ravi के साथ split करो। पाँच सौ, हज़ार, दो हज़ार।"
+  },
+  "names": "before"
+ }
+}

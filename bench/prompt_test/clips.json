@@ -1,0 +1,398 @@
+[
+ {
+  "file": "clips/fresh-synth-hi-1.wav",
+  "kind": "synthetic-fresh",
+  "voice": "Lekha",
+  "reference": "मैंने खाने के लिए तीन सौ रुपये दिए, अर्जुन और गणेश के साथ बाँटो",
+  "amount": 300,
+  "amount_shape": "hundreds",
+  "case": {
+   "id": "fresh-synth-hi-1",
+   "lang": "hindi",
+   "categories": [
+    "amount-words",
+    "synthetic-fresh"
+   ],
+   "text": "मैंने खाने के लिए तीन सौ रुपये दिए, अर्जुन और गणेश के साथ बाँटो",
+   "people": [
+    "Akash",
+    "Arjun",
+    "Ganesh"
+   ],
+   "payer": "You",
+   "owed": {
+    "You": 100.0,
+    "Arjun": 100.0,
+    "Ganesh": 100.0
+   },
+   "name_forms": {
+    "Arjun": [
+     "अर्जुन"
+    ],
+    "Ganesh": [
+     "गणेश"
+    ]
+   }
+  }
+ },
+ {
+  "file": "clips/fresh-synth-hi-2.wav",
+  "kind": "synthetic-fresh",
+  "voice": "Lekha",
+  "reference": "मैंने खाने के लिए एक सौ रुपये दिए, राहुल के साथ बाँटो",
+  "amount": 100,
+  "amount_shape": "hundreds",
+  "case": {
+   "id": "fresh-synth-hi-2",
+   "lang": "hindi",
+   "categories": [
+    "amount-words",
+    "synthetic-fresh"
+   ],
+   "text": "मैंने खाने के लिए एक सौ रुपये दिए, राहुल के साथ बाँटो",
+   "people": [
+    "Priya",
+    "Rahul"
+   ],
+   "payer": "You",
+   "owed": {
+    "You": 50.0,
+    "Rahul": 50.0
+   },
+   "name_forms": {
+    "Rahul": [
+     "राहुल"
+    ]
+   }
+  }
+ },
+ {
+  "file": "clips/fresh-synth-hi-3.wav",
+  "kind": "synthetic-fresh",
+  "voice": "Lekha",
+  "reference": "मैंने टैक्सी के लिए चार हज़ार रुपये दिए, विजय के साथ बाँटो",
+  "amount": 4000,
+  "amount_shape": "thousands",
+  "case": {
+   "id": "fresh-synth-hi-3",
+   "lang": "hindi",
+   "categories": [
+    "amount-words",
+    "synthetic-fresh"
+   ],
+   "text": "मैंने टैक्सी के लिए चार हज़ार रुपये दिए, विजय के साथ बाँटो",
+   "people": [
+    "Priya",
+    "Vijay"
+   ],
+   "payer": "You",
+   "owed": {
+    "You": 2000.0,
+    "Vijay": 2000.0
+   },
+   "name_forms": {
+    "Vijay": [
+     "विजय"
+    ]
+   }
+  }
+ },
+ {
+  "file": "clips/fresh-synth-hi-4.wav",
+  "kind": "synthetic-fresh",
+  "voice": "Lekha",
+  "reference": "मैंने किताबों के लिए तीन हज़ार रुपये दिए, कार्तिका और स्नेहा के साथ बाँटो",
+  "amount": 3000,
+  "amount_shape": "thousands",
+  "case": {
+   "id": "fresh-synth-hi-4",
+   "lang": "hindi",
+   "categories": [
+    "amount-words",
+    "synthetic-fresh"
+   ],
+   "text": "मैंने किताबों के लिए तीन हज़ार रुपये दिए, कार्तिका और स्नेहा के साथ बाँटो",
+   "people": [
+    "Ganesh",
+    "Karthika",
+    "Sneha"
+   ],
+   "payer": "You",
+   "owed": {
+    "You": 1000.0,
+    "Karthika": 1000.0,
+    "Sneha": 1000.0
+   },
+   "name_forms": {
+    "Karthika": [
+     "कार्तिका"
+    ],
+    "Sneha": [
+     "स्नेहा"
+    ]
+   }
+  }
+ },
+ {
+  "file": "clips/fresh-synth-hi-5.wav",
+  "kind": "synthetic-fresh",
+  "voice": "Lekha",
+  "reference": "मैंने किराने के लिए चार सौ पचास रुपये दिए, प्रियंका और दिव्या के साथ बाँटो",
+  "amount": 450,
+  "amount_shape": "compound",
+  "case": {
+   "id": "fresh-synth-hi-5",
+   "lang": "hindi",
+   "categories": [
+    "amount-words",
+    "synthetic-fresh"
+   ],
+   "text": "मैंने किराने के लिए चार सौ पचास रुपये दिए, प्रियंका और दिव्या के साथ बाँटो",
+   "people": [
+    "Divya",
+    "Lakshmi",
+    "Priyanka"
+   ],
+   "payer": "You",
+   "owed": {
+    "You": 150.0,
+    "Priyanka": 150.0,
+    "Divya": 150.0
+   },
+   "name_forms": {
+    "Priyanka": [
+     "प्रियंका"
+    ],
+    "Divya": [
+     "दिव्या"
+    ]
+   }
+  }
+ },
+ {
+  "file": "clips/fresh-synth-ta-1.wav",
+  "kind": "synthetic-fresh",
+  "voice": "Vani",
+  "reference": "நான் டாக்ஸிக்கு நானூறு ரூபாய் கொடுத்தேன், அமித் கூட பிரிச்சுக்கோ",
+  "amount": 400,
+  "amount_shape": "hundreds",
+  "case": {
+   "id": "fresh-synth-ta-1",
+   "lang": "tamil",
+   "categories": [
+    "amount-words",
+    "synthetic-fresh"
+   ],
+   "text": "நான் டாக்ஸிக்கு நானூறு ரூபாய் கொடுத்தேன், அமித் கூட பிரிச்சுக்கோ",
+   "people": [
+    "Amit",
+    "Suresh"
+   ],
+   "payer": "You",
+   "owed": {
+    "You": 200.0,
+    "Amit": 200.0
+   },
+   "name_forms": {
+    "Amit": [
+     "அமித்"
+    ]
+   }
+  }
+ },
+ {
+  "file": "clips/fresh-synth-ta-2.wav",
+  "kind": "synthetic-fresh",
+  "voice": "Vani",
+  "reference": "நான் டாக்ஸிக்கு தொள்ளாயிரம் ரூபாய் கொடுத்தேன், காவ்யா மீனா கூட பிரிச்சுக்கோ",
+  "amount": 900,
+  "amount_shape": "hundreds",
+  "case": {
+   "id": "fresh-synth-ta-2",
+   "lang": "tamil",
+   "categories": [
+    "amount-words",
+    "synthetic-fresh"
+   ],
+   "text": "நான் டாக்ஸிக்கு தொள்ளாயிரம் ரூபாய் கொடுத்தேன், காவ்யா மீனா கூட பிரிச்சுக்கோ",
+   "people": [
+    "Ganesh",
+    "Kavya",
+    "Meena"
+   ],
+   "payer": "You",
+   "owed": {
+    "You": 300.0,
+    "Kavya": 300.0,
+    "Meena": 300.0
+   },
+   "name_forms": {
+    "Kavya": [
+     "காவ்யா"
+    ],
+    "Meena": [
+     "மீனா"
+    ]
+   }
+  }
+ },
+ {
+  "file": "clips/fresh-synth-ta-3.wav",
+  "kind": "synthetic-fresh",
+  "voice": "Vani",
+  "reference": "நான் டாக்ஸிக்கு ஆறாயிரம் ரூபாய் கொடுத்தேன், பிரியா அஞ்சலி கூட பிரிச்சுக்கோ",
+  "amount": 6000,
+  "amount_shape": "thousands",
+  "case": {
+   "id": "fresh-synth-ta-3",
+   "lang": "tamil",
+   "categories": [
+    "amount-words",
+    "synthetic-fresh"
+   ],
+   "text": "நான் டாக்ஸிக்கு ஆறாயிரம் ரூபாய் கொடுத்தேன், பிரியா அஞ்சலி கூட பிரிச்சுக்கோ",
+   "people": [
+    "Anjali",
+    "Karthik",
+    "Priya"
+   ],
+   "payer": "You",
+   "owed": {
+    "You": 2000.0,
+    "Priya": 2000.0,
+    "Anjali": 2000.0
+   },
+   "name_forms": {
+    "Priya": [
+     "பிரியா"
+    ],
+    "Anjali": [
+     "அஞ்சலி"
+    ]
+   }
+  }
+ },
+ {
+  "file": "clips/fresh-synth-ta-4.wav",
+  "kind": "synthetic-fresh",
+  "voice": "Vani",
+  "reference": "நான் பெட்ரோலுக்கு எழுநூற்று இருபது ரூபாய் கொடுத்தேன், பிரியா கணேஷ் கூட பிரிச்சுக்கோ",
+  "amount": 720,
+  "amount_shape": "compound",
+  "case": {
+   "id": "fresh-synth-ta-4",
+   "lang": "tamil",
+   "categories": [
+    "amount-words",
+    "synthetic-fresh"
+   ],
+   "text": "நான் பெட்ரோலுக்கு எழுநூற்று இருபது ரூபாய் கொடுத்தேன், பிரியா கணேஷ் கூட பிரிச்சுக்கோ",
+   "people": [
+    "Ganesh",
+    "Priya",
+    "Rahul"
+   ],
+   "payer": "You",
+   "owed": {
+    "You": 240.0,
+    "Priya": 240.0,
+    "Ganesh": 240.0
+   },
+   "name_forms": {
+    "Priya": [
+     "பிரியா"
+    ],
+    "Ganesh": [
+     "கணேஷ்"
+    ]
+   }
+  }
+ },
+ {
+  "file": "clips/fresh-synth-en-1.wav",
+  "kind": "synthetic-fresh",
+  "voice": "Rishi",
+  "reference": "I paid two hundred rupees for lunch, split with Pooja.",
+  "amount": 200,
+  "amount_shape": "hundreds",
+  "case": {
+   "id": "fresh-synth-en-1",
+   "lang": "indian-english",
+   "categories": [
+    "amount-words",
+    "synthetic-fresh"
+   ],
+   "text": "I paid two hundred rupees for lunch, split with Pooja.",
+   "people": [
+    "Pooja",
+    "Rahul"
+   ],
+   "payer": "You",
+   "owed": {
+    "You": 100.0,
+    "Pooja": 100.0
+   },
+   "name_forms": {
+    "Pooja": []
+   }
+  }
+ },
+ {
+  "file": "clips/fresh-synth-en-2.wav",
+  "kind": "synthetic-fresh",
+  "voice": "Rishi",
+  "reference": "I paid eight thousand rupees for medicine, split with Karthik.",
+  "amount": 8000,
+  "amount_shape": "thousands",
+  "case": {
+   "id": "fresh-synth-en-2",
+   "lang": "indian-english",
+   "categories": [
+    "amount-words",
+    "synthetic-fresh"
+   ],
+   "text": "I paid eight thousand rupees for medicine, split with Karthik.",
+   "people": [
+    "Akash",
+    "Karthik"
+   ],
+   "payer": "You",
+   "owed": {
+    "You": 4000.0,
+    "Karthik": 4000.0
+   },
+   "name_forms": {
+    "Karthik": []
+   }
+  }
+ },
+ {
+  "file": "clips/fresh-synth-en-3.wav",
+  "kind": "synthetic-fresh",
+  "voice": "Rishi",
+  "reference": "I paid seven thousand rupees for books, split with Ganesh.",
+  "amount": 7000,
+  "amount_shape": "thousands",
+  "case": {
+   "id": "fresh-synth-en-3",
+   "lang": "indian-english",
+   "categories": [
+    "amount-words",
+    "synthetic-fresh"
+   ],
+   "text": "I paid seven thousand rupees for books, split with Ganesh.",
+   "people": [
+    "Anjali",
+    "Ganesh"
+   ],
+   "payer": "You",
+   "owed": {
+    "You": 3500.0,
+    "Ganesh": 3500.0
+   },
+   "name_forms": {
+    "Ganesh": []
+   }
+  }
+ }
+]
