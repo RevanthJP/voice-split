@@ -1,5 +1,7 @@
 """Endpoint tests that need no AI calls."""
+import re
 import unittest
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -33,6 +35,15 @@ class Endpoints(unittest.TestCase):
     def test_page_and_app_files(self):
         for path in ("/", "/manifest.webmanifest", "/sw.js", "/icons/icon-192.png", "/static/app.js", "/static/style.css"):
             self.assertEqual(client.get(path).status_code, 200, path)
+
+
+class OneWayToSave(unittest.TestCase):
+    def test_only_the_save_button_adds_an_expense(self):
+        js = (Path(__file__).parent / "public" / "static" / "app.js").read_text(encoding="utf-8")
+        adds = [m.start() for m in re.finditer(r"\.expenses\.(?:unshift|push|concat)\(|\.expenses\s*=\s*\[", js)]
+        self.assertEqual(len(adds), 1, "an expense must be added in exactly one place")
+        handler = js.index('$("save").addEventListener("click"')
+        self.assertTrue(handler < adds[0] < js.index("});", handler), "that place must be the Save handler")
 
 
 if __name__ == "__main__":
