@@ -688,3 +688,10 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 /* Doubts about the AI's reading, shown on the confirmation card for the person to check */
 .checks{margin:0 0 .9rem;padding:10px 14px 10px 30px;border-radius:12px;background:var(--orange-soft);color:var(--ink);font-size:.9rem;line-height:1.4}
 .checks li+li{margin-top:4px}
+
+/* A field the AI reading may have got wrong: orange border and a "Check this" label */
+.doubt{box-shadow:0 0 0 2px var(--orange);border-radius:12px}
+.chips.doubt{padding:6px}
+.checkThis{color:var(--orange);font-size:.8rem;font-weight:700;margin-left:4px}
+.amount.doubt{padding:2px 6px}
+.amountFlag{margin:.3rem 0 .7rem;text-align:right}

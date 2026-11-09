@@ -10,6 +10,7 @@ let draft = null;      // the expense on the confirmation sheet
 let draftGroup = null; // which group it will be saved to
 let draftHeard = null;  // what was said, so the checks can run again after edits
 let draftChecks = [];   // the AI reading's doubts; edits can clear them but never add new ones
+let draftDoubts = {};   // the fields highlighted when the card opened; same rule
 let openGroupId = null;
 
 // ---------- storage ----------
@@ -278,6 +279,7 @@ function showCard(res, gid) {
   draftGroup = gid;
   draftHeard = res.transcript || null;
   draftChecks = res.checks || [];
+  draftDoubts = res.doubts || {};
   fillGroupSelect($("sheetGroup"), gid);
   $("heard").hidden = !res.transcript;
   $("heard").textContent = res.transcript ? "“" + res.transcript + "”" : "";
@@ -297,6 +299,10 @@ $("sheetGroup").addEventListener("change", () => { draftGroup = $("sheetGroup").
 
 function cardPeople() {
   return [...new Set([ME, ...group(draftGroup).people, draft.payer, ...draft.participants, ...draft.items.flatMap((i) => [...i.only, ...i.excluded])])].filter(Boolean);
+}
+function flagField(box, flag, on) {
+  $(box).classList.toggle("doubt", on);
+  $(flag).hidden = !on;
 }
 function paintCard(res) {
   const people = cardPeople();
@@ -334,6 +340,13 @@ function paintCard(res) {
   const checks = (res.checks || []).filter((c) => draftChecks.includes(c));
   $("checks").replaceChildren(...checks.map((c) => el("li", null, c)));
   $("checks").hidden = !checks.length;
+  const doubts = res.doubts || {};
+  const amountDoubt = !!(doubts.amount && draftDoubts.amount), payerDoubt = !!(doubts.payer && draftDoubts.payer);
+  flagField("amountBox", "doubtAmount", amountDoubt);
+  flagField("payer", "doubtPayer", payerDoubt);
+  flagField("sharers", "doubtSharers", payerDoubt);
+  $("total").setAttribute("aria-invalid", amountDoubt);
+  $("payer").setAttribute("aria-invalid", payerDoubt);
   if (res.owed) {
     for (const [name, amount] of Object.entries(res.owed)) {
       if (!amount) continue;

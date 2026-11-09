@@ -4,7 +4,7 @@ import unittest
 from unittest import mock
 
 import reader
-from reader import PROMPT_TOKEN_LIMIT, _echoes_prompt, _is_silence, _number, _tokens, review, speech_prompt, to_expense
+from reader import PROMPT_TOKEN_LIMIT, doubtful_fields, _echoes_prompt, _is_silence, _number, _tokens, review, speech_prompt, to_expense
 from splits import ME, owed_shares
 
 
@@ -416,6 +416,47 @@ class PayerNotSharing(unittest.TestCase):
         data = {**answer, "total": 900, "payer": "You", "participants": ["Arun", "Ravi"]}
         e, missing = to_expense(data, ["Arun", "Ravi"])
         self.assertNotIn(self.you, review(e, missing, "I paid 900 for Arun and Ravi's movie tickets as a treat. I didn't watch it.", ["Arun", "Ravi"], data))
+
+
+class DoubtfulFields(unittest.TestCase):
+    AMOUNT = "Check the amount: ₹1,500 isn't a number that was said."
+    YOU = "You paid but aren't sharing this. Check who shares it."
+    RAVI = "Ravi paid but isn't sharing this. Check who shares it."
+
+    def test_amount_message_wording_is_pinned(self):
+        _, _, notes = checks({"total": 1500, "participants": ["me", "Arun"]}, "I paid 1200 for petrol with Arun")
+        self.assertIn(self.AMOUNT, notes)
+
+    def test_your_payer_message_wording_is_pinned(self):
+        _, _, notes = checks({"participants": ["Arun", "Ravi"]}, "I paid 1200, Arun and Ravi share")
+        self.assertIn(self.YOU, notes)
+
+    def test_other_payer_message_wording_is_pinned(self):
+        _, _, notes = checks({"payer": "Ravi", "participants": ["me", "Arun"]}, "Ravi paid 1200, me and Arun")
+        self.assertIn(self.RAVI, notes)
+
+    def test_amount_not_said_flags_amount_only(self):
+        self.assertEqual(doubtful_fields([self.AMOUNT]), {"amount": True, "payer": False})
+
+    def test_payer_not_sharing_flags_payer_only(self):
+        for note in (self.YOU, self.RAVI, "Arun Kumar paid but isn't sharing this. Check who shares it."):
+            self.assertEqual(doubtful_fields([note]), {"amount": False, "payer": True}, note)
+
+    def test_both_together(self):
+        self.assertEqual(doubtful_fields([self.YOU, "Check who paid.", self.AMOUNT]), {"amount": True, "payer": True})
+
+    def test_other_notes_highlight_nothing(self):
+        for note in ("₹1,000 was worked out from the words said. Check the amount.", "Kitty couldn't read the amount. Type it in.",
+                     "Nobody was said to have paid, so Kitty put you. Check who paid.", "Check who paid.",
+                     "Ravi is set as the payer but wasn't mentioned. Check who paid.", "Meena wasn't in what was said. Check the names.",
+                     "Ravi was added but wasn't mentioned. Check who shares this.", "Check the spelling of Ravi."):
+            self.assertEqual(doubtful_fields([note]), {"amount": False, "payer": False}, note)
+
+    def test_no_notes(self):
+        self.assertEqual(doubtful_fields([]), {"amount": False, "payer": False})
+
+    def test_only_whole_messages_count(self):
+        self.assertEqual(doubtful_fields([f"Note: {self.AMOUNT} Really."]), {"amount": False, "payer": False})
 
 
 if __name__ == "__main__":

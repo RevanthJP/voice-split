@@ -64,6 +64,7 @@ def _card(expense, missing=(), transcript=None, known=(), data=None):
         "owed": None, "splitwise": None, "problem": None,
         "checks": ai.review(expense, list(missing), transcript, known, data),
     }
+    out["doubts"] = ai.doubtful_fields(out["checks"])
     if not missing:
         try:
             out["owed"] = {k: v / 100 for k, v in owed_shares(expense).items()}

@@ -13,7 +13,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Kitty">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="/static/style.css?v=29">
+<link rel="stylesheet" href="/static/style.css?v=30">
 </head>
 <body>
 <div class="app">
@@ -218,11 +218,12 @@
     <ul class="checks" id="checks" hidden aria-label="Things to check"></ul>
     <div class="row">
       <input id="desc" class="desc" aria-label="What it was for" maxlength="60">
-      <label class="amount">₹<input id="total" type="number" inputmode="decimal" min="0" step="0.01" aria-label="Amount"></label>
+      <label class="amount" id="amountBox">₹<input id="total" type="number" inputmode="decimal" min="0" step="0.01" aria-label="Amount"></label>
     </div>
+    <p class="checkThis amountFlag" id="doubtAmount" hidden>Check this</p>
     <label class="label">Group <select id="sheetGroup" class="field"></select></label>
-    <label class="label">Paid by <select id="payer" class="field"></select></label>
-    <div class="label">Split between
+    <label class="label">Paid by <span class="checkThis" id="doubtPayer" hidden>Check this</span> <select id="payer" class="field"></select></label>
+    <div class="label">Split between <span class="checkThis" id="doubtSharers" hidden>Check this</span>
       <div id="sharers" class="chips"></div>
       <form id="addSharer" class="compose inline small">
         <input id="newSharer" maxlength="30" placeholder="Add someone" autocomplete="off">
@@ -424,6 +425,6 @@
   <div id="toast" class="toast" role="status" hidden></div>
 </div>
 <div id="print" class="print" aria-hidden="true"></div>
-<script src="/static/app.js?v=29"></script>
+<script src="/static/app.js?v=31"></script>
 </body>
 </html>

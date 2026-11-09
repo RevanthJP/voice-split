@@ -488,3 +488,14 @@ def review(expense, missing, transcript, known_people=(), data=None):
     if len(raw_items) > len(expense.items):
         notes.append("Part of the bill couldn't be read. Check the separate items.")
     return list(dict.fromkeys(notes))[:5]
+
+
+# The two doubts the card highlights. These match review()'s messages exactly; tests pin the wording.
+_AMOUNT_NOT_SAID = re.compile(r"Check the amount: .+ isn't a number that was said\.")
+_PAYER_NOT_SHARING = re.compile(r"(You paid but aren't|.+ paid but isn't) sharing this\. Check who shares it\.")
+
+
+def doubtful_fields(checks):
+    """Which fields the card should highlight, read from review()'s messages. Changes nothing else."""
+    return {"amount": any(_AMOUNT_NOT_SAID.fullmatch(c) for c in checks),
+            "payer": any(_PAYER_NOT_SHARING.fullmatch(c) for c in checks)}

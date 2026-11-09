@@ -87,6 +87,29 @@ class AiPaths(unittest.TestCase):
         r = client.post("/api/check", json={"expense": fixed, "people": ["Arun", "Ravi"], "transcript": said}).json()
         self.assertEqual(r["checks"], [])
 
+    def test_card_reports_doubtful_fields(self):
+        answer = {**self.answer, "total": 1500, "participants": ["Arun", "Ravi"]}
+        with mock.patch.object(reader, "read_expense", return_value=answer):
+            r = client.post("/api/read-text", json={"text": "I paid 1200, Arun and Ravi share", "people": ["Arun", "Ravi"]}).json()
+        self.assertEqual(r["doubts"], {"amount": True, "payer": True})
+        self.assertEqual(r["owed"], {"Arun": 750, "Ravi": 750})  # a highlight changes nothing in the sum
+        self.assertEqual(r["expense"]["total"], 1500)
+
+    def test_doubts_clear_once_fixed(self):
+        said = "I paid 1200, Arun and Ravi share"
+        wrong = {"description": "Dinner", "total": 1500, "payer": "You", "participants": ["Arun", "Ravi"]}
+        r = client.post("/api/check", json={"expense": wrong, "people": ["Arun", "Ravi"], "transcript": said}).json()
+        self.assertEqual(r["doubts"], {"amount": True, "payer": True})
+        r = client.post("/api/check", json={"expense": {**wrong, "total": 1200}, "people": ["Arun", "Ravi"], "transcript": said}).json()
+        self.assertEqual(r["doubts"], {"amount": False, "payer": True})
+        fixed = {**wrong, "total": 1200, "participants": ["You", "Arun", "Ravi"]}
+        r = client.post("/api/check", json={"expense": fixed, "people": ["Arun", "Ravi"], "transcript": said}).json()
+        self.assertEqual(r["doubts"], {"amount": False, "payer": False})
+
+    def test_hand_made_card_has_no_doubts(self):
+        r = client.post("/api/check", json={"expense": CAB}).json()
+        self.assertEqual(r["doubts"], {"amount": False, "payer": False})
+
     def test_check_clears_after_fix(self):
         fixed = {**self.answer, "total": 1200, "payer": "You", "participants": ["You", "Arun"]}
         r = client.post("/api/check", json={"expense": fixed, "people": ["Arun"],
