@@ -156,7 +156,7 @@ class RealTranscripts(unittest.TestCase):
             self.assertTrue(all(r["numbers_unchanged"] for r in run.values()))
 
     def test_report_states_the_limits(self):
-        for text in ("not evidence about real speakers", "in-sample", "name_aliases.json", "No API calls", "within noise", "kept local"):
+        for text in ("not evidence about real speakers", "in-sample", "name_aliases.json", "No API calls", "within noise", "Kept local"):
             self.assertIn(text, self.report)
 
 
