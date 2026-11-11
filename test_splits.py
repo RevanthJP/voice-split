@@ -2,7 +2,7 @@
 import random
 import unittest
 
-from splits import ME, Expense, Item, SplitError, balances, owed_shares, settle_up, splitwise_shares, with_person
+from splits import ME, Expense, Item, SplitError, balances, explain, owed_shares, settle_up, splitwise_shares, with_person
 
 
 def rupees(owed):
@@ -144,6 +144,64 @@ class Friends(unittest.TestCase):
             exps = [Expense("x", rng.randint(1, 300000) / 100, rng.choice(people), rng.sample(people, rng.randint(1, 4)))
                     for _ in range(rng.randint(1, 6))]
             self.assertEqual(sum(with_person(exps).values()), balances(exps).get(ME, 0))
+
+
+class Explain(unittest.TestCase):
+    """The listed expenses always add up to exactly the balance shown."""
+
+    def check(self, exps):
+        lines, total = explain(exps)
+        self.assertEqual(sum(p for _, p in lines), total)
+        self.assertEqual(total, balances(exps).get(ME, 0))
+        friends = with_person(exps)
+        for name in {p for e in exps for p in [e.payer, *e.participants]} - {ME}:
+            lines, total = explain(exps, ME, name)
+            self.assertEqual(sum(p for _, p in lines), total)
+            self.assertEqual(total, friends.get(name, 0), name)
+            self.assertTrue(all(p for _, p in lines))  # an expense that doesn't move the balance isn't listed
+
+    def test_uneven_split_rounding(self):
+        exps = [Expense("Dinner", 100, ME, [ME, "Arun", "Ravi"]),  # 33.34 / 33.33 / 33.33
+                Expense("Cab", 100, "Arun", [ME, "Arun", "Ravi"])]
+        self.assertEqual(explain(exps, ME, "Arun"), ([(0, 3333), (1, -3334)], -1))  # one paisa, not lost to rounding
+        self.assertEqual(explain(exps), ([(0, 6666), (1, -3334)], 3332))
+        self.check(exps)
+
+    def test_uneven_percent_and_items(self):
+        exps = [Expense("Rent", 1000, ME, [ME, "Arun", "Ravi"], mode="percent", values={ME: 33.3, "Arun": 33.3, "Ravi": 33.4}),
+                Expense("Bill", 1000.01, "Ravi", [ME, "Arun", "Ravi"], items=[Item(100, "drinks", excluded=["Arun"])])]
+        self.check(exps)
+
+    def test_settled_up(self):
+        exps = [Expense("Lunch", 600, ME, [ME, "Arun"]), Expense("Movie", 600, "Arun", [ME, "Arun"])]
+        self.assertEqual(explain(exps, ME, "Arun"), ([(0, 30000), (1, -30000)], 0))
+        self.assertEqual(explain(exps), ([(0, 30000), (1, -30000)], 0))
+        self.check(exps)
+
+    def test_only_expenses_that_move_the_balance(self):
+        exps = [Expense("Snacks", 200, "Arun", ["Arun", "Ravi"]),  # doesn't involve me
+                Expense("Tickets", 500, ME, ["Arun", "Ravi"]),     # I paid but don't share
+                Expense("Own", 300, ME, [ME])]                       # only me: nothing to settle
+        self.assertEqual(explain(exps, ME, "Arun"), ([(1, 25000)], 25000))
+        self.assertEqual(explain(exps), ([(1, 50000)], 50000))
+        self.check(exps)
+
+    def test_random_groups_always_add_up(self):
+        rng = random.Random(11)
+        people = [ME, "Arun", "Ravi", "Kavya", "Meena"]
+        for _ in range(300):
+            exps = []
+            for _ in range(rng.randint(1, 8)):
+                group = rng.sample(people, rng.randint(1, 5))
+                mode = rng.choice(["equal", "equal", "shares", "percent"])
+                values = {}
+                if mode == "shares":
+                    values = {p: rng.randint(1, 4) for p in group}
+                elif mode == "percent":
+                    cuts = sorted(rng.sample(range(1, 100), len(group) - 1))
+                    values = {p: b - a for p, a, b in zip(group, [0, *cuts], [*cuts, 100])}
+                exps.append(Expense("x", rng.randint(1, 500000) / 100, rng.choice(people), group, mode, values))
+            self.check(exps)
 
 
 if __name__ == "__main__":

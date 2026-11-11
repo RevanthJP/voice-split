@@ -13,7 +13,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Kitty">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="/static/style.css?v=27">
+<link rel="stylesheet" href="/static/style.css?v=31">
 </head>
 <body>
 <div class="app">
@@ -70,6 +70,7 @@
         <button id="friendByNumber" class="primaryBtn ghost" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.2 15.2 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg>By number</button>
       </div>
       <label class="searchBox"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4a6 6 0 1 0 3.7 10.7l4.8 4.8 1.4-1.4-4.8-4.8A6 6 0 0 0 10 4Zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"/></svg><input id="friendSearch" type="search" placeholder="Search friends by name or number" autocomplete="off" enterkeyhint="search" aria-label="Search friends"></label>
+      <p id="friendsProblem" class="problem" role="alert" hidden></p>
       <ul id="friends" class="list"></ul>
       <div id="friendsNoMatch" class="emptyCard" hidden><p><b id="noMatchText">No one found</b><br><button type="button" class="link" id="addSearched">Add them by number</button></p></div>
       <div id="friendsEmpty" class="emptyCard"><span class="emptyIcon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5Z"/></svg></span><p><b>No friends yet</b><br>Add them from your contacts or by number, so Kitty can send each person their share on WhatsApp.</p></div>
@@ -112,7 +113,7 @@
     <!-- One group -->
     <section class="view" id="view-group" data-title="Group" hidden>
       <div class="groupHead">
-        <div class="totals single"><div><span id="gBalLabel">Your balance</span><strong id="gBal">₹0</strong></div></div>
+        <div class="totals single"><button type="button" id="gBalBtn" aria-haspopup="dialog"><span id="gBalLabel">Your balance</span><strong id="gBal">₹0</strong></button></div>
         <button id="gAdd" class="primaryBtn" type="button">Add expense here</button>
       </div>
       <div class="chartCard" id="gShareCard" hidden>
@@ -420,9 +421,22 @@
     </div>
   </section>
 
+  <!-- The expenses behind a balance. Uses the reminder sheet's styles. -->
+  <section id="explain" class="sheet remindSheet" hidden role="dialog" aria-modal="true" aria-labelledby="explainTitle">
+    <div class="grab" aria-hidden="true"></div>
+    <h3 class="sheetTitle" id="explainTitle">How this adds up</h3>
+    <p class="note" id="explainNote"></p>
+    <ul id="explainList" class="list"></ul>
+    <p id="explainProblem" class="problem" hidden></p>
+    <div class="actions" id="explainActions">
+      <button id="explainClose" type="button">Close</button>
+      <button id="explainRemind" class="primary" type="button" hidden>Send reminder</button>
+    </div>
+  </section>
+
   <div id="toast" class="toast" role="status" hidden></div>
 </div>
 <div id="print" class="print" aria-hidden="true"></div>
-<script src="/static/app.js?v=28"></script>
+<script src="/static/app.js?v=32"></script>
 </body>
 </html>

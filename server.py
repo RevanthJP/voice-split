@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 import reader as ai
 from export import build_xlsx
-from splits import ME, Expense, Item, SplitError, balances, owed_shares, settle_up, splitwise_shares, with_person
+from splits import ME, Expense, Item, SplitError, balances, explain, owed_shares, settle_up, splitwise_shares, with_person
 
 DAILY_AI_CAP = 300  # protects the free Groq quota on a shared link
 MAX_AUDIO = 4 * 1024 * 1024  # Vercel rejects bodies over 4.5 MB
@@ -155,6 +155,22 @@ def friends(body: AllIn):
     except SplitError as err:
         raise HTTPException(400, str(err))
     return {"friends": {k: v / 100 for k, v in pairs.items() if v}}
+
+
+class ExplainIn(BaseModel):
+    expenses: list[ExpenseIn] = Field(default_factory=list, max_length=3000)
+    person: Optional[str] = None  # a friend for their balance with you; empty for your balance in a group
+
+
+@app.post("/api/explain")
+def explain_balance(body: ExplainIn):
+    """The expenses behind one balance, each signed (+ they owe you, - you owe them). The total is their sum,
+    worked out by the same code as /api/friends and /api/balances, so it always matches what they show."""
+    try:
+        lines, total = explain([_expense(e) for e in body.expenses], ME, body.person or None)
+    except SplitError as err:
+        raise HTTPException(400, str(err))
+    return {"total": total / 100, "lines": [{"index": i, "amount": paise / 100} for i, paise in lines]}
 
 
 @app.post("/api/shares")
