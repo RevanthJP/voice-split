@@ -128,20 +128,27 @@ const screenGroup = () => (!$("view-group").hidden && group(openGroupId) ? openG
 let listenGroupId = null; // the group this recording will be added to
 function openListen() {
   clearError();
+  // A field with the keyboard up would hide the panel at the bottom
+  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
   listenGroupId = screenGroup(); // from Home or another tab, the sheet asks which group
   $("listenGroup").textContent = listenGroupId ? "Adding to " + group(listenGroupId).name : "You'll choose the group next";
   $("listen").hidden = false;
   requestAnimationFrame(() => document.body.classList.add("listen-open"));
-  startRecording();
+  startRecording(); // still from the same tap, so iPhone Safari allows the microphone
 }
 function closeListen() {
   document.body.classList.remove("listen-open");
   setTimeout(() => { $("listen").hidden = true; }, 300);
 }
 document.addEventListener("click", (e) => { if (e.target.closest("[data-listen]")) openListen(); });
-$("listenClose").addEventListener("click", () => {
+// The close button, and a tap on the screen behind the panel, both stop any recording and release the mic.
+function cancelListen() {
   if (rec && rec.state === "recording") { cancelled = true; rec.stop(); }
   closeListen();
+}
+$("listenClose").addEventListener("click", cancelListen);
+$("listen").addEventListener("click", (e) => {
+  if (e.target === $("listen") && e.clientY < $("listen").getBoundingClientRect().top) cancelListen();
 });
 
 // A faint sound wave behind the mic, the same as the earlier design: it follows the voice while recording.
@@ -195,7 +202,7 @@ async function readText(text) {
 }
 async function readAudio(blob, name) {
   clearError();
-  busy(true, "Understanding…");
+  busy(true, "Thinking…");
   const form = new FormData();
   form.append("file", blob, name);
   form.append("people", knownNames().join("|"));
