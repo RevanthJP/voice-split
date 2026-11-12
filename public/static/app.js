@@ -287,17 +287,13 @@ function showCard(res, gid) {
   const matched = matchContacts(draft);
   paintCard(res);
   $("card").scrollTop = 0;
-  $("sayInstead").hidden = true; // only the blank sheet from a group screen offers it
   openSheet();
   if (matched) recheck(); // names changed to the contact's full name, so work the shares out again
 }
 function newBlankCard(gid) {
   showCard({ expense: { description: "", total: null, payer: ME, participants: [...group(gid).people], mode: "equal", values: {}, items: [] }, missing: ["amount"], transcript: null }, gid);
-  $("sayInstead").hidden = false;
-  setTimeout(() => { if (draft) $("desc").focus(); }, 320);
+  setTimeout(() => $("desc").focus(), 320);
 }
-// Close the blank sheet without saving and start the mic, as the mic button does on this group screen.
-$("sayInstead").addEventListener("click", () => { closeCard(); openListen(); });
 $("sheetGroup").addEventListener("change", () => { draftGroup = $("sheetGroup").value; recheck(); });
 
 // Groups with everyone named in the expense come first, marked Suggested. With nobody named, the

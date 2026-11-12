@@ -13,7 +13,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Kitty">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="/static/style.css?v=35">
+<link rel="stylesheet" href="/static/style.css?v=36">
 </head>
 <body>
 <div class="app">
@@ -113,7 +113,10 @@
     <section class="view" id="view-group" data-title="Group" hidden>
       <div class="groupHead">
         <div class="totals single"><div><span id="gBalLabel">Your balance</span><strong id="gBal">₹0</strong></div></div>
-        <button id="gAdd" class="primaryBtn" type="button">Add expense here</button>
+        <div class="gAddRow">
+          <button id="gAdd" class="primaryBtn" type="button">Add expense here</button>
+          <button id="gMic" class="primaryBtn ghostMic gMic" type="button" data-listen aria-label="Add an expense here by voice"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-2.07A7 7 0 0 0 19 12h-2Z"/></svg></button>
+        </div>
       </div>
       <div class="chartCard" id="gShareCard" hidden>
         <div class="chartHead"><h3>Each person's share</h3><span class="muted" id="gShareNote"></span></div>
@@ -214,7 +217,6 @@
   <div id="scrim" class="scrim" hidden></div>
   <section id="card" class="sheet" hidden aria-live="polite" role="dialog" aria-modal="true" aria-label="Check the expense">
     <div class="grab" aria-hidden="true"></div>
-    <button id="sayInstead" class="contactBtn" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-2.07A7 7 0 0 0 19 12h-2Z"/></svg>Say it instead</button>
     <p class="heard" id="heard" hidden></p>
     <div class="row">
       <input id="desc" class="desc" aria-label="What it was for" maxlength="60">
@@ -428,6 +430,6 @@
   <div id="toast" class="toast" role="status" hidden></div>
 </div>
 <div id="print" class="print" aria-hidden="true"></div>
-<script src="/static/app.js?v=38"></script>
+<script src="/static/app.js?v=39"></script>
 </body>
 </html>

@@ -679,3 +679,8 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 .addLabel{margin:14px 0 6px;color:var(--muted);font-size:.85rem}
 .addChip{background:var(--blue-soft);color:var(--blue-deep);font-weight:600}
 .gAddBtns{margin-top:10px}
+/* Group screen: "Add expense here" with a round mic button to its right, the same height */
+.gAddRow{display:flex;gap:10px}
+.gAddRow #gAdd{flex:1;width:auto;height:52px;padding:0 14px}
+.gMic{flex:none;width:52px;height:52px;padding:0;border-radius:50%;display:grid;place-items:center}
+.gMic svg{width:24px;height:24px;fill:currentColor}
