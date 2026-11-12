@@ -436,12 +436,12 @@ async function friendBalances() {
   if (!exps.length) return {};
   return (await post("/api/friends", { expenses: exps.map(plainExpense) })).friends;
 }
+// The default reminder, which the person can still edit before sending. It never says "owe".
 function remindMessage(name, amount) {
   const me = state.profile.name ? ` – ${state.profile.name.split(" ")[0]}` : "";
-  let msg = `Hi ${name}, a quick reminder: you owe me ${rupees(amount)} for our shared expenses on Kitty.`;
   const upi = (state.profile.upi || "").trim();
-  if (/^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(upi)) msg += ` You can pay to my UPI ID: ${upi}.`;
-  return msg + me;
+  const upiLine = /^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(upi) ? `You can pay me on UPI: ${upi}. ` : "";
+  return `Hi ${name}! Quick reminder: your share of our shared expenses comes to ${rupees(amount)}. ${upiLine}Whenever you get a chance, thanks!${me}`;
 }
 function remindLink(name, amount) {
   const b = el("button", "wa", "Send reminder");
