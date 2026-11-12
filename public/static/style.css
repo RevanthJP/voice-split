@@ -679,3 +679,5 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 .addLabel{margin:14px 0 6px;color:var(--muted);font-size:.85rem}
 .addChip{background:var(--blue-soft);color:var(--blue-deep);font-weight:600}
 .gAddBtns{margin-top:10px}
+/* iPhone Safari zooms in on any field under 16px and stays zoomed, which clips the left edge. iOS only; bigger fields keep their size. */
+@supports (-webkit-touch-callout: none) { input, select, textarea, textarea.field { font-size: max(16px, 1em); } }
