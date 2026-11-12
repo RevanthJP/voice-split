@@ -8,6 +8,7 @@ const $ = (id) => document.getElementById(id);
 let state = load();
 let draft = null;      // the expense on the confirmation sheet
 let draftGroup = null; // which group it will be saved to
+let checkTimer = null, checkSeq = 0; // the pending recalculation, and which one is the latest
 let openGroupId = null;
 
 // ---------- storage ----------
@@ -257,6 +258,8 @@ function openSheet() {
   requestAnimationFrame(() => document.body.classList.add("sheet-open"));
 }
 function closeCard() {
+  clearTimeout(checkTimer);
+  checkSeq++; // a recalculation still on its way belongs to this card, so it's ignored
   draft = null;
   document.body.classList.remove("sheet-open");
   setTimeout(() => { $("scrim").hidden = true; $("card").hidden = true; }, 260);
@@ -272,6 +275,7 @@ function fillGroupSelect(sel, value, withAll) {
 }
 
 function showCard(res, gid) {
+  checkSeq++;
   draft = res.expense;
   draftGroup = gid;
   fillGroupSelect($("sheetGroup"), gid);
@@ -339,16 +343,22 @@ function paintCard(res) {
   $("shareWa").disabled = !res.owed;
   lastOwed = res.owed || null;
 }
-let checkTimer = null;
 function recheck() {
   draft.description = $("desc").value.trim() || "Expense";
   const t = parseFloat($("total").value);
   draft.total = Number.isFinite(t) && t > 0 ? t : null;
   draft.payer = $("payer").value || draft.payer;
+  $("save").disabled = true; // back on only when the latest recalculation arrives
+  const seq = ++checkSeq;
   clearTimeout(checkTimer);
   checkTimer = setTimeout(async () => {
-    try { paintCard(await post("/api/check", { expense: draft, people: group(draftGroup).people })); }
-    catch (e) { $("problem").hidden = false; $("problem").textContent = e.message; $("save").disabled = true; }
+    try {
+      const res = await post("/api/check", { expense: draft, people: group(draftGroup).people });
+      if (seq === checkSeq) paintCard(res);
+    } catch (e) {
+      if (seq !== checkSeq) return;
+      $("problem").hidden = false; $("problem").textContent = e.message; $("save").disabled = true;
+    }
   }, 150);
 }
 ["desc", "total"].forEach((id) => $(id).addEventListener("input", recheck));
