@@ -78,7 +78,11 @@ async function post(url, body, isForm, raw) {
   if (raw && res.ok) return res;
   let data = null;
   try { data = await res.json(); } catch (_) {}
-  if (!res.ok) throw new Error((data && typeof data.detail === "string" && data.detail) || "Something went wrong. Please try again.");
+  if (!res.ok) {
+    const err = new Error((data && typeof data.detail === "string" && data.detail) || "Something went wrong. Please try again.");
+    err.status = res.status;
+    throw err;
+  }
   return data;
 }
 const plainExpense = (e) => ({ description: e.description, total: e.total, payer: e.payer, participants: e.participants, mode: e.mode, values: e.values || {}, items: e.items || [] });
@@ -264,7 +268,7 @@ function closeCard() {
   document.body.classList.remove("sheet-open");
   setTimeout(() => { $("scrim").hidden = true; $("card").hidden = true; }, 260);
 }
-$("scrim").addEventListener("click", () => { if (!$("shareTo").hidden) closeShareTo(); else if (!$("addPerson").hidden) closeAddPerson(); else if (!$("contactsAsk").hidden) closeContactsAsk(); else if (!$("remind").hidden) closeRemind(); else closeCard(); });
+$("scrim").addEventListener("click", () => { if (!$("explain").hidden) closeExplain(); else if (!$("shareTo").hidden) closeShareTo(); else if (!$("addPerson").hidden) closeAddPerson(); else if (!$("contactsAsk").hidden) closeContactsAsk(); else if (!$("remind").hidden) closeRemind(); else closeCard(); });
 $("discard").addEventListener("click", closeCard);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && draft) closeCard(); });
 
@@ -475,7 +479,76 @@ $("remindOther").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText(text); toast("Message copied"); closeRemind(); } catch (_) { toast("Couldn't share. Copy the message instead."); }
 });
 
-async function renderHome(friends) {
+// ---------- the expenses behind a balance ----------
+// The list and its total both come from /api/explain, which uses the same code as the balance you tapped.
+let explainFrom = null;
+const signed = (n) => (n > 0 ? "+" : n < 0 ? "−" : "") + rupees(Math.abs(n));
+async function openExplain(friend, gid) {
+  const g = gid ? group(gid) : null;
+  const exps = g ? g.expenses.map((e) => ({ ...e, _group: g.name })) : allExpenses();
+  explainFrom = document.activeElement;
+  $("explainTitle").textContent = friend ? `You and ${friend}` : `Your balance in ${g.name}`;
+  $("explainNote").textContent = "Adding it up…";
+  $("explainList").replaceChildren();
+  $("explainProblem").hidden = true;
+  $("explainRemind").hidden = true;
+  $("explainActions").style.gridTemplateColumns = "1fr";
+  $("scrim").hidden = false; $("explain").hidden = false;
+  requestAnimationFrame(() => document.body.classList.add("remind-open"));
+  setTimeout(() => $("explainClose").focus(), 320);
+  try {
+    const r = exps.length ? await post("/api/explain", { expenses: exps.map(plainExpense), person: friend || null }) : { total: 0, lines: [] };
+    const t = r.total;
+    const head = friend ? (t > 0 ? `${friend} owes you ${rupees(t)}.` : t < 0 ? `You owe ${friend} ${rupees(-t)}.` : `You and ${friend} are settled up.`)
+      : (t > 0 ? `You get back ${rupees(t)}.` : t < 0 ? `You owe ${rupees(-t)}.` : "You're all settled up here.");
+    const n = r.lines.length;
+    $("explainNote").textContent = !n ? `${head} No shared expenses yet.`
+      : `${head} ${n === 1 ? "This expense makes" : `These ${n} expenses add up to`} that. + means ${friend ? "they owe you" : "you get money back"}, − means you owe.`;
+    const manyGroups = new Set(r.lines.map((l) => exps[l.index]._group)).size > 1;
+    const lines = r.lines.slice().sort((a, b) => ((exps[a.index].at || "") < (exps[b.index].at || "") ? 1 : -1));
+    $("explainList").replaceChildren(...lines.map((l) => {
+      const e = exps[l.index];
+      const li = el("li");
+      const amt = el("span", "amt " + (l.amount > 0 ? "get" : "owe"));
+      amt.append(el("small", null, l.amount > 0 ? (friend ? "owes you" : "you get back") : "you owe"), el("strong", null, signed(l.amount)));
+      li.append(who(e.description, `${manyGroups ? e._group + " · " : ""}${e.payer === ME ? "You paid" : e.payer + " paid"} ${rupees(e.total)} · ${shortDate(e.at)}`, "cat"), amt);
+      return li;
+    }));
+    if (n) {
+      const li = el("li");
+      const amt = el("span", "amt " + (t > 0 ? "get" : t < 0 ? "owe" : "zero"));
+      amt.append(el("small", null, "total"), el("strong", null, t ? signed(t) : rupees(0)));
+      li.append(who("Total", `${n} ${n === 1 ? "expense" : "expenses"}`), amt);
+      $("explainList").append(li);
+    }
+    if (friend && t > 0) {
+      $("explainRemind").hidden = false;
+      $("explainActions").style.gridTemplateColumns = "";
+      $("explainRemind").onclick = () => { $("explain").hidden = true; document.body.classList.remove("remind-open"); openRemind(friend, t); };
+    }
+  } catch (e) {
+    $("explainNote").textContent = "";
+    $("explainProblem").textContent = e.status === 400 ? `One expense can't be calculated, so this can't be explained: ${e.message}` : e.message;
+    $("explainProblem").hidden = false;
+  }
+}
+function closeExplain() {
+  document.body.classList.remove("remind-open");
+  setTimeout(() => { $("explain").hidden = true; if ($("card").hidden && $("remind").hidden) $("scrim").hidden = true; }, 300);
+  if (explainFrom && explainFrom.focus) explainFrom.focus();
+}
+$("explainClose").addEventListener("click", closeExplain);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("explain").hidden) closeExplain(); });
+$("gBalBtn").addEventListener("click", () => { if (group(openGroupId)) openExplain(null, openGroupId); });
+// Lets a span act as a button for keyboards too
+function tapTarget(node, label, fn) {
+  node.setAttribute("role", "button"); node.tabIndex = 0; node.setAttribute("aria-label", label); node.setAttribute("aria-haspopup", "dialog");
+  node.addEventListener("click", (e) => { e.stopPropagation(); fn(); });
+  node.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); fn(); } });
+}
+const BALANCE_PROBLEM = "One expense can't be calculated. Please check it.";
+
+async function renderHome(friends, problem) {
   const first = (state.profile.name || "").split(" ")[0];
   $("greet").textContent = first ? `Hello, ${first} 👋` : "Hello there 👋";
   $("meInitial").textContent = (state.profile.name || "You").slice(0, 1).toUpperCase();
@@ -491,6 +564,12 @@ async function renderHome(friends) {
   $("heroSub").textContent = !allExpenses().length ? "Add your first expense to get started"
     : net === 0 ? "You're all settled up" : `${Object.values(friends).filter((v) => v).length} open ${Object.values(friends).filter((v) => v).length === 1 ? "balance" : "balances"} with friends`;
   document.querySelector(".hero").classList.toggle("neg", net < 0);
+  if (problem) { // say so, rather than showing ₹0 as if everything were settled
+    $("heroLabel").textContent = "Overall"; $("heroValue").textContent = "—"; $("heroSub").textContent = problem;
+    $("getBack").textContent = "—"; $("youOwe").textContent = "—";
+    $("getBack").className = "zero"; $("youOwe").className = "zero";
+    $("getBack").closest("button").disabled = false; $("youOwe").closest("button").disabled = false;
+  }
   const recent = allExpenses().sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 5);
   $("recent").replaceChildren(...recent.map((e) => {
     const li = el("li", "tap");
@@ -506,8 +585,10 @@ async function renderHome(friends) {
 let lastFriendBalances = {};
 const WA_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.7 1.1 1.5 1.8 1 .9 1.9 1.2 2.2 1.3.3.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.6-.1 1.2Z"/></svg>';
 const SMS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2Zm3 6v2h2V9H7Zm4 0v2h2V9h-2Zm4 0v2h2V9h-2Z"/></svg>';
-function renderFriends(friends) {
-  lastFriendBalances = friends;
+let lastFriendsProblem = null;
+function renderFriends(friends, problem) {
+  lastFriendBalances = friends; lastFriendsProblem = problem || null;
+  $("friendsProblem").textContent = problem || ""; $("friendsProblem").hidden = !problem;
   // Everyone you know: people in your groups, friends you added, and anyone with a balance.
   const all = [...new Set([...allPeople(), ...Object.keys(friends)])].filter((n) => n !== ME)
     .sort((a, b) => Math.abs(friends[b] || 0) - Math.abs(friends[a] || 0) || a.localeCompare(b));
@@ -523,9 +604,15 @@ function renderFriends(friends) {
   $("friends").replaceChildren(...names.map((n) => {
     const v = friends[n] || 0;
     const groups = state.groups.filter((g) => g.people.includes(n)).map((g) => g.name).join(", ");
-    const li = el("li", "pay");
-    const amt = el("span", "amt " + (v > 0 ? "get" : v < 0 ? "owe" : "zero"));
-    amt.append(el("small", null, v > 0 ? "owes you" : v < 0 ? "you owe" : "settled up"), el("strong", null, v ? rupees(Math.abs(v)) : ""));
+    const li = el("li", "pay" + (problem ? "" : " tap"));
+    const amt = el("span", "amt " + (problem ? "zero" : v > 0 ? "get" : v < 0 ? "owe" : "zero"));
+    if (problem) amt.append(el("small", null, "can't calculate"), el("strong", null, "—"));
+    else {
+      amt.append(el("small", null, v > 0 ? "owes you" : v < 0 ? "you owe" : "settled up"), el("strong", null, v ? rupees(Math.abs(v)) : ""));
+      // Tap the row, or the amount, to see the expenses behind it
+      tapTarget(amt, `${v > 0 ? `${n} owes you ${rupees(v)}` : v < 0 ? `You owe ${n} ${rupees(-v)}` : `Settled up with ${n}`}. Show the expenses`, () => openExplain(n));
+      li.addEventListener("click", (e) => { if (!e.target.closest("button")) openExplain(n); });
+    }
     const phone = (state.phones || {})[n];
     const w = who(n, groups || phone || "No number yet");
     const via = (state.via || {})[n];
@@ -536,7 +623,7 @@ function renderFriends(friends) {
       w.querySelector(".name").append(badge);
     }
     li.append(w, amt);
-    if (v > 0) li.append(remindLink(n, v));
+    if (v > 0 && !problem) li.append(remindLink(n, v));
     const acts = el("div", "friendActions");
     if (!phone) { const a = el("button", "link", "Add number"); a.type = "button"; a.onclick = () => openAddPerson(n, true); acts.append(a); }
     const inv = el("button", "link", "Invite to Kitty"); inv.type = "button"; inv.onclick = () => openInvite(n); acts.append(inv);
@@ -563,6 +650,7 @@ async function renderGroups() {
     const li = el("li", "tap");
     const right = el("span", "amt " + (mine > 0 ? "get" : mine < 0 ? "owe" : "zero"));
     right.append(el("small", null, mine > 0 ? "you get back" : mine < 0 ? "you owe" : "settled"), el("strong", null, mine ? rupees(Math.abs(mine)) : ""));
+    if (g.expenses.length) tapTarget(right, `${mine > 0 ? `You get back ${rupees(mine)}` : mine < 0 ? `You owe ${rupees(-mine)}` : "Settled"} in ${g.name}. Show the expenses`, () => openExplain(null, g.id));
     li.append(who(g.name, `${g.people.length} ${g.people.length === 1 ? "person" : "people"} · ${g.expenses.length} ${g.expenses.length === 1 ? "expense" : "expenses"}`, "cat"), right);
     li.onclick = () => go("group", g.id);
     return li;
@@ -653,7 +741,7 @@ $("gDelete").addEventListener("click", () => {
 });
 $("friendFromContacts").addEventListener("click", () => openContactsAsk("friends"));
 $("friendByNumber").addEventListener("click", () => openAddPerson());
-$("friendSearch").addEventListener("input", () => renderFriends(lastFriendBalances));
+$("friendSearch").addEventListener("input", () => renderFriends(lastFriendBalances, lastFriendsProblem));
 $("addSearched").addEventListener("click", () => openAddPerson($("friendSearch").value));
 
 // Add a friend with their mobile number, so Kitty can send them their share
@@ -819,10 +907,10 @@ $("xPdf").addEventListener("click", async () => {
 // ---------- startup ----------
 async function renderAll() {
   renderAccount();
-  let friends = {};
-  try { friends = await friendBalances(); } catch (_) {}
-  renderHome(friends);
-  renderFriends(friends);
+  let friends = {}, problem = null;
+  try { friends = await friendBalances(); } catch (e) { problem = e.status === 400 ? BALANCE_PROBLEM : e.message; }
+  renderHome(friends, problem);
+  renderFriends(friends, problem);
   renderGroups();
   if (!$("view-group").hidden) renderGroup();
 }
