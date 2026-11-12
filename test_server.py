@@ -58,6 +58,30 @@ class Endpoints(unittest.TestCase):
             self.assertEqual(client.get(path).status_code, 200, path)
 
 
+class OneAmount(unittest.TestCase):
+    """The report's test data through the real routes: one amount per person, everywhere."""
+    EXPS = [{"description": d, "total": t, "payer": p, "participants": ["You", "Arun", "Meena"]}
+            for d, t, p in (("Hotel", 3000, "You"), ("Lunch", 300, "You"), ("Cab", 600, "Arun"), ("Movie", 300, "Meena"))]
+
+    def test_group_rows_are_direct_amounts(self):
+        b = client.post("/api/balances", json={"expenses": self.EXPS}).json()
+        rows = {(p["from"], p["to"]): p["amount"] for p in b["payments"]}
+        self.assertEqual(rows, {("Arun", "You"): 900, ("Meena", "You"): 1000, ("Meena", "Arun"): 100})
+        self.assertEqual(b["net"]["You"], 1900)  # the group card is the sum of my rows
+
+    def test_group_matches_friends_and_explain(self):
+        rows = {p["from"]: p["amount"] for p in client.post("/api/balances", json={"expenses": self.EXPS}).json()["payments"] if p["to"] == "You"}
+        friends = client.post("/api/friends", json={"expenses": self.EXPS}).json()["friends"]
+        self.assertEqual(rows, friends)
+        for name in ("Arun", "Meena"):
+            r = client.post("/api/explain", json={"expenses": self.EXPS, "person": name}).json()
+            self.assertEqual(r["total"], friends[name], name)
+
+    def test_bad_expense_is_still_a_clear_error(self):
+        bad = {**self.EXPS[0], "mode": "exact", "values": {"You": 100}}
+        self.assertEqual(client.post("/api/balances", json={"expenses": [bad]}).status_code, 400)
+
+
 class OneWayToSave(unittest.TestCase):
     def test_only_the_save_button_adds_an_expense(self):
         js = (Path(__file__).parent / "public" / "static" / "app.js").read_text(encoding="utf-8")

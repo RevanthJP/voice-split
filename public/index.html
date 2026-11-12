@@ -105,7 +105,7 @@
         <ol>
           <li><b>Add people once</b><span>Everyone in the group is ready for every expense.</span></li>
           <li><b>Say the expense</b><span>It's saved to the group you're in, like Goa trip.</span></li>
-          <li><b>Settle up</b><span>Kitty works out who pays whom in the fewest payments, and you can export it.</span></li>
+          <li><b>Settle up</b><span>Kitty shows who owes whom, person by person, so the amount you see is the amount you send.</span></li>
         </ol>
       </div>
     </section>
@@ -126,6 +126,9 @@
       <h2>Settle up</h2>
       <ul id="gSettle" class="list"></ul>
       <p id="gSettleEmpty" class="muted small">Nothing to settle yet.</p>
+      <h2 id="gOthersHead" hidden>Between others</h2>
+      <ul id="gOthers" class="list"></ul>
+      <button id="gOthersMore" class="link" type="button" hidden>Show more</button>
       <h2>Expenses</h2>
       <ul id="gExpenses" class="list"></ul>
       <p id="gExpensesEmpty" class="muted small">No expenses in this group yet.</p>
@@ -325,11 +328,11 @@
             <p><span class="avatar">R</span><span>Cab<small>Ravi paid</small></span><b>₹2,000</b></p>
           </div>
           <div class="settle">
-            <small>Settle up in 4 payments</small>
-            <p><span>Suresh → You</span><b>₹4,125</b></p>
-            <p><span>Akash → You</span><b>₹1,750</b></p>
-            <p><span>Akash → Arun</span><b>₹1,750</b></p>
-            <p><span>Ravi → Arun</span><b>₹2,125</b></p>
+            <small>Who pays you, person by person</small>
+            <p><span>Suresh → You</span><b>₹2,000</b></p>
+            <p><span>Akash → You</span><b>₹2,000</b></p>
+            <p><span>Ravi → You</span><b>₹1,600</b></p>
+            <p><span>Arun → You</span><b>₹400</b></p>
           </div>
           </div>
         </div>
@@ -444,6 +447,6 @@
   <div id="toast" class="toast" role="status" hidden></div>
 </div>
 <div id="print" class="print" aria-hidden="true"></div>
-<script src="/static/app.js?v=42"></script>
+<script src="/static/app.js?v=43"></script>
 </body>
 </html>

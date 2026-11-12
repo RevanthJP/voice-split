@@ -437,16 +437,18 @@ async function friendBalances() {
   return (await post("/api/friends", { expenses: exps.map(plainExpense) })).friends;
 }
 // The default reminder, which the person can still edit before sending. It never says "owe".
-function remindMessage(name, amount) {
+// Sent from a group's row, it names the group; from Friends it covers all shared expenses.
+function remindMessage(name, amount, groupName) {
   const me = state.profile.name ? ` – ${state.profile.name.split(" ")[0]}` : "";
   const upi = (state.profile.upi || "").trim();
   const upiLine = /^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(upi) ? `You can pay me on UPI: ${upi}. ` : "";
-  return `Hi ${name}! Quick reminder: your share of our shared expenses comes to ${rupees(amount)}. ${upiLine}Whenever you get a chance, thanks!${me}`;
+  const what = groupName ? `your share for ${groupName}` : "your share of our shared expenses";
+  return `Hi ${name}! Quick reminder: ${what} comes to ${rupees(amount)}. ${upiLine}Whenever you get a chance, thanks!${me}`;
 }
-function remindLink(name, amount) {
+function remindLink(name, amount, groupName) {
   const b = el("button", "wa", "Send reminder");
   b.type = "button";
-  b.onclick = () => openRemind(name, amount);
+  b.onclick = () => openRemind(name, amount, groupName);
   return b;
 }
 // One sheet sends reminders and invites, by WhatsApp, SMS or any other app.
@@ -463,7 +465,9 @@ function openSend(name, title, text, kind) {
   $("scrim").hidden = false; $("remind").hidden = false;
   requestAnimationFrame(() => document.body.classList.add("remind-open"));
 }
-function openRemind(name, amount) { openSend(name, `Remind ${name} about ${rupees(amount)}`, remindMessage(name, amount), "remind"); }
+function openRemind(name, amount, groupName) {
+  openSend(name, `Remind ${name} about ${rupees(amount)}${groupName ? ` (${groupName})` : ""}`, remindMessage(name, amount, groupName), "remind");
+}
 const APP_LINK = /localhost|127\.0\.0\.1/.test(location.host) ? "https://voice-split.vercel.app" : location.origin;
 function openInvite(name) {
   const me = state.profile.name ? ` – ${state.profile.name.split(" ")[0]}` : "";
@@ -524,7 +528,7 @@ async function openExplain(friend, gid) {
   const g = gid ? group(gid) : null;
   const exps = g ? g.expenses.map((e) => ({ ...e, _group: g.name })) : allExpenses();
   explainFrom = document.activeElement;
-  $("explainTitle").textContent = friend ? `You and ${friend}` : `Your balance in ${g.name}`;
+  $("explainTitle").textContent = friend ? `You and ${friend}${g ? " in " + g.name : ""}` : `Your balance in ${g.name}`;
   $("explainNote").textContent = "Adding it up…";
   $("explainList").replaceChildren();
   $("explainProblem").hidden = true;
@@ -561,7 +565,7 @@ async function openExplain(friend, gid) {
     if (friend && t > 0) {
       $("explainRemind").hidden = false;
       $("explainActions").style.gridTemplateColumns = "";
-      $("explainRemind").onclick = () => { $("explain").hidden = true; document.body.classList.remove("remind-open"); openRemind(friend, t); };
+      $("explainRemind").onclick = () => { $("explain").hidden = true; document.body.classList.remove("remind-open"); openRemind(friend, t, g ? g.name : undefined); };
     }
   } catch (e) {
     $("explainNote").textContent = "";
@@ -739,6 +743,7 @@ async function renderGroup() {
   settle.replaceChildren();
   $("gBal").textContent = "₹0"; $("gBal").className = "zero"; $("gBalLabel").textContent = "All settled";
   $("gSettleEmpty").hidden = false;
+  $("gOthers").replaceChildren(); $("gOthersHead").hidden = true; $("gOthersMore").hidden = true;
   if (!g.expenses.length) return;
   try {
     const b = await post("/api/balances", { expenses: g.expenses.map(plainExpense) });
@@ -746,14 +751,33 @@ async function renderGroup() {
     $("gBal").textContent = rupees(Math.abs(mine));
     $("gBal").className = mine > 0 ? "get" : mine < 0 ? "owe" : "zero";
     $("gBalLabel").textContent = mine > 0 ? "You get back" : mine < 0 ? "You owe" : "All settled";
+    // Direct amounts, person by person: the same numbers as the Friends tab for this group's expenses.
+    const mineRows = b.payments.filter((p) => p.to === ME || p.from === ME);
+    const others = b.payments.filter((p) => p.to !== ME && p.from !== ME);
     $("gSettleEmpty").hidden = b.payments.length > 0;
-    for (const p of b.payments) {
-      const li = el("li", "pay");
-      const line = p.to === ME ? `${p.from} pays you` : p.from === ME ? `You pay ${p.to}` : `${p.from} pays ${p.to}`;
-      li.append(who(line), el("strong", p.to === ME ? "get" : p.from === ME ? "owe" : "", rupees(p.amount)));
-      if (p.to === ME) li.append(remindLink(p.from, p.amount));
+    for (const p of mineRows) {
+      const friend = p.to === ME ? p.from : p.to;
+      const li = el("li", "pay tap");
+      const amt = el("strong", p.to === ME ? "get" : "owe", rupees(p.amount));
+      li.append(who(p.to === ME ? `${p.from} pays you` : `You pay ${p.to}`), amt);
+      tapTarget(amt, `${p.to === ME ? `${p.from} pays you` : `You pay ${p.to}`} ${rupees(p.amount)} for ${g.name}. Show the expenses`, () => openExplain(friend, g.id));
+      li.addEventListener("click", (e) => { if (!e.target.closest("button")) openExplain(friend, g.id); });
+      if (p.to === ME) li.append(remindLink(p.from, p.amount, g.name));
       settle.append(li);
     }
+    // Debts between other people: shown for completeness, muted, with nothing to send.
+    const SHOW = 3;
+    $("gOthersHead").hidden = !others.length;
+    $("gOthers").replaceChildren(...others.map((p, i) => {
+      const li = el("li", "muted");
+      li.append(who(`${p.from} pays ${p.to}`), el("strong", null, rupees(p.amount)));
+      li.hidden = others.length > SHOW && i >= SHOW;
+      return li;
+    }));
+    const more = $("gOthersMore");
+    more.hidden = others.length <= SHOW;
+    more.textContent = `Show ${others.length - SHOW} more`;
+    more.onclick = () => { $("gOthers").querySelectorAll("li[hidden]").forEach((li) => (li.hidden = false)); more.hidden = true; };
   } catch (e) { settle.append(el("li", "problem", e.message)); }
 }
 $("gAdd").addEventListener("click", () => newBlankCard(openGroupId));
@@ -1195,7 +1219,7 @@ const HOW = [
   { title: "Find your friends", text: "Pick them from your contacts, or add someone by name and mobile number. Your contact list stays on this phone; Kitty sends friends' names, never numbers, to its server and its AI provider (Groq) to match who you mean." },
   { title: "Kitty finds the people", text: "The names you said show up, ready to check. Tap Next when it looks right." },
   { title: "Check it, then save", text: "Akash skipped drinks, so he pays only for food. Fix anything with a tap, then save." },
-  { title: "Groups keep the tally", text: "Make a group for a trip or your flat. Every expense adds up, and Kitty works out who pays whom in the fewest payments." },
+  { title: "Groups keep the tally", text: "Make a group for a trip or your flat. Every expense adds up, and Kitty shows who owes whom, person by person, so the amount you see is the amount you send." },
   { title: "Split and share", text: "Post the split in your group chat on WhatsApp, or send it by SMS or any other app. Later, remind anyone on their own from Friends." },
 ];
 const SAY = [

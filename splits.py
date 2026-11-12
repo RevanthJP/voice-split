@@ -157,6 +157,25 @@ def with_person(expenses, me=ME):
     return out
 
 
+def pairwise(expenses):
+    """What each person owes each other person directly, in paise: one row per pair, debtor to creditor,
+    with pairs that come to zero left out. Built from part(), like with_person, so the rows involving
+    a person match that person's balances with everyone else."""
+    net = {}  # (a, b) with a < b -> paise b owes a (negative: a owes b)
+    for e in expenses:
+        owed = owed_shares(e)
+        for p in owed:
+            if p == e.payer:
+                continue
+            a, b = sorted((e.payer, p))
+            amount = part(e, owed, a, b)
+            if amount:
+                net[(a, b)] = net.get((a, b), 0) + amount
+    rows = [{"from": b, "to": a, "paise": v} if v > 0 else {"from": a, "to": b, "paise": -v}
+            for (a, b), v in net.items() if v]
+    return sorted(rows, key=lambda r: (-r["paise"], r["from"], r["to"]))
+
+
 def explain(expenses, me=ME, other=None):
     """The expenses behind one balance: [(index, signed paise)] for each expense that moves it, and
     their sum. Without `other` the sum is balances(expenses)[me]; with it, with_person(expenses)[other]."""
