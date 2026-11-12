@@ -118,9 +118,13 @@ function busy(on, label) {
 }
 
 // ---------- listening screen ----------
+// The group whose screen is open, if any. A voice expense started there goes to that group.
+const screenGroup = () => (!$("view-group").hidden && group(openGroupId) ? openGroupId : null);
+let listenGroupId = null; // the group this recording will be added to
 function openListen() {
   clearError();
-  $("listenGroup").textContent = "Adding to " + current().name;
+  listenGroupId = screenGroup() || state.current;
+  $("listenGroup").textContent = "Adding to " + (group(listenGroupId) || current()).name;
   $("listen").hidden = false;
   requestAnimationFrame(() => document.body.classList.add("listen-open"));
   startRecording();
@@ -195,7 +199,7 @@ async function readAudio(blob, name) {
     const res = await post("/api/read-audio", form, true);
     if (heardNothing(res)) { showError("I couldn't hear an expense. Tap the mic and say the amount and who it's with."); return; }
     closeListen();
-    showCard(res, state.current);
+    showCard(res, group(listenGroupId) ? listenGroupId : state.current);
   }
   catch (e) { showError(e.message); $("micHint").textContent = "Tap the mic to try again"; }
   finally { busy(false); if (!$("listen").hidden && $("listenError").hidden) $("micHint").textContent = "Tap the mic and say the expense"; }
