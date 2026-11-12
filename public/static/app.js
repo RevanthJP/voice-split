@@ -1057,7 +1057,7 @@ $("setupDone").addEventListener("click", () => {
 // Its numbers come from the app's own split maths (splits.py).
 const HOW = [
   { title: "Just say it", text: "Tap the mic and say the expense the way you'd tell a friend, in English, Tamil, Hindi or a mix." },
-  { title: "Find your friends", text: "Pick them from your contacts, or add someone by name and mobile number. Everything stays on your phone." },
+  { title: "Find your friends", text: "Pick them from your contacts, or add someone by name and mobile number. Your contact list stays on this phone; Kitty sends friends' names, never numbers, to its server and its AI provider (Groq) to match who you mean." },
   { title: "Kitty finds the people", text: "The names you said show up, ready to check. Tap Next when it looks right." },
   { title: "Check it, then save", text: "Akash skipped drinks, so he pays only for food. Fix anything with a tap, then save." },
   { title: "Groups keep the tally", text: "Make a group for a trip or your flat. Every expense adds up, and Kitty works out who pays whom in the fewest payments." },
@@ -1153,8 +1153,8 @@ async function pickContacts() {
 }
 let contactsMode = "app";
 const CONTACT_TEXT = {
-  app: { title: "Now give your contacts access", body: "Kitty uses your friends' names to match who you mean when you speak. They stay on this phone: nothing from your contacts is uploaded or saved on a server.", later: "Not now", allow: "Allow contacts" },
-  friends: { title: "Add friends from your contacts", body: "Your phone opens its contact list and you choose who to add. Only the names and numbers you pick are saved, and only on this phone. Nothing from your contacts is uploaded to a server.", later: "Not now", allow: "Choose contacts" },
+  app: { title: "Now give your contacts access", body: "Your contact list stays on this phone. When you add an expense, Kitty sends your friends' names, never phone numbers, to its server and its AI provider (Groq) to match who you mean. Kitty's server stores nothing.", later: "Not now", allow: "Allow contacts" },
+  friends: { title: "Add friends from your contacts", body: "Your phone opens its contact list and you choose who to add. Only the names and numbers you pick are saved, and only on this phone; the rest of your contact list stays here. When you add an expense, Kitty sends your friends' names, never phone numbers, to its server and its AI provider (Groq) to match who you mean. Kitty's server stores nothing.", later: "Not now", allow: "Choose contacts" },
 };
 function openContactsAsk(mode) {
   contactsMode = mode === "friends" ? "friends" : "app";
