@@ -114,7 +114,10 @@
     <section class="view" id="view-group" data-title="Group" hidden>
       <div class="groupHead">
         <div class="totals single"><button type="button" id="gBalBtn" aria-haspopup="dialog"><span id="gBalLabel">Your balance</span><strong id="gBal">₹0</strong></button></div>
-        <button id="gAdd" class="primaryBtn" type="button">Add expense here</button>
+        <div class="gAddRow">
+          <button id="gAdd" class="primaryBtn" type="button">Add expense here</button>
+          <button id="gMic" class="primaryBtn ghostMic gMic" type="button" data-listen aria-label="Add an expense here by voice"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-2.07A7 7 0 0 0 19 12h-2Z"/></svg></button>
+        </div>
       </div>
       <div class="chartCard" id="gShareCard" hidden>
         <div class="chartHead"><h3>Each person's share</h3><span class="muted" id="gShareNote"></span></div>
@@ -220,7 +223,11 @@
       <input id="desc" class="desc" aria-label="What it was for" maxlength="60">
       <label class="amount">₹<input id="total" type="number" inputmode="decimal" min="0" step="0.01" aria-label="Amount"></label>
     </div>
-    <label class="label">Group <select id="sheetGroup" class="field"></select></label>
+    <label class="label" id="sheetGroupRow">Group <select id="sheetGroup" class="field"></select></label>
+    <div class="label" id="groupPick" hidden>Group
+      <div id="groupChips" class="chips"></div>
+      <p id="groupProblem" class="problem">Add to a group?</p>
+    </div>
     <label class="label">Paid by <select id="payer" class="field"></select></label>
     <div class="label">Split between
       <div id="sharers" class="chips"></div>

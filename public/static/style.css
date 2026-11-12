@@ -681,3 +681,8 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 .gAddBtns{margin-top:10px}
 /* iPhone Safari zooms in on any field under 16px and stays zoomed, which clips the left edge. iOS only; bigger fields keep their size. */
 @supports (-webkit-touch-callout: none) { input, select, textarea, textarea.field { font-size: max(16px, 1em); } }
+/* Group screen: "Add expense here" with a round mic button to its right, the same height */
+.gAddRow{display:flex;gap:10px}
+.gAddRow #gAdd{flex:1;width:auto;height:52px;padding:0 14px}
+.gMic{flex:none;width:52px;height:52px;padding:0;border-radius:50%;display:grid;place-items:center}
+.gMic svg{width:24px;height:24px;fill:currentColor}
