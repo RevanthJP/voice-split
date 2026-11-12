@@ -123,8 +123,8 @@ const screenGroup = () => (!$("view-group").hidden && group(openGroupId) ? openG
 let listenGroupId = null; // the group this recording will be added to
 function openListen() {
   clearError();
-  listenGroupId = screenGroup() || state.current;
-  $("listenGroup").textContent = "Adding to " + (group(listenGroupId) || current()).name;
+  listenGroupId = screenGroup(); // from Home or another tab, the sheet asks which group
+  $("listenGroup").textContent = listenGroupId ? "Adding to " + group(listenGroupId).name : "You'll choose the group next";
   $("listen").hidden = false;
   requestAnimationFrame(() => document.body.classList.add("listen-open"));
   startRecording();
@@ -183,7 +183,7 @@ async function readText(text) {
   try {
     const res = await post("/api/read-text", { text, people: knownNames() });
     if (heardNothing(res)) showError("That doesn't look like an expense. Say what it was, the amount and who it's with.");
-    else showCard(res, state.current);
+    else showCard(res, null); // the type box is on Home, so ask which group
   }
   catch (e) { showError(e.message); }
   finally { busy(false); }
@@ -199,7 +199,7 @@ async function readAudio(blob, name) {
     const res = await post("/api/read-audio", form, true);
     if (heardNothing(res)) { showError("I couldn't hear an expense. Tap the mic and say the amount and who it's with."); return; }
     closeListen();
-    showCard(res, group(listenGroupId) ? listenGroupId : state.current);
+    showCard(res, group(listenGroupId) ? listenGroupId : null);
   }
   catch (e) { showError(e.message); $("micHint").textContent = "Tap the mic to try again"; }
   finally { busy(false); if (!$("listen").hidden && $("listenError").hidden) $("micHint").textContent = "Tap the mic and say the expense"; }
@@ -275,10 +275,11 @@ function fillGroupSelect(sel, value, withAll) {
   sel.value = value;
 }
 
+// gid null means nobody has chosen the group yet: the sheet shows group chips and Save waits for one.
 function showCard(res, gid) {
   draft = res.expense;
-  draftGroup = gid;
-  fillGroupSelect($("sheetGroup"), gid);
+  draftGroup = gid || null;
+  fillGroupSelect($("sheetGroup"), gid || "");
   $("heard").hidden = !res.transcript;
   $("heard").textContent = res.transcript ? "“" + res.transcript + "”" : "";
   $("desc").value = draft.description || "";
@@ -295,10 +296,35 @@ function newBlankCard(gid) {
 }
 $("sheetGroup").addEventListener("change", () => { draftGroup = $("sheetGroup").value; recheck(); });
 
+// Groups with everyone named in the expense come first, marked Suggested. With nobody named, the
+// last group saved to is suggested. If someone named is in no group, nothing is suggested.
+function groupChoices() {
+  const low = (n) => n.toLowerCase();
+  const named = [...new Set([draft.payer, ...draft.participants, ...draft.items.flatMap((i) => [...i.only, ...i.excluded])]
+    .filter((n) => n && n !== ME).map(low))];
+  const fits = (g) => named.length ? named.every((n) => g.people.some((p) => low(p) === n)) : g.id === state.current;
+  const suggested = state.groups.filter(fits);
+  return [...suggested.map((g) => ({ g, suggested: true })), ...state.groups.filter((g) => !suggested.includes(g)).map((g) => ({ g, suggested: false }))];
+}
+function paintGroupPick() {
+  $("groupPick").hidden = !!draftGroup;
+  $("sheetGroupRow").hidden = !draftGroup;
+  if (draftGroup) return;
+  $("groupChips").replaceChildren(...groupChoices().map(({ g, suggested }) => {
+    const b = el("button", "chip", g.name);
+    b.type = "button";
+    b.setAttribute("aria-pressed", "false");
+    if (suggested) { b.append(el("small", null, " · Suggested")); b.setAttribute("aria-label", g.name + ", suggested"); }
+    b.onclick = () => { draftGroup = g.id; $("sheetGroup").value = g.id; recheck(); };
+    return b;
+  }));
+}
+
 function cardPeople() {
-  return [...new Set([ME, ...group(draftGroup).people, draft.payer, ...draft.participants, ...draft.items.flatMap((i) => [...i.only, ...i.excluded])])].filter(Boolean);
+  return [...new Set([ME, ...(draftGroup ? group(draftGroup).people : []), draft.payer, ...draft.participants, ...draft.items.flatMap((i) => [...i.only, ...i.excluded])])].filter(Boolean);
 }
 function paintCard(res) {
+  paintGroupPick();
   const people = cardPeople();
   $("payer").replaceChildren(...people.map((p) => { const o = el("option", null, p); o.value = p; o.selected = p === draft.payer; return o; }));
   $("sharers").replaceChildren(...people.map((p) => {
@@ -339,7 +365,7 @@ function paintCard(res) {
       owed.append(li);
     }
   }
-  $("save").disabled = !res.owed;
+  $("save").disabled = !res.owed || !draftGroup;
   $("shareWa").disabled = !res.owed;
   lastOwed = res.owed || null;
 }
@@ -351,7 +377,7 @@ function recheck() {
   draft.payer = $("payer").value || draft.payer;
   clearTimeout(checkTimer);
   checkTimer = setTimeout(async () => {
-    try { paintCard(await post("/api/check", { expense: draft, people: group(draftGroup).people })); }
+    try { paintCard(await post("/api/check", { expense: draft, people: draftGroup ? group(draftGroup).people : [] })); }
     catch (e) { $("problem").hidden = false; $("problem").textContent = e.message; $("save").disabled = true; }
   }, 150);
 }
@@ -369,7 +395,7 @@ $("addSharer").addEventListener("submit", (e) => {
   recheck();
 });
 $("save").addEventListener("click", () => {
-  if (!draft || $("save").disabled) return;
+  if (!draft || $("save").disabled || !group(draftGroup)) return;
   const g = group(draftGroup);
   for (const p of cardPeople()) if (!g.people.includes(p) && (p === draft.payer || draft.participants.includes(p))) g.people.push(p);
   g.expenses.unshift({ ...plainExpense(draft), id: newId(), at: new Date().toISOString() });
