@@ -5,7 +5,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-from splits import ME, owed_shares, to_paise, with_person
+from splits import ME, owed_shares, to_paise, with_payments, with_person
 
 HEAD = Font(bold=True, color="FFFFFF")
 HEAD_FILL = PatternFill("solid", fgColor="3B4CCA")
@@ -25,8 +25,9 @@ def _widths(ws, widths):
         ws.column_dimensions[get_column_letter(i)].width = w
 
 
-def build_xlsx(rows, title):
-    """rows: list of (date_text, group_name, Expense). Returns xlsx bytes."""
+def build_xlsx(rows, title, payments=()):
+    """rows: list of (date_text, group_name, Expense); payments: list of (date_text, group_name, Payment).
+    Payments are not spending: they only change the balances, and get a sheet of their own."""
     wb = Workbook()
     ws = wb.active
     ws.title = "Expenses"
@@ -55,12 +56,20 @@ def build_xlsx(rows, title):
         s.cell(r, 2).number_format = MONEY
     s.append([])
     _header(s, ["Friend", "Balance with you", "Meaning"])
-    for person, paise in sorted(with_person([e for _, _, e in rows]).items()):
+    for person, paise in sorted(with_person(with_payments([e for _, _, e in rows], [p for _, _, p in payments])).items()):
         if paise:
             s.append([person, paise / 100, "owes you" if paise > 0 else "you owe"])
             s.cell(s.max_row, 2).number_format = MONEY
     s.freeze_panes = None
     _widths(s, [28, 18, 12])
+
+    if payments:
+        ps = wb.create_sheet("Payments")
+        _header(ps, ["Date", "Group", "From", "To", "Amount"])
+        for date, group, p in payments:
+            ps.append([date, group, p.frm, p.to, p.paise / 100])
+            ps.cell(ps.max_row, 5).number_format = MONEY
+        _widths(ps, [12, 16, 16, 16, 12])
 
     buf = BytesIO()
     wb.save(buf)

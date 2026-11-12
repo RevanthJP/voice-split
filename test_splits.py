@@ -2,7 +2,8 @@
 import random
 import unittest
 
-from splits import ME, Expense, Item, SplitError, balances, explain, owed_shares, pairwise, settle_up, splitwise_shares, with_person
+from splits import (ME, Expense, Item, Payment, SplitError, balances, explain, owed_shares, pairwise, settle_up,
+                    splitwise_shares, to_paise, transfer, with_payments, with_person)
 
 
 def rupees(owed):
@@ -322,6 +323,143 @@ class OneAmount(unittest.TestCase):
             if sum(1 for rows in rows_by_group if my_row(rows, "Arun")) >= 2:
                 checked_two_groups += 1
         self.assertGreater(checked_two_groups, 50)  # Arun really had amounts in two groups, many times
+
+
+# ---------- recorded payments ----------
+# The independent check, extended with its own loop for payments: when A pays B, B now "owes" A that
+# amount, which cancels the same amount of A's debt to B. Again no part(), with_person, explain or pairwise.
+def oracle_with_payments(expenses, payments):
+    owes = {}
+    for e in expenses:
+        for person, share in owed_shares(e).items():
+            if person != e.payer and share:
+                owes[(person, e.payer)] = owes.get((person, e.payer), 0) + share
+    for pay in payments:
+        owes[(pay.to, pay.frm)] = owes.get((pay.to, pay.frm), 0) + pay.paise
+    rows = {}
+    for (a, b), v in owes.items():
+        net = v - owes.get((b, a), 0)
+        if net > 0:
+            rows[(a, b)] = net
+    return rows
+
+
+def oracle_net(expenses, payments):
+    net = {}
+    for e in expenses:
+        net[e.payer] = net.get(e.payer, 0) + to_paise(e.total)
+        for person, share in owed_shares(e).items():
+            net[person] = net.get(person, 0) - share
+    for pay in payments:
+        net[pay.frm] = net.get(pay.frm, 0) + pay.paise
+        net[pay.to] = net.get(pay.to, 0) - pay.paise
+    return net
+
+
+ODD = [1, 3, 99, 3333, 3334, 10001]  # ₹0.01, ₹0.03, ₹0.99, ₹33.33, ₹33.34, ₹100.01
+
+
+def rows_with(expenses, payments):
+    return as_rows(with_payments(expenses, payments))
+
+
+class Payments(unittest.TestCase):
+    PEOPLE = [ME, "Arun", "Meena"]
+
+    def report_data(self):
+        return [Expense("Hotel", 3000, ME, self.PEOPLE), Expense("Lunch", 300, ME, self.PEOPLE),
+                Expense("Cab", 600, "Arun", self.PEOPLE), Expense("Movie", 300, "Meena", self.PEOPLE)]
+
+    def test_report_data_after_a_100_payment(self):
+        exps, pays = self.report_data(), [Payment("Meena", ME, 10000)]
+        self.assertEqual(rows_with(exps, pays), {("Arun", ME): 90000, ("Meena", ME): 90000, ("Meena", "Arun"): 10000})
+        self.assertEqual(rows_with(exps, pays), oracle_with_payments(exps, pays))
+        self.assertEqual(with_person(with_payments(exps, pays)), {"Arun": 90000, "Meena": 90000})
+        self.assertEqual(balances(with_payments(exps, pays))[ME], 180000)
+        lines, total = explain(with_payments(exps, pays), ME, "Meena")
+        self.assertEqual(total, 90000)
+        self.assertIn((4, -10000), lines)  # index 4 is the payment, right after the four expenses
+
+    def test_exact_overpay_and_both_directions(self):
+        exps = self.report_data()
+        self.assertNotIn(("Meena", ME), rows_with(exps, [Payment("Meena", ME, 100000)]))  # paid exactly: row gone
+        self.assertEqual(rows_with(exps, [Payment("Meena", ME, 120000)])[(ME, "Meena")], 20000)  # overpaid: flips
+        self.assertEqual(rows_with(exps, [Payment(ME, "Arun", 5000)])[("Arun", ME)], 95000)  # I paid Arun
+        self.assertEqual(rows_with(exps, [Payment("Meena", ME, 3333)])[("Meena", ME)], 100000 - 3333)  # odd paise
+        self.assertEqual(rows_with(exps, [Payment("Meena", ME, 1)])[("Meena", ME)], 99999)  # one paisa
+
+    def test_bad_payments_are_refused(self):
+        for bad in (Payment("Meena", ME, 0), Payment("Meena", ME, -5), Payment("Meena", "Meena", 100), Payment("", ME, 100)):
+            with self.assertRaises(SplitError):
+                transfer(bad)
+        with self.assertRaises(SplitError):
+            transfer(Payment("Meena", ME, 33.5))  # amounts are whole paise only
+
+    def test_transfer_is_exact_to_the_paisa(self):
+        for paise in [*ODD, 123456789, 1_000_000_000]:
+            self.assertEqual(owed_shares(transfer(Payment("A", "B", paise))), {"B": paise})
+
+    def test_random_groups_with_payments(self):
+        rng = random.Random(4048)
+        seen = {"odd": 0, "exact": 0, "over": 0, "mine_out": 0, "two_groups": 0}
+        for _ in range(300):
+            groups, tagged = random_setup(rng)
+            per_group = [[e for gi, e in tagged if gi == g] for g in range(len(groups))]
+            pays = []
+            for g, exps in enumerate(per_group):
+                members, here = groups[g], []
+                for _ in range(rng.randint(0, 4)):
+                    a, b = rng.sample(members, 2)
+                    kind = rng.choice(["odd", "random", "exact", "over"])
+                    owed_now = oracle_with_payments(exps, here).get((a, b), 0)
+                    if kind in ("exact", "over") and owed_now:
+                        paise = owed_now + (rng.choice(ODD) if kind == "over" else 0)
+                        seen[kind] += 1
+                    else:
+                        paise = rng.choice(ODD) if kind == "odd" else rng.randint(1, 500000)
+                        seen["odd"] += kind == "odd"
+                    here.append(Payment(a, b, paise))
+                    seen["mine_out"] += a == ME
+                pays.append(here)
+            everything = [e for _, e in tagged]
+            all_pays = [p for here in pays for p in here]
+            friends = with_person(with_payments(everything, all_pays))
+            spent_before = [owed_shares(e) for e in everything]
+            for g, exps in enumerate(per_group):
+                rows = rows_with(exps, pays[g])
+                self.assertEqual(rows, oracle_with_payments(exps, pays[g]))  # every pair, including pairs without me
+                net = balances(with_payments(exps, pays[g]))
+                self.assertEqual({k: v for k, v in net.items() if v}, {k: v for k, v in oracle_net(exps, pays[g]).items() if v})
+                self.assertEqual(sum(net.values()), 0)
+                for person in set(net) | {q for pair in rows for q in pair}:  # each person's rows add up to their net
+                    got = sum(v for (a, b), v in rows.items() if b == person) - sum(v for (a, b), v in rows.items() if a == person)
+                    self.assertEqual(got, net.get(person, 0), person)
+                self.assertEqual(sum(my_row(rows, f) for f in {q for pair in rows for q in pair} - {ME}), net.get(ME, 0))  # rule 4
+                for friend in {p for members in groups for p in members} - {ME}:
+                    row = my_row(rows, friend)
+                    self.assertEqual(explain(with_payments(exps, pays[g]), ME, friend)[1], row)  # rule 3
+                    elsewhere = any(gi != g and involves(e, friend) for gi, e in tagged) or \
+                        any(h != g and {ME, friend} == {p.frm, p.to} for h in range(len(groups)) for p in pays[h])
+                    if not elsewhere:
+                        self.assertEqual(row, friends.get(friend, 0), friend)  # rule 1
+                # a payment moves both nets by its amount, and nobody else's
+                if pays[g]:
+                    pay = rng.choice(pays[g])
+                    rest = [p for p in pays[g] if p is not pay]
+                    before = balances(with_payments(exps, rest))
+                    for person in set(net) | set(before):
+                        delta = {pay.frm: pay.paise, pay.to: -pay.paise}.get(person, 0)
+                        self.assertEqual(net.get(person, 0) - before.get(person, 0), delta, person)
+                    # deleting that payment gives back exactly the rows without it
+                    self.assertEqual(rows_with(exps, rest), oracle_with_payments(exps, rest))
+            for friend in {p for members in groups for p in members} - {ME}:  # rule 2
+                per = [my_row(rows_with(exps, pays[g]), friend) for g, exps in enumerate(per_group)]
+                self.assertEqual(friends.get(friend, 0), sum(per))
+                if sum(1 for v in per if v) >= 2:
+                    seen["two_groups"] += 1
+            self.assertEqual([owed_shares(e) for e in everything], spent_before)  # payments are never spending
+        for kind, n in seen.items():
+            self.assertGreater(n, 20, kind)  # each kind of payment really happened, many times
 
 
 if __name__ == "__main__":

@@ -118,6 +118,30 @@ def splitwise_shares(expense):
     return rows
 
 
+@dataclass
+class Payment:
+    """Money one person handed another to settle up: `frm` paid `to`, in whole paise."""
+    frm: str
+    to: str
+    paise: int
+
+
+def transfer(payment):
+    """A payment as a one-person expense: `frm` "paid" and only `to` shares it, so `to` now owes `frm`
+    the amount. That cancels the same amount of `frm`'s debt to `to`, and every balance function below
+    handles it unchanged. It is never counted as spending."""
+    if not isinstance(payment.paise, int) or payment.paise <= 0:
+        raise SplitError("A payment must be more than zero.")
+    if not payment.frm or not payment.to or payment.frm == payment.to:
+        raise SplitError("A payment needs two different people.")
+    return Expense("Payment", payment.paise / 100, payment.frm, [payment.to])
+
+
+def with_payments(expenses, payments=()):
+    """Expenses followed by the payments as transfers, in that order, so indexes past the expenses are payments."""
+    return [*expenses, *(transfer(p) for p in payments)]
+
+
 def part(expense, owed, person, other=None):
     """How one expense moves a balance, in signed paise. Every balance in the app is a sum of these.
 

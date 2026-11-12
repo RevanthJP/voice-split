@@ -6,11 +6,12 @@ from typing import Optional
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 
 import reader as ai
 from export import build_xlsx
-from splits import ME, Expense, Item, SplitError, balances, explain, owed_shares, pairwise, splitwise_shares, with_person
+from splits import (ME, Expense, Item, Payment, SplitError, balances, explain, owed_shares, pairwise, splitwise_shares,
+                    with_payments, with_person)
 
 DAILY_AI_CAP = 300  # protects the free Groq quota on a shared link
 MAX_AUDIO = 4 * 1024 * 1024  # Vercel rejects bodies over 4.5 MB
@@ -44,6 +45,24 @@ class ExpenseIn(BaseModel):
     mode: str = "equal"
     values: dict[str, float] = {}
     items: list[ItemIn] = []
+
+
+class PaymentIn(BaseModel):
+    """Money one person paid another. The amount is whole paise, so nothing is rounded again."""
+    model_config = ConfigDict(populate_by_name=True)
+    frm: str = Field(alias="from", min_length=1, max_length=60)
+    to: str = Field(min_length=1, max_length=60)
+    amount: StrictInt = Field(gt=0, le=1_000_000_000)  # up to ₹1 crore
+
+    @model_validator(mode="after")
+    def _two_people(self):
+        if self.frm.strip().lower() == self.to.strip().lower():
+            raise ValueError("A payment needs two different people.")
+        return self
+
+
+def _payments(items):
+    return [Payment(p.frm, p.to, p.amount) for p in items]
 
 
 def _expense(e: ExpenseIn):
@@ -131,12 +150,13 @@ def check(body: CheckIn):
 
 class GroupIn(BaseModel):
     expenses: list[ExpenseIn] = Field(default_factory=list, max_length=500)
+    payments: list[PaymentIn] = Field(default_factory=list, max_length=3000)
 
 
 @app.post("/api/balances")
 def group_balances(body: GroupIn):
     try:
-        expenses = [_expense(e) for e in body.expenses]
+        expenses = with_payments([_expense(e) for e in body.expenses], _payments(body.payments))
         net = balances(expenses)
         # Direct amounts between each pair of people, so a row shows what that person really owes.
         # settle_up() would reroute debts to save payments, and the amounts would then differ from Friends.
@@ -149,13 +169,14 @@ def group_balances(body: GroupIn):
 
 class AllIn(BaseModel):
     expenses: list[ExpenseIn] = Field(default_factory=list, max_length=3000)
+    payments: list[PaymentIn] = Field(default_factory=list, max_length=3000)
 
 
 @app.post("/api/friends")
 def friends(body: AllIn):
     """Each person's balance with you across every group."""
     try:
-        pairs = with_person([_expense(e) for e in body.expenses])
+        pairs = with_person(with_payments([_expense(e) for e in body.expenses], _payments(body.payments)))
     except SplitError as err:
         raise HTTPException(400, str(err))
     return {"friends": {k: v / 100 for k, v in pairs.items() if v}}
@@ -163,6 +184,7 @@ def friends(body: AllIn):
 
 class ExplainIn(BaseModel):
     expenses: list[ExpenseIn] = Field(default_factory=list, max_length=3000)
+    payments: list[PaymentIn] = Field(default_factory=list, max_length=3000)
     person: Optional[str] = None  # a friend for their balance with you; empty for your balance in a group
 
 
@@ -171,10 +193,13 @@ def explain_balance(body: ExplainIn):
     """The expenses behind one balance, each signed (+ they owe you, - you owe them). The total is their sum,
     worked out by the same code as /api/friends and /api/balances, so it always matches what they show."""
     try:
-        lines, total = explain([_expense(e) for e in body.expenses], ME, body.person or None)
+        n = len(body.expenses)
+        lines, total = explain(with_payments([_expense(e) for e in body.expenses], _payments(body.payments)), ME, body.person or None)
     except SplitError as err:
         raise HTTPException(400, str(err))
-    return {"total": total / 100, "lines": [{"index": i, "amount": paise / 100} for i, paise in lines]}
+    # Lines past the expenses are payments, marked "kind": "payment", with "index" into the payments list.
+    return {"total": total / 100, "lines": [{"index": i, "amount": paise / 100} if i < n else
+                                            {"kind": "payment", "index": i - n, "amount": paise / 100} for i, paise in lines]}
 
 
 @app.post("/api/shares")
@@ -192,15 +217,23 @@ class ExportRow(BaseModel):
     expense: ExpenseIn
 
 
+class ExportPayment(BaseModel):
+    date: str = Field("", max_length=20)
+    group: str = Field("", max_length=60)
+    payment: PaymentIn
+
+
 class ExportIn(BaseModel):
     title: str = Field("Kitty", max_length=80)
     rows: list[ExportRow] = Field(default_factory=list, max_length=3000)
+    payments: list[ExportPayment] = Field(default_factory=list, max_length=3000)
 
 
 @app.post("/api/export-xlsx")
 def export_xlsx(body: ExportIn):
     try:
-        data = build_xlsx([(r.date, r.group, _expense(r.expense)) for r in body.rows], body.title)
+        data = build_xlsx([(r.date, r.group, _expense(r.expense)) for r in body.rows], body.title,
+                          [(p.date, p.group, _payments([p.payment])[0]) for p in body.payments])
     except SplitError as err:
         raise HTTPException(400, str(err))
     return Response(data, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
