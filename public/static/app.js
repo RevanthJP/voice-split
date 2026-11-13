@@ -402,16 +402,23 @@ function showDebug(peak, ms) {
 }
 
 // ---------- confirmation sheet ----------
+// Opening cancels a close that is still sliding out, and closing cancels an open still waiting for its
+// frame, so a fast close and reopen (or open and close) always ends in the state asked for last.
+let sheetTimer = null, sheetSeq = 0;
 function openSheet() {
+  clearTimeout(sheetTimer);
+  const n = ++sheetSeq;
   $("scrim").hidden = false; $("card").hidden = false;
-  requestAnimationFrame(() => document.body.classList.add("sheet-open"));
+  requestAnimationFrame(() => { if (n === sheetSeq) document.body.classList.add("sheet-open"); });
 }
 function closeCard() {
   clearTimeout(checkTimer);
   checkSeq++; // a recalculation still on its way belongs to this card, so it's ignored
   draft = null;
+  sheetSeq++;
   document.body.classList.remove("sheet-open");
-  setTimeout(() => { $("scrim").hidden = true; $("card").hidden = true; }, 260);
+  clearTimeout(sheetTimer);
+  sheetTimer = setTimeout(() => { $("scrim").hidden = true; $("card").hidden = true; }, 260);
 }
 $("scrim").addEventListener("click", () => { if (!$("explain").hidden) closeExplain(); else if (!$("shareTo").hidden) closeShareTo(); else if (!$("addPerson").hidden) closeAddPerson(); else if (!$("contactsAsk").hidden) closeContactsAsk(); else if (!$("remind").hidden) closeRemind(); else closeCard(); });
 $("discard").addEventListener("click", closeCard);
@@ -1588,3 +1595,58 @@ $("stOther").addEventListener("click", async () => {
   if (navigator.share) { try { await navigator.share({ text }); closeShareTo(); return; } catch (e) { if (e.name === "AbortError") return; } }
   try { await navigator.clipboard.writeText(text); closeShareTo(); toast("Split copied. Paste it in any app."); } catch (_) { toast("Couldn't share. Try WhatsApp instead."); }
 });
+
+// ---------- the phone's own bars follow the dimmed page ----------
+// On a phone, Safari paints the status bar and the strip below the page from <meta name="theme-color">
+// and the page background, not from the dim layer. While a sheet or the listening panel is open, both
+// are set to the dimmed colour, worked out from the real dim layer's colour over the app's background;
+// the strip below is set to the sheet's own colour so the sheet reaches the bottom of the screen.
+// The open state is read from the body's "-open" classes, so a fast close and reopen, or a sheet still
+// open when the page is hidden, can't leave the bars stuck. Phones only: wider screens are left alone.
+const BARS_NARROW = window.matchMedia("(max-width:480px)");
+const SCRIM_OPEN = ["sheet-open", "remind-open", "contactsAsk-open", "addPerson-open"]; // these show #scrim
+const themeMeta = document.querySelector('meta[name="theme-color"]');
+const themeDefault = themeMeta ? themeMeta.getAttribute("content") : null;
+function rgba(css) {
+  const m = (css || "").match(/rgba?\(([^)]+)\)/);
+  if (!m) return null;
+  const [r, g, b, a = 1] = m[1].split(/[ ,/]+/).filter(Boolean).map(Number);
+  return { r, g, b, a };
+}
+const hex = ({ r, g, b }) => "#" + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, "0")).join("").toUpperCase();
+// A layer of colour c with alpha a over an opaque colour under: c·a + under·(1−a), per channel.
+const over = (c, under) => ({ r: c.r * c.a + under.r * (1 - c.a), g: c.g * c.a + under.g * (1 - c.a), b: c.b * c.a + under.b * (1 - c.a), a: 1 });
+function dimLayers() {
+  const cls = document.body.classList, layers = [];
+  // A class alone isn't enough: one can be added a frame after its sheet was already closed, so the dim
+  // layer itself must be showing too.
+  if (SCRIM_OPEN.some((c) => cls.contains(c)) && !$("scrim").hidden) layers.push(rgba(getComputedStyle($("scrim")).backgroundColor));
+  if (cls.contains("listen-open") && !$("listen").hidden) layers.push(rgba(getComputedStyle($("listen"), "::before").backgroundColor));
+  return layers.filter((l) => l && l.a > 0);
+}
+function paintBars() {
+  const layers = BARS_NARROW.matches ? dimLayers() : [];
+  const roots = [document.documentElement, document.body];
+  if (!layers.length) {
+    roots.forEach((n) => { n.style.removeProperty("background-color"); n.style.removeProperty("background-image"); });
+    if (themeMeta) themeMeta.setAttribute("content", themeDefault);
+    delete document.body.dataset.bars;
+    return;
+  }
+  const page = rgba(getComputedStyle(document.querySelector(".app")).backgroundColor);
+  const dimmed = hex(layers.reduce((under, l) => over(l, under), page));
+  const sheet = hex(rgba(getComputedStyle(document.body.classList.contains("listen-open") && !$("listen").hidden ? $("listen") : $("card")).backgroundColor));
+  roots.forEach((n) => {
+    n.style.setProperty("background-color", dimmed);
+    n.style.setProperty("background-image", `linear-gradient(to bottom, transparent 50%, ${sheet} 50%)`);
+  });
+  if (themeMeta) themeMeta.setAttribute("content", dimmed);
+  document.body.dataset.bars = dimmed;
+}
+const barsWatch = new MutationObserver(paintBars);
+barsWatch.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+for (const layer of [$("scrim"), $("listen")]) barsWatch.observe(layer, { attributes: true, attributeFilter: ["hidden"] });
+BARS_NARROW.addEventListener("change", paintBars);
+document.addEventListener("visibilitychange", paintBars);
+window.addEventListener("pageshow", paintBars);
+paintBars();
