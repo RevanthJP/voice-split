@@ -1406,6 +1406,11 @@ function showHow(i) {
   howAt = i;
   const phone = $("phone");
   phone.dataset.step = i;
+  // Coming back to a step must play it from the start. Toggling "play" alone isn't enough on iPhone Safari
+  // (going Back left steps 2 and 3 empty), so the step's scene is swapped for a fresh copy, which starts
+  // its animations new, as on a first visit. The typed text below is cleared again on the new copy.
+  const scene = phone.querySelector(".scene.s" + i);
+  if (scene) scene.replaceWith(scene.cloneNode(true));
   phone.classList.remove("play"); void phone.offsetWidth; phone.classList.add("play"); // restart the animations
   $("howTitle").textContent = HOW[i].title;
   $("howText").textContent = HOW[i].text;
