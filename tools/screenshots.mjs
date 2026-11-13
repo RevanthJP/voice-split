@@ -247,7 +247,7 @@ try {
   await run(`[...document.querySelectorAll("#friends li")].find((li) => li.textContent.includes("Meena")).querySelector(".friendActions .link").click()`);
   await waitFor(`!document.getElementById("remind").hidden`);
   await sleep(500);
-  const invite = await run(`({ title: document.getElementById("remindTitle").textContent, link: document.getElementById("remindText").value.includes("https://voice-split.vercel.app"), number: document.getElementById("remindPhone").value, buttons: [...document.querySelectorAll("#sendBtns button")].map((b) => b.textContent.trim()) })`);
+  const invite = await run(`({ title: document.getElementById("remindTitle").textContent, link: document.getElementById("remindText").value.includes("https://kitty-expense.vercel.app"), number: document.getElementById("remindPhone").value, buttons: [...document.querySelectorAll("#sendBtns button")].map((b) => b.textContent.trim()) })`);
   console.log("invite:", JSON.stringify(invite));
   if (!invite.link || invite.number !== "99999 99999" || invite.buttons.join() !== "WhatsApp,SMS") throw new Error("Invite sheet is wrong");
   await shot("15-friends-invite.jpg");

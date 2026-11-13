@@ -612,7 +612,8 @@ function openSend(name, title, text, kind) {
 function openRemind(name, amount, groupName) {
   openSend(name, `Remind ${name} about ${rupees(amount)}${groupName ? ` (${groupName})` : ""}`, remindMessage(name, amount, groupName), "remind");
 }
-const APP_LINK = /localhost|127\.0\.0\.1/.test(location.host) ? "https://voice-split.vercel.app" : location.origin;
+// The one address invites send, wherever the app is running (localhost and previews included).
+const APP_LINK = "https://kitty-expense.vercel.app";
 function openInvite(name) {
   const me = state.profile.name ? ` – ${state.profile.name.split(" ")[0]}` : "";
   openSend(name, `Invite ${name} to Kitty`, `Hi ${name}, I'm using Kitty to split our expenses. Just say what you spent, in English, Tamil, Hindi or a mix, and it works out who owes what: ${APP_LINK}${me}`, "invite");
