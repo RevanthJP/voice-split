@@ -50,6 +50,9 @@ const NO_GROUP = "none", NO_GROUP_LABEL = "No group";
 const oneOffs = () => state.oneOffs || [];
 const allExpenses = () => [...state.groups.flatMap((g) => g.expenses.map((e) => ({ ...e, _group: g.name, _gid: g.id }))),
   ...oneOffs().map((e) => ({ ...e, _group: NO_GROUP_LABEL, _gid: NO_GROUP }))];
+// Payments live in their group, like expenses. Saved data from before payments has no list: read it as empty.
+const payments = (g) => (g && Array.isArray(g.payments) ? g.payments : []);
+const allPayments = () => state.groups.flatMap((g) => payments(g).map((p) => ({ ...p, _group: g.name, _gid: g.id })));
 const allPeople = () => [...new Set([...state.groups.flatMap((g) => g.people), ...(state.friends || []),
   ...oneOffs().flatMap((e) => [e.payer, ...e.participants])])];
 
@@ -98,6 +101,9 @@ async function post(url, body, isForm, raw) {
   }
   return data;
 }
+const plainPayment = (p) => ({ from: p.from, to: p.to, amount: p.amount });
+// What a person has paid me in one group, or in all groups, in rupees: used by the reminder text.
+const paidToMe = (name, gid) => (gid ? payments(group(gid)) : allPayments()).filter((p) => p.from === name && p.to === ME).reduce((a, p) => a + p.amount, 0) / 100;
 const plainExpense = (e) => ({ description: e.description, total: e.total, payer: e.payer, participants: e.participants, mode: e.mode, values: e.values || {}, items: e.items || [] });
 
 // ---------- navigation ----------
@@ -440,7 +446,7 @@ function closeCard() {
   clearTimeout(sheetTimer);
   sheetTimer = setTimeout(() => { $("scrim").hidden = true; $("card").hidden = true; }, 260);
 }
-$("scrim").addEventListener("click", () => { if (!$("oneOff").hidden) closeOneOff(); else if (!$("explain").hidden) closeExplain(); else if (!$("shareTo").hidden) closeShareTo(); else if (!$("addPerson").hidden) closeAddPerson(); else if (!$("contactsAsk").hidden) closeContactsAsk(); else if (!$("remind").hidden) closeRemind(); else closeCard(); });
+$("scrim").addEventListener("click", () => { if (!$("pay").hidden) closePayment(); else if (!$("oneOff").hidden) closeOneOff(); else if (!$("explain").hidden) closeExplain(); else if (!$("shareTo").hidden) closeShareTo(); else if (!$("addPerson").hidden) closeAddPerson(); else if (!$("contactsAsk").hidden) closeContactsAsk(); else if (!$("remind").hidden) closeRemind(); else closeCard(); });
 $("discard").addEventListener("click", closeCard);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && draft) closeCard(); });
 
@@ -608,23 +614,25 @@ $("save").addEventListener("click", () => {
 
 // ---------- rendering ----------
 async function friendBalances() {
-  const exps = allExpenses();
-  if (!exps.length) return {};
-  return (await post("/api/friends", { expenses: exps.map(plainExpense) })).friends;
+  const exps = allExpenses(), pays = allPayments();
+  if (!exps.length && !pays.length) return {};
+  return (await post("/api/friends", { expenses: exps.map(plainExpense), payments: pays.map(plainPayment) })).friends;
 }
 // The default reminder, which the person can still edit before sending. It never says "owe".
-// Sent from a group's row, it names the group; from Friends it covers all shared expenses.
-function remindMessage(name, amount, groupName) {
+// Sent from a group's row, it names the group; from Friends it covers all shared expenses. Only when that
+// person has already paid me something in that scope does it say "the rest" and thank them for it.
+function remindMessage(name, amount, groupName, paid) {
   const me = state.profile.name ? ` – ${state.profile.name.split(" ")[0]}` : "";
   const upi = (state.profile.upi || "").trim();
   const upiLine = /^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(upi) ? `You can pay me on UPI: ${upi}. ` : "";
   const what = groupName ? `your share for ${groupName}` : "your share of our shared expenses";
+  if (paid > 0) return `Hi ${name}! Quick reminder: the rest of ${what} comes to ${rupees(amount)}. Thanks for the ${rupees(paid)} you already sent! ${upiLine}Whenever you get a chance, thanks!${me}`;
   return `Hi ${name}! Quick reminder: ${what} comes to ${rupees(amount)}. ${upiLine}Whenever you get a chance, thanks!${me}`;
 }
-function remindLink(name, amount, groupName) {
+function remindLink(name, amount, gid) {
   const b = el("button", "wa", "Send reminder");
   b.type = "button";
-  b.onclick = () => openRemind(name, amount, groupName);
+  b.onclick = () => openRemind(name, amount, gid);
   return b;
 }
 // One sheet sends reminders and invites, by WhatsApp, SMS or any other app.
@@ -641,8 +649,9 @@ function openSend(name, title, text, kind) {
   $("scrim").hidden = false; $("remind").hidden = false;
   requestAnimationFrame(() => document.body.classList.add("remind-open"));
 }
-function openRemind(name, amount, groupName) {
-  openSend(name, `Remind ${name} about ${rupees(amount)}${groupName ? ` (${groupName})` : ""}`, remindMessage(name, amount, groupName), "remind");
+function openRemind(name, amount, gid) {
+  const g = gid ? group(gid) : null;
+  openSend(name, `Remind ${name} about ${rupees(amount)}${g ? ` (${g.name})` : ""}`, remindMessage(name, amount, g ? g.name : null, paidToMe(name, gid)), "remind");
 }
 // The one address invites send, wherever the app is running (localhost and previews included).
 const APP_LINK = "https://kitty-expense.vercel.app";
@@ -697,6 +706,94 @@ $("remindOther").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText(text); toast("Message copied"); closeRemind(); } catch (_) { toast("Couldn't share. Copy the message instead."); }
 });
 
+// ---------- recording a payment ----------
+// A payment is stored in its group as { id, from, to, amount (whole paise), at }. Balances are never stored:
+// every screen works them out again from the expenses and payments, so all of them update together.
+function payLink(name, gid) {
+  const b = el("button", "link", "Record payment"); b.type = "button";
+  b.onclick = (e) => { e.stopPropagation(); openPayment(name, gid); };
+  return b;
+}
+let payFor = null, payGroup = null, payDir = "in", payRows = {}, payTyped = false;
+async function rowsWith(name) {
+  // This person's direct amount in each group we share: + they owe me, − I owe them.
+  const shared = state.groups.filter((g) => g.people.includes(name) && g.people.includes(ME));
+  const out = {};
+  await Promise.all(shared.map(async (g) => {
+    if (!g.expenses.length && !payments(g).length) { out[g.id] = 0; return; }
+    const b = await post("/api/balances", { expenses: g.expenses.map(plainExpense), payments: payments(g).map(plainPayment) });
+    out[g.id] = b.payments.reduce((a, p) => a + (p.from === name && p.to === ME ? p.amount : p.from === ME && p.to === name ? -p.amount : 0), 0);
+  }));
+  return { shared, out };
+}
+async function openPayment(name, gid) {
+  payFor = name; payTyped = false;
+  $("payTitle").textContent = `Record a payment with ${name}`;
+  $("payProblem").hidden = true; $("payNote").textContent = "";
+  $("payAmount").value = "";
+  $("scrim").hidden = false; $("pay").hidden = false;
+  requestAnimationFrame(() => document.body.classList.add("remind-open"));
+  let found;
+  try { found = await rowsWith(name); } catch (e) { $("payProblem").textContent = e.message; $("payProblem").hidden = false; return; }
+  payRows = found.out;
+  // From a group row the group is known. From Friends, ask, unless only one group has a balance with them.
+  const open = found.shared.filter((g) => payRows[g.id]);
+  payGroup = gid || (open.length === 1 ? open[0].id : null);
+  $("payGroupPick").hidden = !!gid;
+  $("payGroupChips").replaceChildren(...found.shared.map((g) => {
+    const v = payRows[g.id];
+    const b = el("button", "chip" + (g.id === payGroup ? " on" : ""), `${g.name} · ${v ? (v > 0 ? `owes you ${rupees(v)}` : `you owe ${rupees(-v)}`) : "settled"}`);
+    b.type = "button"; b.dataset.gid = g.id; b.setAttribute("aria-pressed", g.id === payGroup);
+    b.onclick = () => { payGroup = g.id; payTyped = false; paintPayment(); };
+    return b;
+  }));
+  const start = payGroup ? payRows[payGroup] : Object.values(payRows).reduce((a, v) => a + v, 0);
+  payDir = start < 0 ? "out" : "in";
+  paintPayment();
+}
+function paintPayment() {
+  const name = payFor, row = payGroup ? payRows[payGroup] || 0 : 0;
+  $("payIn").textContent = `${name} paid you`; $("payOut").textContent = `You paid ${name}`;
+  for (const [id, dir] of [["payIn", "in"], ["payOut", "out"]]) { $(id).classList.toggle("on", payDir === dir); $(id).setAttribute("aria-pressed", payDir === dir); }
+  $("payGroupChips").querySelectorAll(".chip").forEach((c) => { const on = c.dataset.gid === payGroup; c.classList.toggle("on", on); c.setAttribute("aria-pressed", on); });
+  $("payGroupProblem").hidden = !!payGroup;
+  // Fill in what's open in this group, in the direction that settles it, until the person types their own amount
+  if (!payTyped && payGroup) $("payAmount").value = (payDir === "in" ? row > 0 : row < 0) ? String(Math.abs(row)) : "";
+  const paise = Math.round(parseFloat($("payAmount").value) * 100);
+  const ok = Number.isFinite(paise) && paise > 0 && paise <= 1e9;
+  let note = "";
+  if (payGroup && ok) {
+    const owed = Math.round(row * 100); // + they owe me, − I owe them, in paise
+    const after = owed + (payDir === "in" ? -paise : paise);
+    const gname = group(payGroup).name;
+    // Paying more than is owed is allowed: the extra shows as the other person owing.
+    const room = payDir === "in" ? Math.max(owed, 0) : Math.max(-owed, 0);
+    const extra = paise - room;
+    const over = extra > 0 ? `That's ${rupees(extra / 100)} more than ${payDir === "in" ? (room ? `${name} owes you` : `${name} owes you here`) : (room ? `you owe ${name}` : `you owe ${name} here`)}. ` : "";
+    const left = after > 0 ? `${name} will owe you ${rupees(after / 100)}` : after < 0 ? `you will owe ${name} ${rupees(-after / 100)}` : `you and ${name} will be settled up`;
+    note = `${over}After this, ${left} in ${gname}.`;
+  }
+  $("payNote").textContent = note;
+  $("paySave").disabled = !(payGroup && ok);
+}
+$("payIn").addEventListener("click", () => { payDir = "in"; payTyped = false; paintPayment(); });
+$("payOut").addEventListener("click", () => { payDir = "out"; payTyped = false; paintPayment(); });
+$("payAmount").addEventListener("input", () => { payTyped = true; paintPayment(); });
+function closePayment() {
+  document.body.classList.remove("remind-open");
+  setTimeout(() => { $("pay").hidden = true; if ($("card").hidden && $("remind").hidden) $("scrim").hidden = true; }, 300);
+}
+$("payCancel").addEventListener("click", closePayment);
+$("paySave").addEventListener("click", () => {
+  const g = group(payGroup);
+  const amount = Math.round(parseFloat($("payAmount").value) * 100);
+  if (!g || !(amount > 0 && amount <= 1e9) || !g.people.includes(payFor)) return;
+  const [from, to] = payDir === "in" ? [payFor, ME] : [ME, payFor];
+  g.payments = [...payments(g), { id: newId(), from, to, amount, at: new Date().toISOString() }];
+  persist(); closePayment(); renderAll();
+  toast(`Recorded ${rupees(amount / 100)} ${payDir === "in" ? `from ${payFor}` : `to ${payFor}`} in ${g.name}`);
+});
+
 // ---------- the expenses behind a balance ----------
 // The list and its total both come from /api/explain, which uses the same code as the balance you tapped.
 let explainFrom = null;
@@ -704,6 +801,7 @@ const signed = (n) => (n > 0 ? "+" : n < 0 ? "−" : "") + rupees(Math.abs(n));
 async function openExplain(friend, gid) {
   const g = gid ? group(gid) : null;
   const exps = g ? g.expenses.map((e) => ({ ...e, _group: g.name })) : allExpenses();
+  const pays = g ? payments(g).map((p) => ({ ...p, _group: g.name })) : allPayments();
   explainFrom = document.activeElement;
   $("explainTitle").textContent = friend ? `You and ${friend}${g ? " in " + g.name : ""}` : `Your balance in ${g.name}`;
   $("explainNote").textContent = "Adding it up…";
@@ -715,34 +813,43 @@ async function openExplain(friend, gid) {
   requestAnimationFrame(() => document.body.classList.add("remind-open"));
   setTimeout(() => $("explainClose").focus(), 320);
   try {
-    const r = exps.length ? await post("/api/explain", { expenses: exps.map(plainExpense), person: friend || null }) : { total: 0, lines: [] };
+    const r = exps.length || pays.length ? await post("/api/explain", { expenses: exps.map(plainExpense), payments: pays.map(plainPayment), person: friend || null }) : { total: 0, lines: [] };
+    const item = (l) => (l.kind === "payment" ? pays[l.index] : exps[l.index]);
     const t = r.total;
     const head = friend ? (t > 0 ? `${friend} owes you ${rupees(t)}.` : t < 0 ? `You owe ${friend} ${rupees(-t)}.` : `You and ${friend} are settled up.`)
       : (t > 0 ? `You get back ${rupees(t)}.` : t < 0 ? `You owe ${rupees(-t)}.` : "You're all settled up here.");
     const n = r.lines.length;
+    const np = r.lines.filter((l) => l.kind === "payment").length, ne = n - np;
+    const counted = [ne && `${ne} ${ne === 1 ? "expense" : "expenses"}`, np && `${np} ${np === 1 ? "payment" : "payments"}`].filter(Boolean).join(" and ");
     $("explainNote").textContent = !n ? `${head} No shared expenses yet.`
-      : `${head} ${n === 1 ? "This expense makes" : `These ${n} expenses add up to`} that. + means ${friend ? "they owe you" : "you get money back"}, − means you owe.`;
-    const manyGroups = new Set(r.lines.map((l) => exps[l.index]._group)).size > 1;
-    const lines = r.lines.slice().sort((a, b) => ((exps[a.index].at || "") < (exps[b.index].at || "") ? 1 : -1));
+      : `${head} ${n === 1 ? `This ${ne ? "expense" : "payment"} makes` : `These ${counted} add up to`} that. + means ${friend ? "they owe you" : "you get money back"}, − means you owe.`;
+    const manyGroups = new Set(r.lines.map((l) => item(l)._group)).size > 1;
+    const lines = r.lines.slice().sort((a, b) => ((item(a).at || "") < (item(b).at || "") ? 1 : -1));
     $("explainList").replaceChildren(...lines.map((l) => {
-      const e = exps[l.index];
+      const e = item(l);
       const li = el("li");
       const amt = el("span", "amt " + (l.amount > 0 ? "get" : "owe"));
-      amt.append(el("small", null, l.amount > 0 ? (friend ? "owes you" : "you get back") : "you owe"), el("strong", null, signed(l.amount)));
-      li.append(who(e.description, `${manyGroups ? e._group + " · " : ""}${e.payer === ME ? "You paid" : e.payer + " paid"} ${rupees(e.total)} · ${shortDate(e.at)}`, "cat"), amt);
+      const label = l.kind === "payment" ? (e.from === ME ? "you paid" : `${e.from} paid`) : l.amount > 0 ? (friend ? "owes you" : "you get back") : "you owe";
+      amt.append(el("small", null, label), el("strong", null, signed(l.amount)));
+      if (l.kind === "payment") {
+        const what = e.from === ME ? `You paid ${e.to}` : e.to === ME ? `${e.from} paid you` : `${e.from} paid ${e.to}`;
+        li.append(who("Payment", `${manyGroups ? e._group + " · " : ""}${what} · ${shortDate(e.at)}`, "cat"), amt);
+      } else {
+        li.append(who(e.description, `${manyGroups ? e._group + " · " : ""}${e.payer === ME ? "You paid" : e.payer + " paid"} ${rupees(e.total)} · ${shortDate(e.at)}`, "cat"), amt);
+      }
       return li;
     }));
     if (n) {
       const li = el("li");
       const amt = el("span", "amt " + (t > 0 ? "get" : t < 0 ? "owe" : "zero"));
       amt.append(el("small", null, "total"), el("strong", null, t ? signed(t) : rupees(0)));
-      li.append(who("Total", `${n} ${n === 1 ? "expense" : "expenses"}`), amt);
+      li.append(who("Total", counted), amt);
       $("explainList").append(li);
     }
     if (friend && t > 0) {
       $("explainRemind").hidden = false;
       $("explainActions").style.gridTemplateColumns = "";
-      $("explainRemind").onclick = () => { $("explain").hidden = true; document.body.classList.remove("remind-open"); openRemind(friend, t, g ? g.name : undefined); };
+      $("explainRemind").onclick = () => { $("explain").hidden = true; document.body.classList.remove("remind-open"); openRemind(friend, t, g ? g.id : undefined); };
     }
   } catch (e) {
     $("explainNote").textContent = "";
@@ -845,8 +952,9 @@ function renderFriends(friends, problem) {
     if (v > 0 && !problem) li.append(remindLink(n, v));
     const acts = el("div", "friendActions");
     if (!phone) { const a = el("button", "link", "Add number"); a.type = "button"; a.onclick = () => openAddPerson(n, true); acts.append(a); }
+    if (!problem && state.groups.some((g) => g.people.includes(n) && g.people.includes(ME))) acts.append(payLink(n));
     const inv = el("button", "link", "Invite to Kitty"); inv.type = "button"; inv.onclick = () => openInvite(n); acts.append(inv);
-    const used = allExpenses().some((e) => e.payer === n || e.participants.includes(n));
+    const used = allExpenses().some((e) => e.payer === n || e.participants.includes(n)) || allPayments().some((x) => x.from === n || x.to === n);
     if (!used && (state.friends || []).includes(n)) {
       const x = el("button", "link removeFriend", "Remove"); x.type = "button";
       x.onclick = () => { state.friends = state.friends.filter((f) => f !== n); persist(); renderAll(); toast(`Removed ${n}`); };
@@ -863,13 +971,13 @@ function renderFriends(friends, problem) {
 async function renderGroups() {
   const items = await Promise.all(state.groups.map(async (g) => {
     let mine = 0;
-    if (g.expenses.length) {
-      try { mine = (await post("/api/balances", { expenses: g.expenses.map(plainExpense) })).net[ME] || 0; } catch (_) {}
+    if (g.expenses.length || payments(g).length) {
+      try { mine = (await post("/api/balances", { expenses: g.expenses.map(plainExpense), payments: payments(g).map(plainPayment) })).net[ME] || 0; } catch (_) {}
     }
     const li = el("li", "tap");
     const right = el("span", "amt " + (mine > 0 ? "get" : mine < 0 ? "owe" : "zero"));
     right.append(el("small", null, mine > 0 ? "you get back" : mine < 0 ? "you owe" : "settled"), el("strong", null, mine ? rupees(Math.abs(mine)) : ""));
-    if (g.expenses.length) tapTarget(right, `${mine > 0 ? `You get back ${rupees(mine)}` : mine < 0 ? `You owe ${rupees(-mine)}` : "Settled"} in ${g.name}. Show the expenses`, () => openExplain(null, g.id));
+    if (g.expenses.length || payments(g).length) tapTarget(right, `${mine > 0 ? `You get back ${rupees(mine)}` : mine < 0 ? `You owe ${rupees(-mine)}` : "Settled"} in ${g.name}. Show the expenses`, () => openExplain(null, g.id));
     li.append(who(g.name, `${g.people.length} ${g.people.length === 1 ? "person" : "people"} · ${g.expenses.length} ${g.expenses.length === 1 ? "expense" : "expenses"}`, "cat"), right);
     li.onclick = () => go("group", g.id);
     return li;
@@ -915,8 +1023,22 @@ $("ooDelete").addEventListener("click", () => {
 async function renderGroup() {
   const g = group(openGroupId);
   if (!g) return;
-  $("gExpensesEmpty").hidden = g.expenses.length > 0;
-  $("gExpenses").replaceChildren(...g.expenses.map((e) => {
+  $("gExpensesEmpty").hidden = g.expenses.length + payments(g).length > 0;
+  const paymentRows = payments(g).map((p) => {
+    const li = el("li");
+    const right = el("div", "right");
+    const del = el("button", "link", "Delete"); del.type = "button";
+    const what = p.from === ME ? `You paid ${p.to}` : p.to === ME ? `${p.from} paid you` : `${p.from} paid ${p.to}`;
+    del.onclick = () => {
+      if (!confirm(`Delete this payment: ${what} ${rupees(p.amount / 100)}?`)) return;
+      g.payments = payments(g).filter((x) => x.id !== p.id); persist(); renderAll(); toast("Payment deleted");
+    };
+    right.append(el("strong", null, rupees(p.amount / 100)), del);
+    li.append(who(what, `Payment · ${shortDate(p.at)}`, "cat"), right);
+    li.dataset.at = p.at;
+    return li;
+  });
+  const expenseRows = g.expenses.map((e) => {
     const li = el("li");
     const right = el("div", "right");
     const del = el("button", "link", "Delete"); del.type = "button";
@@ -926,12 +1048,14 @@ async function renderGroup() {
     };
     right.append(el("strong", null, rupees(e.total)), del);
     li.append(who(e.description, `${e.payer === ME ? "You paid" : e.payer + " paid"} · ${shortDate(e.at)} · ${e.participants.join(", ")}`, "cat"), right);
+    li.dataset.at = e.at || "";
     return li;
-  }));
+  });
+  $("gExpenses").replaceChildren(...[...expenseRows, ...paymentRows].sort((a, b) => (a.dataset.at < b.dataset.at ? 1 : -1)));
   $("gPeople").replaceChildren(...g.people.map((p) => {
     const li = el("li");
     li.append(who(p === ME ? (state.profile.name ? state.profile.name + " (you)" : "You") : p));
-    if (p !== ME && !g.expenses.some((e) => e.payer === p || e.participants.includes(p))) {
+    if (p !== ME && !g.expenses.some((e) => e.payer === p || e.participants.includes(p)) && !payments(g).some((x) => x.from === p || x.to === p)) {
       const x = el("button", "link", "Remove"); x.type = "button";
       x.onclick = () => { g.people = g.people.filter((q) => q !== p); persist(); renderGroup(); };
       li.append(x);
@@ -952,9 +1076,9 @@ async function renderGroup() {
   $("gBal").textContent = "₹0"; $("gBal").className = "zero"; $("gBalLabel").textContent = "All settled";
   $("gSettleEmpty").hidden = false;
   $("gOthers").replaceChildren(); $("gOthersHead").hidden = true; $("gOthersMore").hidden = true;
-  if (!g.expenses.length) return;
+  if (!g.expenses.length && !payments(g).length) return;
   try {
-    const b = await post("/api/balances", { expenses: g.expenses.map(plainExpense) });
+    const b = await post("/api/balances", { expenses: g.expenses.map(plainExpense), payments: payments(g).map(plainPayment) });
     const mine = b.net[ME] || 0;
     $("gBal").textContent = rupees(Math.abs(mine));
     $("gBal").className = mine > 0 ? "get" : mine < 0 ? "owe" : "zero";
@@ -970,7 +1094,8 @@ async function renderGroup() {
       li.append(who(p.to === ME ? `${p.from} pays you` : `You pay ${p.to}`), amt);
       tapTarget(amt, `${p.to === ME ? `${p.from} pays you` : `You pay ${p.to}`} ${rupees(p.amount)} for ${g.name}. Show the expenses`, () => openExplain(friend, g.id));
       li.addEventListener("click", (e) => { if (!e.target.closest("button")) openExplain(friend, g.id); });
-      if (p.to === ME) li.append(remindLink(p.from, p.amount, g.name));
+      if (p.to === ME) li.append(remindLink(p.from, p.amount, g.id));
+      li.append(payLink(friend, g.id));
       settle.append(li);
     }
     // Debts between other people: shown for completeness, muted, with nothing to send.
@@ -1002,7 +1127,8 @@ $("gByNumber").addEventListener("click", () => { addToGroup = openGroupId; openA
 $("gDelete").addEventListener("click", () => {
   const g = group(openGroupId);
   if (!g) return;
-  if (!confirm(`Delete "${g.name}" and its ${g.expenses.length} expenses?`)) return;
+  const np = payments(g).length;
+  if (!confirm(`Delete "${g.name}" and its ${g.expenses.length} expenses${np ? ` and ${np} ${np === 1 ? "payment" : "payments"}` : ""}?`)) return;
   state.groups = state.groups.filter((x) => x.id !== g.id);
   if (state.current === g.id) state.current = state.groups.length ? state.groups[0].id : null;
   persist(); go("groups"); renderAll(); toast("Group deleted");
@@ -1104,8 +1230,11 @@ function exportRows() {
   const rows = allExpenses()
     .filter((e) => (!gid || e._gid === gid) && (!from || new Date(e.at) >= from) && (!to || new Date(e.at) < to))
     .sort((a, b) => (a.at < b.at ? -1 : 1));
+  const pays = allPayments()
+    .filter((p) => (!gid || p._gid === gid) && (!from || new Date(p.at) >= from) && (!to || new Date(p.at) < to))
+    .sort((a, b) => (a.at < b.at ? -1 : 1));
   const gname = gid === NO_GROUP ? NO_GROUP_LABEL : gid ? group(gid).name : "All groups";
-  return { rows, title: `Kitty: ${gname}, ${label}`, file: `kitty-${gname}-${label}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+$/, "") };
+  return { rows, pays, title: `Kitty: ${gname}, ${label}`, file: `kitty-${gname}-${label}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+$/, "") };
 }
 function renderExportCount() {
   const n = exportRows().rows.length;
@@ -1125,11 +1254,12 @@ async function saveFile(blob, name) {
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 $("xExcel").addEventListener("click", async () => {
-  const { rows, title, file } = exportRows();
+  const { rows, pays, title, file } = exportRows();
   if (!rows.length) return;
   $("xExcel").disabled = true;
   try {
-    const res = await post("/api/export-xlsx", { title, rows: rows.map((e) => ({ date: new Date(e.at).toLocaleDateString("en-IN"), group: e._group, expense: plainExpense(e) })) }, false, true);
+    const res = await post("/api/export-xlsx", { title, rows: rows.map((e) => ({ date: new Date(e.at).toLocaleDateString("en-IN"), group: e._group, expense: plainExpense(e) })),
+      payments: pays.map((p) => ({ date: new Date(p.at).toLocaleDateString("en-IN"), group: p._group, payment: plainPayment(p) })) }, false, true);
     await saveFile(await res.blob(), file + ".xlsx");
     toast("Excel file ready");
   } catch (e) { toast(e.message); }

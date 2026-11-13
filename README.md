@@ -13,6 +13,7 @@ A working prototype of voice input for splitting shared expenses with friends, b
 3. **The maths is plain code, not AI:** `splits.py` works in paise, so shares always add up to the exact total. It supports equal, exact, shares and percent splits, items only some people share, and direct balances between each pair of people.
 4. **You confirm:** nothing is saved until you check the card. You can change the amount, the payer or who shares.
 5. **Settle up:** Kitty shows who owes whom, person by person, so the amount you see is the amount you send. A group shows the same amount as the Friends tab for its expenses, with a WhatsApp reminder for each, including your UPI ID if you add one.
+6. **Record a payment:** when someone pays you, or you pay them, record it from their row in a group or in Friends, and both screens go down by that amount. Payments are stored with their group and are never counted as spending. Version 1 cannot record payments between two other people, only payments you made or received.
 
 **Screens:** Home (speak or type an expense, totals, recent expenses), Friends (each person's balance with you across all groups), Groups (separate groups such as a trip or a flat, each with its own settle-up), and Account (your details, Excel and PDF export by month or range, and features marked as coming soon). It can be installed from the browser as a phone app.
 

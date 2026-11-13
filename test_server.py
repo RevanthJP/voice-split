@@ -105,6 +105,53 @@ class SilentAudio(unittest.TestCase):
         self.assertEqual(reads, [])  # the reader never saw "I paid 1,200 rupees."
 
 
+class RecordedPayments(unittest.TestCase):
+    """The report's test data after Meena pays me ₹100, through the real routes."""
+    EXPS = OneAmount.EXPS
+    PAY = [{"from": "Meena", "to": "You", "amount": 10000}]
+
+    def test_group_friends_explain_after_a_payment(self):
+        b = client.post("/api/balances", json={"expenses": self.EXPS, "payments": self.PAY}).json()
+        rows = {(p["from"], p["to"]): p["amount"] for p in b["payments"]}
+        self.assertEqual(rows, {("Arun", "You"): 900, ("Meena", "You"): 900, ("Meena", "Arun"): 100})
+        self.assertEqual(b["net"]["You"], 1800)
+        friends = client.post("/api/friends", json={"expenses": self.EXPS, "payments": self.PAY}).json()["friends"]
+        self.assertEqual(friends, {"Arun": 900, "Meena": 900})
+        r = client.post("/api/explain", json={"expenses": self.EXPS, "payments": self.PAY, "person": "Meena"}).json()
+        self.assertEqual(r["total"], 900)
+        self.assertIn({"kind": "payment", "index": 0, "amount": -100}, r["lines"])
+        self.assertEqual(sum(line["amount"] for line in r["lines"]), 900)
+
+    def test_payments_are_not_spending(self):
+        shares = client.post("/api/shares", json={"expenses": self.EXPS, "payments": self.PAY}).json()["shares"]
+        self.assertEqual(len(shares), 4)
+        self.assertEqual(sum(sh["You"] for sh in shares), 1400)
+
+    def test_old_requests_without_payments_still_work(self):
+        self.assertEqual(client.post("/api/friends", json={"expenses": self.EXPS}).json()["friends"], {"Arun": 900, "Meena": 1000})
+
+    def test_bad_payments_are_refused(self):
+        for bad in ({"from": "Meena", "to": "You", "amount": 0}, {"from": "Meena", "to": "You", "amount": -5},
+                    {"from": "Meena", "to": "You", "amount": 33.5}, {"from": "Meena", "to": "You", "amount": "100"},
+                    {"from": "Meena", "to": "meena", "amount": 100}, {"from": "", "to": "You", "amount": 100},
+                    {"from": "Meena", "to": "You", "amount": 1_000_000_001}, {"from": "M" * 61, "to": "You", "amount": 100}):
+            for url in ("/api/balances", "/api/friends", "/api/explain"):
+                self.assertEqual(client.post(url, json={"expenses": self.EXPS, "payments": [bad]}).status_code, 422, (url, bad))
+        many = [{"from": "Meena", "to": "You", "amount": 1}] * 3001
+        self.assertEqual(client.post("/api/friends", json={"expenses": self.EXPS, "payments": many}).status_code, 422)
+
+    def test_excel_has_payments_and_balances_include_them(self):
+        from io import BytesIO
+        from openpyxl import load_workbook
+        body = {"title": "t", "rows": [{"date": "1", "group": "Test group", "expense": e} for e in self.EXPS],
+                "payments": [{"date": "9", "group": "Test group", "payment": self.PAY[0]}]}
+        wb = load_workbook(BytesIO(client.post("/api/export-xlsx", json=body).content))
+        self.assertEqual([list(r) for r in wb["Payments"].iter_rows(min_row=2, values_only=True)], [["9", "Test group", "Meena", "You", 100]])
+        summary = {r[0]: r[1] for r in wb["Summary"].iter_rows(values_only=True) if r and r[0] in ("Arun", "Meena")}
+        self.assertEqual(summary, {"Arun": 900, "Meena": 900})
+        self.assertEqual(wb["Expenses"].max_row, 5)  # four expenses and the header: the payment is not an expense
+
+
 class OneWayToSave(unittest.TestCase):
     def test_only_the_save_button_adds_an_expense(self):
         js = (Path(__file__).parent / "public" / "static" / "app.js").read_text(encoding="utf-8")
