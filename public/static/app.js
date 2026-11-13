@@ -344,9 +344,9 @@ function closeCard() {
   document.body.classList.remove("sheet-open");
   setTimeout(() => { $("scrim").hidden = true; $("card").hidden = true; }, 260);
 }
-$("scrim").addEventListener("click", () => { if (!$("explain").hidden) closeExplain(); else if (!$("shareTo").hidden) closeShareTo(); else if (!$("addPerson").hidden) closeAddPerson(); else if (!$("contactsAsk").hidden) closeContactsAsk(); else if (!$("remind").hidden) closeRemind(); else closeCard(); });
+$("scrim").addEventListener("click", () => { if (!$("who").hidden) closeWho(); else if (!$("explain").hidden) closeExplain(); else if (!$("shareTo").hidden) closeShareTo(); else if (!$("addPerson").hidden) closeAddPerson(); else if (!$("contactsAsk").hidden) closeContactsAsk(); else if (!$("remind").hidden) closeRemind(); else closeCard(); });
 $("discard").addEventListener("click", closeCard);
-document.addEventListener("keydown", (e) => { if (e.key === "Escape" && draft) closeCard(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && draft) { if (!$("who").hidden) closeWho(); else closeCard(); } });
 
 function fillGroupSelect(sel, value, withAll) {
   sel.replaceChildren(...(withAll ? [Object.assign(el("option", null, "All groups"), { value: "" })] : []),
@@ -406,21 +406,40 @@ function paintGroupPick() {
 function cardPeople() {
   return [...new Set([ME, ...(draftGroup ? group(draftGroup).people : []), draft.payer, ...draft.participants, ...draft.items.flatMap((i) => [...i.only, ...i.excluded])])].filter(Boolean);
 }
+// Names in this expense: the payer, the people sharing, and anyone named in an item.
+const inDraft = (p) => p === draft.payer || draft.participants.includes(p) || draft.items.some((i) => i.only.includes(p) || i.excluded.includes(p));
+// A name is "new" when the server says so and it isn't a saved friend or group member. With nobody saved
+// yet (first run) every name would be new, so then nothing is tagged.
+function newNames(res) {
+  const saved = allPeople().filter((p) => p !== ME).map((p) => p.toLowerCase());
+  if (!saved.length) return new Set();
+  return new Set((res.new_people || []).filter((p) => !saved.includes(p.toLowerCase())));
+}
+const PENCIL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25Zm17.7-10.2a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z"/></svg>';
 function paintCard(res) {
   paintGroupPick();
   const people = cardPeople();
+  const fresh = newNames(res);
   $("payer").replaceChildren(...people.map((p) => { const o = el("option", null, p); o.value = p; o.selected = p === draft.payer; return o; }));
   $("sharers").replaceChildren(...people.map((p) => {
     const on = draft.participants.includes(p);
     const b = el("button", "chip" + (on ? " on" : ""), p);
     b.type = "button";
     b.setAttribute("aria-pressed", on);
+    if (fresh.has(p)) { b.append(el("small", "newTag", "new")); b.setAttribute("aria-label", `${p}, new name`); }
     b.onclick = () => {
       draft.participants = on ? draft.participants.filter((x) => x !== p) : [...draft.participants, p];
       if (draft.mode !== "equal") { draft.mode = "equal"; draft.values = {}; }
       recheck();
     };
-    return b;
+    if (p === ME || !inDraft(p)) return b;
+    // The pencil fixes a misheard name, for this expense only
+    const wrap = el("span", "chipWrap");
+    const edit = el("button", "chipEdit"); edit.type = "button"; edit.innerHTML = PENCIL;
+    edit.setAttribute("aria-label", `Fix the name ${p}`);
+    edit.onclick = () => openWho(p);
+    wrap.append(b, edit);
+    return wrap;
   }));
   const modeNote = { shares: "Split by shares: ", percent: "Split by percent: ", exact: "Exact amounts: " }[draft.mode];
   $("modeNote").hidden = !modeNote;
@@ -483,6 +502,72 @@ $("addSharer").addEventListener("submit", (e) => {
   if (draft.mode !== "equal") { draft.mode = "equal"; draft.values = {}; }
   recheck();
 });
+// ---------- fixing a name on this expense ----------
+// Nothing is remembered about mishearings: a fix changes this expense only, and only the names still on
+// the sheet can be saved to the group.
+let whoFor = null;
+function resolveName(raw) {
+  const t = (raw || "").trim().replace(/\s+/g, " ");
+  if (!t) return "";
+  if (["you", "me", "myself"].includes(t.toLowerCase())) return ME;
+  return [...cardPeople(), ...allPeople()].find((p) => p.toLowerCase() === t.toLowerCase()) || titleName(t);
+}
+function syncPayer() {
+  // recheck() reads the payer from the menu, so the menu must show the payer before it runs
+  if (![...$("payer").options].some((o) => o.value === draft.payer)) $("payer").append(Object.assign(el("option", null, draft.payer), { value: draft.payer }));
+  $("payer").value = draft.payer;
+}
+function renameInDraft(from, to) {
+  if (!draft || !to || to === from) return;
+  const swap = (n) => (n === from ? to : n);
+  const dedupe = (xs) => [...new Set(xs.map(swap))];
+  if (draft.mode !== "equal" && from in draft.values) {
+    if (to in draft.values) { draft.mode = "equal"; draft.values = {}; } // two custom amounts can't simply merge
+    else { draft.values[to] = draft.values[from]; delete draft.values[from]; }
+  }
+  draft.payer = swap(draft.payer);
+  draft.participants = dedupe(draft.participants);
+  for (const it of draft.items) { it.only = dedupe(it.only); it.excluded = dedupe(it.excluded); }
+  syncPayer();
+  recheck();
+}
+function removeFromDraft(name) {
+  if (!draft) return;
+  draft.participants = draft.participants.filter((x) => x !== name);
+  // An item only that person shared has nobody left; its amount is then shared like the rest of the bill.
+  draft.items = draft.items.filter((it) => !(it.only.length && it.only.every((x) => x === name)));
+  for (const it of draft.items) { it.only = it.only.filter((x) => x !== name); it.excluded = it.excluded.filter((x) => x !== name); }
+  if (draft.mode !== "equal") { draft.mode = "equal"; draft.values = {}; }
+  if (draft.payer === name) draft.payer = ME;
+  syncPayer();
+  recheck();
+}
+function openWho(name) {
+  whoFor = name;
+  $("whoHeard").textContent = `Kitty heard “${name}”. Pick who it is, or type the name.`;
+  $("whoName").value = "";
+  const options = [...new Set([ME, ...cardPeople(), ...allPeople()])].filter((p) => p !== name);
+  $("whoChips").replaceChildren(...options.map((p) => {
+    const b = el("button", "chip", p === ME ? "You" : p); b.type = "button";
+    b.onclick = () => { closeWho(); renameInDraft(name, p); };
+    return b;
+  }));
+  $("who").hidden = false;
+  requestAnimationFrame(() => document.body.classList.add("remind-open"));
+}
+function closeWho() {
+  document.body.classList.remove("remind-open");
+  setTimeout(() => { $("who").hidden = true; }, 300);
+}
+$("whoForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const to = resolveName($("whoName").value);
+  if (!to) return;
+  const from = whoFor; closeWho(); renameInDraft(from, to);
+});
+$("whoRemove").addEventListener("click", () => { const from = whoFor; closeWho(); removeFromDraft(from); });
+$("whoCancel").addEventListener("click", closeWho);
+
 $("save").addEventListener("click", () => {
   if (!draft || $("save").disabled || !group(draftGroup)) return;
   const g = group(draftGroup);

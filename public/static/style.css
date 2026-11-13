@@ -173,6 +173,13 @@ h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.07em;color:var(--mut
 .field{display:block;width:100%;margin-top:6px;padding:12px 14px;border:0;border-radius:14px;background:var(--gray);color:var(--ink)}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .chip{border:0;background:var(--gray);border-radius:999px;padding:8px 15px;font-size:.95rem;color:var(--ink);transition:background .2s,color .2s}
+/* Fix-a-name: a pencil beside a person chip, and a small tag on names Kitty doesn't know yet */
+.chipWrap{display:inline-flex;align-items:center;gap:2px}
+.chipEdit{flex:none;width:36px;height:36px;border:0;border-radius:50%;background:none;color:var(--blue-link);display:grid;place-items:center}
+.chipEdit svg{width:17px;height:17px;fill:currentColor}
+.chip .newTag{margin-left:6px;padding:1px 6px;border-radius:999px;background:var(--orange-soft);color:var(--orange);font-size:.7rem;font-weight:700}
+.link.whoRemove{display:block;margin-top:14px;color:var(--red)}
+.actions.whoActions{grid-template-columns:1fr}
 .chip.on{background:var(--blue-soft);color:var(--blue-deep);font-weight:600}
 .note{color:var(--muted);font-size:.88rem;margin:.8rem 0 0}
 .items{list-style:none;padding:0;margin:.8rem 0 0;font-size:.92rem}

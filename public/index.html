@@ -13,7 +13,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Kitty">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="/static/style.css?v=41">
+<link rel="stylesheet" href="/static/style.css?v=42">
 </head>
 <body>
 <div class="app">
@@ -444,9 +444,23 @@
     </div>
   </section>
 
+  <!-- Fix a misheard name on the expense being added. Uses the reminder sheet's styles. -->
+  <section id="who" class="sheet remindSheet" hidden role="dialog" aria-modal="true" aria-labelledby="whoTitle">
+    <div class="grab" aria-hidden="true"></div>
+    <h3 class="sheetTitle" id="whoTitle">Who is this?</h3>
+    <p class="note" id="whoHeard"></p>
+    <div id="whoChips" class="chips"></div>
+    <form id="whoForm" class="compose inline small">
+      <input id="whoName" maxlength="30" placeholder="Or type their name" autocomplete="off" aria-label="Their name">
+      <button type="submit" aria-label="Use this name"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2Z"/></svg></button>
+    </form>
+    <button id="whoRemove" class="link whoRemove" type="button">Remove from this expense</button>
+    <div class="actions whoActions"><button id="whoCancel" type="button">Cancel</button></div>
+  </section>
+
   <div id="toast" class="toast" role="status" hidden></div>
 </div>
 <div id="print" class="print" aria-hidden="true"></div>
-<script src="/static/app.js?v=46"></script>
+<script src="/static/app.js?v=47"></script>
 </body>
 </html>
