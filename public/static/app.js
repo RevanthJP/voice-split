@@ -5,9 +5,13 @@ const KEY = "voice-split-v2";
 const ASKED_FOR_TOUR = location.hash === "#welcome"; // read before the app changes the address
 const OLD_KEY = "voice-split-v1";
 const $ = (id) => document.getElementById(id);
+// Only some browsers (Chrome on Android) let a web page open the phone's contact list. Elsewhere,
+// including iPhone Safari, Kitty never offers contacts, and friends are added by name instead.
+const CONTACTS_OK = "contacts" in navigator && "ContactsManager" in window;
 let state = load();
 let draft = null;      // the expense on the confirmation sheet
 let draftGroup = null; // which group it will be saved to
+let checkTimer = null, checkSeq = 0; // the pending recalculation, and which one is the latest
 let openGroupId = null;
 
 // ---------- storage ----------
@@ -77,7 +81,11 @@ async function post(url, body, isForm, raw) {
   if (raw && res.ok) return res;
   let data = null;
   try { data = await res.json(); } catch (_) {}
-  if (!res.ok) throw new Error((data && typeof data.detail === "string" && data.detail) || "Something went wrong. Please try again.");
+  if (!res.ok) {
+    const err = new Error((data && typeof data.detail === "string" && data.detail) || "Something went wrong. Please try again.");
+    err.status = res.status;
+    throw err;
+  }
   return data;
 }
 const plainExpense = (e) => ({ description: e.description, total: e.total, payer: e.payer, participants: e.participants, mode: e.mode, values: e.values || {}, items: e.items || [] });
@@ -118,21 +126,50 @@ function busy(on, label) {
 }
 
 // ---------- listening screen ----------
+// The group whose screen is open, if any. A voice expense started there goes to that group.
+const screenGroup = () => (!$("view-group").hidden && group(openGroupId) ? openGroupId : null);
+let listenGroupId = null; // the group this recording will be added to
+// Every open and close of the panel moves this on, so a microphone that is granted after the panel
+// was closed (or reopened) can tell it is no longer wanted.
+let listenSession = 0;
+// One audio engine for the level meter. iPhone Safari only lets it run if it starts during a tap,
+// so it is created or resumed here, inside the tap that opens the panel.
+let audioCtx = null;
+function wakeAudio() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+  } catch (_) { audioCtx = null; }
+}
 function openListen() {
   clearError();
-  $("listenGroup").textContent = "Adding to " + current().name;
+  listenSession++;
+  wakeAudio();
+  // A field with the keyboard up would hide the panel at the bottom
+  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+  listenGroupId = screenGroup(); // from Home or another tab, the sheet asks which group
+  $("listenGroup").textContent = listenGroupId ? "Adding to " + group(listenGroupId).name : "You'll choose the group next";
   $("listen").hidden = false;
   requestAnimationFrame(() => document.body.classList.add("listen-open"));
-  startRecording();
+  startRecording(); // still from the same tap, so iPhone Safari allows the microphone
 }
 function closeListen() {
-  document.body.classList.remove("listen-open");
+  document.body.classList.remove("listen-open", "micAsk", "micDenied");
   setTimeout(() => { $("listen").hidden = true; }, 300);
 }
 document.addEventListener("click", (e) => { if (e.target.closest("[data-listen]")) openListen(); });
-$("listenClose").addEventListener("click", () => {
-  if (rec && rec.state === "recording") { cancelled = true; rec.stop(); }
+// The close button, and a tap on the screen behind the panel, both stop any recording and release the mic.
+function cancelListen() {
+  listenSession++; // a microphone still being asked for will be released when it arrives
+  if (take) {
+    take.cancelled = true;
+    if (take.rec && take.rec.state === "recording") take.rec.stop();
+  }
   closeListen();
+}
+$("listenClose").addEventListener("click", cancelListen);
+$("listen").addEventListener("click", (e) => {
+  if (e.target === $("listen") && e.clientY < $("listen").getBoundingClientRect().top) cancelListen();
 });
 
 // A faint sound wave behind the mic, the same as the earlier design: it follows the voice while recording.
@@ -148,26 +185,38 @@ const WAVE = 34;
     w.append(b);
   }
 })();
-let meterStop = null;
-function meter(stream) {
+// Moves the wave with the voice, and records the loudest moment of this recording in t.peak, as RMS on a
+// 0 to 1 scale. If the meter can't run (no audio engine, or iOS kept it paused), t.peak stays null and the
+// silence check is skipped rather than guessed: real speech must never be thrown away.
+function meter(stream, t) {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    wakeAudio();
+    const ctx = audioCtx;
+    const src = ctx.createMediaStreamSource(stream);
     const an = ctx.createAnalyser();
     an.fftSize = 512;
-    ctx.createMediaStreamSource(stream).connect(an);
-    const data = new Uint8Array(an.fftSize);
-    let raf = 0;
+    src.connect(an);
+    const data = new Uint8Array(an.fftSize), fine = new Float32Array(an.fftSize);
+    let raf = 0, ticks = 0, loudest = 0;
     const tick = () => {
       an.getByteTimeDomainData(data);
       let sum = 0;
       for (const v of data) sum += (v - 128) ** 2;
       const level = Math.min(1, Math.sqrt(sum / data.length) / 40);
       document.body.style.setProperty("--level", level.toFixed(3));
+      if (ctx.state === "running") {
+        an.getFloatTimeDomainData(fine);
+        let f = 0;
+        for (const v of fine) f += v * v;
+        loudest = Math.max(loudest, Math.sqrt(f / fine.length));
+        ticks++;
+      }
+      t.peak = ticks >= 5 ? loudest : null; // a handful of real readings, or no judgement at all
       raf = requestAnimationFrame(tick);
     };
     tick();
-    meterStop = () => { cancelAnimationFrame(raf); ctx.close(); document.body.style.setProperty("--level", 0); };
-  } catch (_) { meterStop = null; }
+    t.stopMeter = () => { cancelAnimationFrame(raf); src.disconnect(); if (take === t || !take) document.body.style.setProperty("--level", 0); };
+  } catch (_) { t.peak = null; t.stopMeter = null; }
 }
 const knownNames = () => [...new Set([...current().people, ...allPeople()])];
 // Silence or noise can come back as a stray word (like "E aí"). With no amount and nobody
@@ -179,14 +228,14 @@ async function readText(text) {
   try {
     const res = await post("/api/read-text", { text, people: knownNames() });
     if (heardNothing(res)) showError("That doesn't look like an expense. Say what it was, the amount and who it's with.");
-    else showCard(res, state.current);
+    else showCard(res, null); // the type box is on Home, so ask which group
   }
   catch (e) { showError(e.message); }
   finally { busy(false); }
 }
 async function readAudio(blob, name) {
   clearError();
-  busy(true, "Understanding…");
+  busy(true, "Thinking…");
   const form = new FormData();
   form.append("file", blob, name);
   form.append("people", knownNames().join("|"));
@@ -195,7 +244,7 @@ async function readAudio(blob, name) {
     const res = await post("/api/read-audio", form, true);
     if (heardNothing(res)) { showError("I couldn't hear an expense. Tap the mic and say the amount and who it's with."); return; }
     closeListen();
-    showCard(res, state.current);
+    showCard(res, group(listenGroupId) ? listenGroupId : null);
   }
   catch (e) { showError(e.message); $("micHint").textContent = "Tap the mic to try again"; }
   finally { busy(false); if (!$("listen").hidden && $("listenError").hidden) $("micHint").textContent = "Tap the mic and say the expense"; }
@@ -209,7 +258,14 @@ $("typeForm").addEventListener("submit", (e) => {
 function paintLangs() { state.profile.lang = ""; } // the language is always detected automatically
 
 // ---------- recording ----------
-let rec = null, chunks = [], stream = null, stopTimer = null, cancelled = false;
+// Each recording is its own object with its own cancelled flag, stream, recorder, chunks, timer and meter,
+// so a recording that was cancelled can never be sent, and can never stop a newer one.
+let take = null;
+const MIN_CLIP_MS = 800;
+// The quietest peak that still counts as someone speaking: RMS 0.005 on a 0 to 1 scale, about −46 dBFS.
+// Quiet speech at arm's length peaks far above this; a silent room with the phone's noise suppression
+// sits well below it. Set low on purpose, so a soft voice is never rejected.
+const SILENCE_PEAK_RMS = 0.005;
 function pickMime() {
   for (const m of ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"]) {
     if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
@@ -217,38 +273,63 @@ function pickMime() {
   return "";
 }
 $("mic").addEventListener("click", () => {
-  if (rec && rec.state === "recording") { rec.stop(); return; }
+  if (take && take.rec && take.rec.state === "recording") { take.rec.stop(); return; }
+  wakeAudio();
   startRecording();
 });
 async function startRecording() {
-  if (rec && rec.state === "recording") return;
+  if (take && take.rec && take.rec.state === "recording") return;
   clearError();
-  cancelled = false;
+  const session = listenSession;
   if (!navigator.mediaDevices || !window.MediaRecorder) { showError("This browser can't record. Please type instead."); return; }
+  // Until the microphone is granted (iOS may be showing its permission prompt), the panel stays still:
+  // no wave, no moving ring. The request itself still comes from the same tap, which iOS requires.
+  // No words either: the iOS prompt says enough.
+  document.body.classList.remove("micDenied");
+  document.body.classList.add("micAsk");
+  $("micHint").textContent = "";
+  let stream;
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-  catch (_) { showError("Microphone access was blocked. Allow it in your settings, or type instead."); return; }
+  catch (_) {
+    if (session !== listenSession) return;
+    document.body.classList.remove("micAsk"); document.body.classList.add("micDenied");
+    $("micHint").textContent = "The microphone is off";
+    showError("Kitty can't use the microphone. Allow it in your browser's settings for this site (on iPhone: aA in the address bar, then Website Settings), or type instead.");
+    return;
+  }
+  // The panel was closed (or opened again) while the permission prompt was up: don't record, let go of the mic.
+  if (session !== listenSession || $("listen").hidden) { stream.getTracks().forEach((tr) => tr.stop()); return; }
+  document.body.classList.remove("micAsk");
   const mime = pickMime();
-  rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
-  chunks = [];
-  const started = Date.now();
-  rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
-  rec.onstop = () => {
-    clearTimeout(stopTimer);
-    stream.getTracks().forEach((t) => t.stop());
-    if (meterStop) meterStop();
-    document.body.classList.remove("recording");
-    if (cancelled) { busy(false); return; }
-    const type = rec.mimeType || "audio/webm";
-    if (Date.now() - started < 800) { showError("That was too short. Tap, speak, then tap again."); busy(false); return; }
+  const t = { cancelled: false, stream, chunks: [], peak: null, stopMeter: null, timer: null, started: Date.now() };
+  t.rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+  take = t;
+  t.rec.ondataavailable = (e) => { if (e.data.size) t.chunks.push(e.data); };
+  t.rec.onstop = () => {
+    clearTimeout(t.timer);
+    t.stream.getTracks().forEach((tr) => tr.stop()); // only this recording's microphone
+    if (t.stopMeter) t.stopMeter();
+    const latest = take === t;
+    if (latest) document.body.classList.remove("recording");
+    if (t.cancelled || !latest) { if (latest) busy(false); return; }
+    const type = t.rec.mimeType || "audio/webm";
+    if (Date.now() - t.started < MIN_CLIP_MS) { showError("That was too short. Tap, speak, then tap again."); busy(false); return; }
+    // Nothing above a whisper the whole time: say so here, and send nothing.
+    if (t.peak !== null && t.peak < SILENCE_PEAK_RMS) {
+      showError("I didn't hear anything. Tap the mic and say the expense.");
+      $("micHint").textContent = "Tap the mic and say the expense";
+      busy(false);
+      return;
+    }
     const ext = type.includes("mp4") ? "m4a" : type.includes("ogg") ? "ogg" : "webm";
-    readAudio(new Blob(chunks, { type }), "expense." + ext);
+    readAudio(new Blob(t.chunks, { type }), "expense." + ext);
   };
-  rec.start();
+  t.rec.start();
   document.body.classList.add("recording");
-  meter(stream);
+  meter(stream, t);
   $("micHint").textContent = "Listening… tap when done";
   if (navigator.vibrate) navigator.vibrate(10);
-  stopTimer = setTimeout(() => rec.state === "recording" && rec.stop(), 45000);
+  t.timer = setTimeout(() => t.rec.state === "recording" && t.rec.stop(), 45000);
 }
 
 // ---------- confirmation sheet ----------
@@ -257,11 +338,13 @@ function openSheet() {
   requestAnimationFrame(() => document.body.classList.add("sheet-open"));
 }
 function closeCard() {
+  clearTimeout(checkTimer);
+  checkSeq++; // a recalculation still on its way belongs to this card, so it's ignored
   draft = null;
   document.body.classList.remove("sheet-open");
   setTimeout(() => { $("scrim").hidden = true; $("card").hidden = true; }, 260);
 }
-$("scrim").addEventListener("click", () => { if (!$("shareTo").hidden) closeShareTo(); else if (!$("addPerson").hidden) closeAddPerson(); else if (!$("contactsAsk").hidden) closeContactsAsk(); else if (!$("remind").hidden) closeRemind(); else closeCard(); });
+$("scrim").addEventListener("click", () => { if (!$("explain").hidden) closeExplain(); else if (!$("shareTo").hidden) closeShareTo(); else if (!$("addPerson").hidden) closeAddPerson(); else if (!$("contactsAsk").hidden) closeContactsAsk(); else if (!$("remind").hidden) closeRemind(); else closeCard(); });
 $("discard").addEventListener("click", closeCard);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && draft) closeCard(); });
 
@@ -271,10 +354,12 @@ function fillGroupSelect(sel, value, withAll) {
   sel.value = value;
 }
 
+// gid null means nobody has chosen the group yet: the sheet shows group chips and Save waits for one.
 function showCard(res, gid) {
+  checkSeq++;
   draft = res.expense;
-  draftGroup = gid;
-  fillGroupSelect($("sheetGroup"), gid);
+  draftGroup = gid || null;
+  fillGroupSelect($("sheetGroup"), gid || "");
   $("heard").hidden = !res.transcript;
   $("heard").textContent = res.transcript ? "“" + res.transcript + "”" : "";
   $("desc").value = draft.description || "";
@@ -287,14 +372,42 @@ function showCard(res, gid) {
 }
 function newBlankCard(gid) {
   showCard({ expense: { description: "", total: null, payer: ME, participants: [...group(gid).people], mode: "equal", values: {}, items: [] }, missing: ["amount"], transcript: null }, gid);
-  setTimeout(() => $("desc").focus(), 320);
+  // On a touch phone, focusing the description opened the keyboard while the sheet was still sliding up,
+  // and iOS scrolled the page to an in-between spot, clipping the top. There, the person taps the field
+  // themselves once the sheet is in place. With a mouse and keyboard, focus it after the slide ends.
+  if (matchMedia("(pointer: fine)").matches) setTimeout(() => { if (draft) $("desc").focus({ preventScroll: true }); }, 480);
 }
 $("sheetGroup").addEventListener("change", () => { draftGroup = $("sheetGroup").value; recheck(); });
 
+// Groups with everyone named in the expense come first, marked Suggested. With nobody named, the
+// last group saved to is suggested. If someone named is in no group, nothing is suggested.
+function groupChoices() {
+  const low = (n) => n.toLowerCase();
+  const named = [...new Set([draft.payer, ...draft.participants, ...draft.items.flatMap((i) => [...i.only, ...i.excluded])]
+    .filter((n) => n && n !== ME).map(low))];
+  const fits = (g) => named.length ? named.every((n) => g.people.some((p) => low(p) === n)) : g.id === state.current;
+  const suggested = state.groups.filter(fits);
+  return [...suggested.map((g) => ({ g, suggested: true })), ...state.groups.filter((g) => !suggested.includes(g)).map((g) => ({ g, suggested: false }))];
+}
+function paintGroupPick() {
+  $("groupPick").hidden = !!draftGroup;
+  $("sheetGroupRow").hidden = !draftGroup;
+  if (draftGroup) return;
+  $("groupChips").replaceChildren(...groupChoices().map(({ g, suggested }) => {
+    const b = el("button", "chip", g.name);
+    b.type = "button";
+    b.setAttribute("aria-pressed", "false");
+    if (suggested) { b.append(el("small", null, " · Suggested")); b.setAttribute("aria-label", g.name + ", suggested"); }
+    b.onclick = () => { draftGroup = g.id; $("sheetGroup").value = g.id; recheck(); };
+    return b;
+  }));
+}
+
 function cardPeople() {
-  return [...new Set([ME, ...group(draftGroup).people, draft.payer, ...draft.participants, ...draft.items.flatMap((i) => [...i.only, ...i.excluded])])].filter(Boolean);
+  return [...new Set([ME, ...(draftGroup ? group(draftGroup).people : []), draft.payer, ...draft.participants, ...draft.items.flatMap((i) => [...i.only, ...i.excluded])])].filter(Boolean);
 }
 function paintCard(res) {
+  paintGroupPick();
   const people = cardPeople();
   $("payer").replaceChildren(...people.map((p) => { const o = el("option", null, p); o.value = p; o.selected = p === draft.payer; return o; }));
   $("sharers").replaceChildren(...people.map((p) => {
@@ -335,20 +448,26 @@ function paintCard(res) {
       owed.append(li);
     }
   }
-  $("save").disabled = !res.owed;
+  $("save").disabled = !res.owed || !draftGroup;
   $("shareWa").disabled = !res.owed;
   lastOwed = res.owed || null;
 }
-let checkTimer = null;
 function recheck() {
   draft.description = $("desc").value.trim() || "Expense";
   const t = parseFloat($("total").value);
   draft.total = Number.isFinite(t) && t > 0 ? t : null;
   draft.payer = $("payer").value || draft.payer;
+  $("save").disabled = true; // back on only when the latest recalculation arrives
+  const seq = ++checkSeq;
   clearTimeout(checkTimer);
   checkTimer = setTimeout(async () => {
-    try { paintCard(await post("/api/check", { expense: draft, people: group(draftGroup).people })); }
-    catch (e) { $("problem").hidden = false; $("problem").textContent = e.message; $("save").disabled = true; }
+    try {
+      const res = await post("/api/check", { expense: draft, people: draftGroup ? group(draftGroup).people : [] });
+      if (seq === checkSeq) paintCard(res);
+    } catch (e) {
+      if (seq !== checkSeq) return;
+      $("problem").hidden = false; $("problem").textContent = e.message; $("save").disabled = true;
+    }
   }, 150);
 }
 ["desc", "total"].forEach((id) => $(id).addEventListener("input", recheck));
@@ -365,7 +484,7 @@ $("addSharer").addEventListener("submit", (e) => {
   recheck();
 });
 $("save").addEventListener("click", () => {
-  if (!draft || $("save").disabled) return;
+  if (!draft || $("save").disabled || !group(draftGroup)) return;
   const g = group(draftGroup);
   for (const p of cardPeople()) if (!g.people.includes(p) && (p === draft.payer || draft.participants.includes(p))) g.people.push(p);
   g.expenses.unshift({ ...plainExpense(draft), id: newId(), at: new Date().toISOString() });
@@ -385,17 +504,19 @@ async function friendBalances() {
   if (!exps.length) return {};
   return (await post("/api/friends", { expenses: exps.map(plainExpense) })).friends;
 }
-function remindMessage(name, amount) {
+// The default reminder, which the person can still edit before sending. It never says "owe".
+// Sent from a group's row, it names the group; from Friends it covers all shared expenses.
+function remindMessage(name, amount, groupName) {
   const me = state.profile.name ? ` – ${state.profile.name.split(" ")[0]}` : "";
-  let msg = `Hi ${name}, a quick reminder: you owe me ${rupees(amount)} for our shared expenses on Kitty.`;
   const upi = (state.profile.upi || "").trim();
-  if (/^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(upi)) msg += ` You can pay to my UPI ID: ${upi}.`;
-  return msg + me;
+  const upiLine = /^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(upi) ? `You can pay me on UPI: ${upi}. ` : "";
+  const what = groupName ? `your share for ${groupName}` : "your share of our shared expenses";
+  return `Hi ${name}! Quick reminder: ${what} comes to ${rupees(amount)}. ${upiLine}Whenever you get a chance, thanks!${me}`;
 }
-function remindLink(name, amount) {
+function remindLink(name, amount, groupName) {
   const b = el("button", "wa", "Send reminder");
   b.type = "button";
-  b.onclick = () => openRemind(name, amount);
+  b.onclick = () => openRemind(name, amount, groupName);
   return b;
 }
 // One sheet sends reminders and invites, by WhatsApp, SMS or any other app.
@@ -412,7 +533,9 @@ function openSend(name, title, text, kind) {
   $("scrim").hidden = false; $("remind").hidden = false;
   requestAnimationFrame(() => document.body.classList.add("remind-open"));
 }
-function openRemind(name, amount) { openSend(name, `Remind ${name} about ${rupees(amount)}`, remindMessage(name, amount), "remind"); }
+function openRemind(name, amount, groupName) {
+  openSend(name, `Remind ${name} about ${rupees(amount)}${groupName ? ` (${groupName})` : ""}`, remindMessage(name, amount, groupName), "remind");
+}
 const APP_LINK = /localhost|127\.0\.0\.1/.test(location.host) ? "https://voice-split.vercel.app" : location.origin;
 function openInvite(name) {
   const me = state.profile.name ? ` – ${state.profile.name.split(" ")[0]}` : "";
@@ -465,7 +588,76 @@ $("remindOther").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText(text); toast("Message copied"); closeRemind(); } catch (_) { toast("Couldn't share. Copy the message instead."); }
 });
 
-async function renderHome(friends) {
+// ---------- the expenses behind a balance ----------
+// The list and its total both come from /api/explain, which uses the same code as the balance you tapped.
+let explainFrom = null;
+const signed = (n) => (n > 0 ? "+" : n < 0 ? "−" : "") + rupees(Math.abs(n));
+async function openExplain(friend, gid) {
+  const g = gid ? group(gid) : null;
+  const exps = g ? g.expenses.map((e) => ({ ...e, _group: g.name })) : allExpenses();
+  explainFrom = document.activeElement;
+  $("explainTitle").textContent = friend ? `You and ${friend}${g ? " in " + g.name : ""}` : `Your balance in ${g.name}`;
+  $("explainNote").textContent = "Adding it up…";
+  $("explainList").replaceChildren();
+  $("explainProblem").hidden = true;
+  $("explainRemind").hidden = true;
+  $("explainActions").style.gridTemplateColumns = "1fr";
+  $("scrim").hidden = false; $("explain").hidden = false;
+  requestAnimationFrame(() => document.body.classList.add("remind-open"));
+  setTimeout(() => $("explainClose").focus(), 320);
+  try {
+    const r = exps.length ? await post("/api/explain", { expenses: exps.map(plainExpense), person: friend || null }) : { total: 0, lines: [] };
+    const t = r.total;
+    const head = friend ? (t > 0 ? `${friend} owes you ${rupees(t)}.` : t < 0 ? `You owe ${friend} ${rupees(-t)}.` : `You and ${friend} are settled up.`)
+      : (t > 0 ? `You get back ${rupees(t)}.` : t < 0 ? `You owe ${rupees(-t)}.` : "You're all settled up here.");
+    const n = r.lines.length;
+    $("explainNote").textContent = !n ? `${head} No shared expenses yet.`
+      : `${head} ${n === 1 ? "This expense makes" : `These ${n} expenses add up to`} that. + means ${friend ? "they owe you" : "you get money back"}, − means you owe.`;
+    const manyGroups = new Set(r.lines.map((l) => exps[l.index]._group)).size > 1;
+    const lines = r.lines.slice().sort((a, b) => ((exps[a.index].at || "") < (exps[b.index].at || "") ? 1 : -1));
+    $("explainList").replaceChildren(...lines.map((l) => {
+      const e = exps[l.index];
+      const li = el("li");
+      const amt = el("span", "amt " + (l.amount > 0 ? "get" : "owe"));
+      amt.append(el("small", null, l.amount > 0 ? (friend ? "owes you" : "you get back") : "you owe"), el("strong", null, signed(l.amount)));
+      li.append(who(e.description, `${manyGroups ? e._group + " · " : ""}${e.payer === ME ? "You paid" : e.payer + " paid"} ${rupees(e.total)} · ${shortDate(e.at)}`, "cat"), amt);
+      return li;
+    }));
+    if (n) {
+      const li = el("li");
+      const amt = el("span", "amt " + (t > 0 ? "get" : t < 0 ? "owe" : "zero"));
+      amt.append(el("small", null, "total"), el("strong", null, t ? signed(t) : rupees(0)));
+      li.append(who("Total", `${n} ${n === 1 ? "expense" : "expenses"}`), amt);
+      $("explainList").append(li);
+    }
+    if (friend && t > 0) {
+      $("explainRemind").hidden = false;
+      $("explainActions").style.gridTemplateColumns = "";
+      $("explainRemind").onclick = () => { $("explain").hidden = true; document.body.classList.remove("remind-open"); openRemind(friend, t, g ? g.name : undefined); };
+    }
+  } catch (e) {
+    $("explainNote").textContent = "";
+    $("explainProblem").textContent = e.status === 400 ? `One expense can't be calculated, so this can't be explained: ${e.message}` : e.message;
+    $("explainProblem").hidden = false;
+  }
+}
+function closeExplain() {
+  document.body.classList.remove("remind-open");
+  setTimeout(() => { $("explain").hidden = true; if ($("card").hidden && $("remind").hidden) $("scrim").hidden = true; }, 300);
+  if (explainFrom && explainFrom.focus) explainFrom.focus();
+}
+$("explainClose").addEventListener("click", closeExplain);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("explain").hidden) closeExplain(); });
+$("gBalBtn").addEventListener("click", () => { if (group(openGroupId)) openExplain(null, openGroupId); });
+// Lets a span act as a button for keyboards too
+function tapTarget(node, label, fn) {
+  node.setAttribute("role", "button"); node.tabIndex = 0; node.setAttribute("aria-label", label); node.setAttribute("aria-haspopup", "dialog");
+  node.addEventListener("click", (e) => { e.stopPropagation(); fn(); });
+  node.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); fn(); } });
+}
+const BALANCE_PROBLEM = "One expense can't be calculated. Please check it.";
+
+async function renderHome(friends, problem) {
   const first = (state.profile.name || "").split(" ")[0];
   $("greet").textContent = first ? `Hello, ${first} 👋` : "Hello there 👋";
   $("meInitial").textContent = (state.profile.name || "You").slice(0, 1).toUpperCase();
@@ -481,6 +673,12 @@ async function renderHome(friends) {
   $("heroSub").textContent = !allExpenses().length ? "Add your first expense to get started"
     : net === 0 ? "You're all settled up" : `${Object.values(friends).filter((v) => v).length} open ${Object.values(friends).filter((v) => v).length === 1 ? "balance" : "balances"} with friends`;
   document.querySelector(".hero").classList.toggle("neg", net < 0);
+  if (problem) { // say so, rather than showing ₹0 as if everything were settled
+    $("heroLabel").textContent = "Overall"; $("heroValue").textContent = "—"; $("heroSub").textContent = problem;
+    $("getBack").textContent = "—"; $("youOwe").textContent = "—";
+    $("getBack").className = "zero"; $("youOwe").className = "zero";
+    $("getBack").closest("button").disabled = false; $("youOwe").closest("button").disabled = false;
+  }
   const recent = allExpenses().sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 5);
   $("recent").replaceChildren(...recent.map((e) => {
     const li = el("li", "tap");
@@ -496,8 +694,10 @@ async function renderHome(friends) {
 let lastFriendBalances = {};
 const WA_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.7 1.1 1.5 1.8 1 .9 1.9 1.2 2.2 1.3.3.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.6-.1 1.2Z"/></svg>';
 const SMS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2Zm3 6v2h2V9H7Zm4 0v2h2V9h-2Zm4 0v2h2V9h-2Z"/></svg>';
-function renderFriends(friends) {
-  lastFriendBalances = friends;
+let lastFriendsProblem = null;
+function renderFriends(friends, problem) {
+  lastFriendBalances = friends; lastFriendsProblem = problem || null;
+  $("friendsProblem").textContent = problem || ""; $("friendsProblem").hidden = !problem;
   // Everyone you know: people in your groups, friends you added, and anyone with a balance.
   const all = [...new Set([...allPeople(), ...Object.keys(friends)])].filter((n) => n !== ME)
     .sort((a, b) => Math.abs(friends[b] || 0) - Math.abs(friends[a] || 0) || a.localeCompare(b));
@@ -513,9 +713,15 @@ function renderFriends(friends) {
   $("friends").replaceChildren(...names.map((n) => {
     const v = friends[n] || 0;
     const groups = state.groups.filter((g) => g.people.includes(n)).map((g) => g.name).join(", ");
-    const li = el("li", "pay");
-    const amt = el("span", "amt " + (v > 0 ? "get" : v < 0 ? "owe" : "zero"));
-    amt.append(el("small", null, v > 0 ? "owes you" : v < 0 ? "you owe" : "settled up"), el("strong", null, v ? rupees(Math.abs(v)) : ""));
+    const li = el("li", "pay" + (problem ? "" : " tap"));
+    const amt = el("span", "amt " + (problem ? "zero" : v > 0 ? "get" : v < 0 ? "owe" : "zero"));
+    if (problem) amt.append(el("small", null, "can't calculate"), el("strong", null, "—"));
+    else {
+      amt.append(el("small", null, v > 0 ? "owes you" : v < 0 ? "you owe" : "settled up"), el("strong", null, v ? rupees(Math.abs(v)) : ""));
+      // Tap the row, or the amount, to see the expenses behind it
+      tapTarget(amt, `${v > 0 ? `${n} owes you ${rupees(v)}` : v < 0 ? `You owe ${n} ${rupees(-v)}` : `Settled up with ${n}`}. Show the expenses`, () => openExplain(n));
+      li.addEventListener("click", (e) => { if (!e.target.closest("button")) openExplain(n); });
+    }
     const phone = (state.phones || {})[n];
     const w = who(n, groups || phone || "No number yet");
     const via = (state.via || {})[n];
@@ -526,7 +732,7 @@ function renderFriends(friends) {
       w.querySelector(".name").append(badge);
     }
     li.append(w, amt);
-    if (v > 0) li.append(remindLink(n, v));
+    if (v > 0 && !problem) li.append(remindLink(n, v));
     const acts = el("div", "friendActions");
     if (!phone) { const a = el("button", "link", "Add number"); a.type = "button"; a.onclick = () => openAddPerson(n, true); acts.append(a); }
     const inv = el("button", "link", "Invite to Kitty"); inv.type = "button"; inv.onclick = () => openInvite(n); acts.append(inv);
@@ -553,6 +759,7 @@ async function renderGroups() {
     const li = el("li", "tap");
     const right = el("span", "amt " + (mine > 0 ? "get" : mine < 0 ? "owe" : "zero"));
     right.append(el("small", null, mine > 0 ? "you get back" : mine < 0 ? "you owe" : "settled"), el("strong", null, mine ? rupees(Math.abs(mine)) : ""));
+    if (g.expenses.length) tapTarget(right, `${mine > 0 ? `You get back ${rupees(mine)}` : mine < 0 ? `You owe ${rupees(-mine)}` : "Settled"} in ${g.name}. Show the expenses`, () => openExplain(null, g.id));
     li.append(who(g.name, `${g.people.length} ${g.people.length === 1 ? "person" : "people"} · ${g.expenses.length} ${g.expenses.length === 1 ? "expense" : "expenses"}`, "cat"), right);
     li.onclick = () => go("group", g.id);
     return li;
@@ -604,6 +811,7 @@ async function renderGroup() {
   settle.replaceChildren();
   $("gBal").textContent = "₹0"; $("gBal").className = "zero"; $("gBalLabel").textContent = "All settled";
   $("gSettleEmpty").hidden = false;
+  $("gOthers").replaceChildren(); $("gOthersHead").hidden = true; $("gOthersMore").hidden = true;
   if (!g.expenses.length) return;
   try {
     const b = await post("/api/balances", { expenses: g.expenses.map(plainExpense) });
@@ -611,14 +819,33 @@ async function renderGroup() {
     $("gBal").textContent = rupees(Math.abs(mine));
     $("gBal").className = mine > 0 ? "get" : mine < 0 ? "owe" : "zero";
     $("gBalLabel").textContent = mine > 0 ? "You get back" : mine < 0 ? "You owe" : "All settled";
+    // Direct amounts, person by person: the same numbers as the Friends tab for this group's expenses.
+    const mineRows = b.payments.filter((p) => p.to === ME || p.from === ME);
+    const others = b.payments.filter((p) => p.to !== ME && p.from !== ME);
     $("gSettleEmpty").hidden = b.payments.length > 0;
-    for (const p of b.payments) {
-      const li = el("li", "pay");
-      const line = p.to === ME ? `${p.from} pays you` : p.from === ME ? `You pay ${p.to}` : `${p.from} pays ${p.to}`;
-      li.append(who(line), el("strong", p.to === ME ? "get" : p.from === ME ? "owe" : "", rupees(p.amount)));
-      if (p.to === ME) li.append(remindLink(p.from, p.amount));
+    for (const p of mineRows) {
+      const friend = p.to === ME ? p.from : p.to;
+      const li = el("li", "pay tap");
+      const amt = el("strong", p.to === ME ? "get" : "owe", rupees(p.amount));
+      li.append(who(p.to === ME ? `${p.from} pays you` : `You pay ${p.to}`), amt);
+      tapTarget(amt, `${p.to === ME ? `${p.from} pays you` : `You pay ${p.to}`} ${rupees(p.amount)} for ${g.name}. Show the expenses`, () => openExplain(friend, g.id));
+      li.addEventListener("click", (e) => { if (!e.target.closest("button")) openExplain(friend, g.id); });
+      if (p.to === ME) li.append(remindLink(p.from, p.amount, g.name));
       settle.append(li);
     }
+    // Debts between other people: shown for completeness, muted, with nothing to send.
+    const SHOW = 3;
+    $("gOthersHead").hidden = !others.length;
+    $("gOthers").replaceChildren(...others.map((p, i) => {
+      const li = el("li", "muted");
+      li.append(who(`${p.from} pays ${p.to}`), el("strong", null, rupees(p.amount)));
+      li.hidden = others.length > SHOW && i >= SHOW;
+      return li;
+    }));
+    const more = $("gOthersMore");
+    more.hidden = others.length <= SHOW;
+    more.textContent = `Show ${others.length - SHOW} more`;
+    more.onclick = () => { $("gOthers").querySelectorAll("li[hidden]").forEach((li) => (li.hidden = false)); more.hidden = true; };
   } catch (e) { settle.append(el("li", "problem", e.message)); }
 }
 $("gAdd").addEventListener("click", () => newBlankCard(openGroupId));
@@ -643,7 +870,7 @@ $("gDelete").addEventListener("click", () => {
 });
 $("friendFromContacts").addEventListener("click", () => openContactsAsk("friends"));
 $("friendByNumber").addEventListener("click", () => openAddPerson());
-$("friendSearch").addEventListener("input", () => renderFriends(lastFriendBalances));
+$("friendSearch").addEventListener("input", () => renderFriends(lastFriendBalances, lastFriendsProblem));
 $("addSearched").addEventListener("click", () => openAddPerson($("friendSearch").value));
 
 // Add a friend with their mobile number, so Kitty can send them their share
@@ -652,6 +879,7 @@ function openAddPerson(name, editing) {
   apEditing = editing ? name : null;
   $("apTitle").textContent = editing ? `Add ${name}'s number` : "Add a friend";
   $("apSubmit").textContent = editing ? "Save number" : "Add friend";
+  $("apPhoneLabel").textContent = !CONTACTS_OK && !editing ? "Mobile number (optional)" : "Mobile number";
   $("apName").readOnly = !!editing;
   $("apName").value = typeof name === "string" ? (editing ? name : titleName(name)) : ""; $("apPhone").value = ""; $("apError").hidden = true;
   $("scrim").hidden = false; $("addPerson").hidden = false;
@@ -671,14 +899,15 @@ $("addPersonForm").addEventListener("submit", (e) => {
   const raw = $("apPhone").value.trim();
   const bad = (msg, field) => { $("apError").textContent = msg; $("apError").hidden = false; $(field).focus(); };
   if (!name) return bad("Add their name.", "apName");
-  if (!waNumber(raw)) return bad("Add their mobile number: 10 digits, or with the country code.", "apPhone");
+  const optional = !CONTACTS_OK && !apEditing; // adding by name: a number helps reminders but isn't needed
+  if (!(optional && !raw) && !waNumber(raw)) return bad(optional ? "That number doesn't look right. Use 10 digits, or add the country code, or leave it empty." : "Add their mobile number: 10 digits, or with the country code.", "apPhone");
   if (apEditing) {
     state.phones = state.phones || {}; state.phones[apEditing] = raw;
     persist(); closeAddPerson(); renderAll(); toast(`Saved ${apEditing}'s number`); return;
   }
   if (name.toLowerCase() === "you" || allPeople().some((p) => p.toLowerCase() === name.toLowerCase())) return bad(`${name} is already a friend.`, "apName");
   state.friends = [...(state.friends || []), name];
-  state.phones = state.phones || {}; state.phones[name] = raw;
+  state.phones = state.phones || {}; if (raw) state.phones[name] = raw;
   $("friendSearch").value = "";
   const g = addToGroup && group(addToGroup);
   if (g) joinGroup(g.id, [name]);
@@ -809,10 +1038,10 @@ $("xPdf").addEventListener("click", async () => {
 // ---------- startup ----------
 async function renderAll() {
   renderAccount();
-  let friends = {};
-  try { friends = await friendBalances(); } catch (_) {}
-  renderHome(friends);
-  renderFriends(friends);
+  let friends = {}, problem = null;
+  try { friends = await friendBalances(); } catch (e) { problem = e.status === 400 ? BALANCE_PROBLEM : e.message; }
+  renderHome(friends, problem);
+  renderFriends(friends, problem);
   renderGroups();
   if (!$("view-group").hidden) renderGroup();
 }
@@ -1038,7 +1267,7 @@ function finishOnboarding() {
   go("home");
   renderAll();
   toast(`Welcome, ${state.profile.name.split(" ")[0]}`);
-  if (!state.contactsAsked) setTimeout(openContactsAsk, 1400);
+  if (!state.contactsAsked && CONTACTS_OK) setTimeout(openContactsAsk, 1400); // never a dead end where contacts can't be shared
 }
 $("introNext").addEventListener("click", openHow);
 $("introSkip").addEventListener("click", openSetup);
@@ -1057,10 +1286,12 @@ $("setupDone").addEventListener("click", () => {
 // Its numbers come from the app's own split maths (splits.py).
 const HOW = [
   { title: "Just say it", text: "Tap the mic and say the expense the way you'd tell a friend, in English, Tamil, Hindi or a mix." },
-  { title: "Find your friends", text: "Pick them from your contacts, or add someone by name and mobile number. Everything stays on your phone." },
+  { title: "Find your friends", text: CONTACTS_OK
+    ? "Pick them from your contacts, or add someone by name and mobile number. Your contact list stays on this phone; Kitty sends friends' names, never numbers, to its server and its AI provider (Groq) to match who you mean."
+    : "Add someone by name, or just say their names when you add an expense. Kitty sends friends' names, never numbers, to its server and its AI provider (Groq) to match who you mean." },
   { title: "Kitty finds the people", text: "The names you said show up, ready to check. Tap Next when it looks right." },
   { title: "Check it, then save", text: "Akash skipped drinks, so he pays only for food. Fix anything with a tap, then save." },
-  { title: "Groups keep the tally", text: "Make a group for a trip or your flat. Every expense adds up, and Kitty works out who pays whom in the fewest payments." },
+  { title: "Groups keep the tally", text: "Make a group for a trip or your flat. Every expense adds up, and Kitty shows who owes whom, person by person, so the amount you see is the amount you send." },
   { title: "Split and share", text: "Post the split in your group chat on WhatsApp, or send it by SMS or any other app. Later, remind anyone on their own from Friends." },
 ];
 const SAY = [
@@ -1143,7 +1374,26 @@ if (state.onboarded !== TOUR_VERSION || ASKED_FOR_TOUR) openIntro();
 // Contacts are held in this variable for this visit only. They are never written to storage
 // and never sent to the server; matching spoken names to them happens here in the browser.
 let phoneContacts = [];
-const canPickContacts = () => "contacts" in navigator && "ContactsManager" in window;
+const canPickContacts = () => CONTACTS_OK;
+// Where contacts can't be shared: hide every contacts button and the onboarding sample, and turn
+// "By number" into "Add friends by name" (the number becomes optional on that sheet).
+const PERSON_ICON = '<path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5Z"/>';
+function applyContactSupport() {
+  document.body.classList.toggle("noContacts", !CONTACTS_OK);
+  if (CONTACTS_OK) return;
+  for (const id of ["friendFromContacts", "gFromContacts", "pickContacts"]) $(id).hidden = true;
+  for (const id of ["friendByNumber", "gByNumber"]) {
+    const b = $(id);
+    b.querySelector("svg").innerHTML = PERSON_ICON;
+    b.lastChild.textContent = "Add friends by name";
+  }
+  $("friendsEmptyText").replaceChildren(el("b", null, "No friends yet"), el("br"), "Add them by name, or just say their names when you add an expense.");
+  $("tipAddTitle").textContent = "Add them by name";
+  $("tipAddText").textContent = "A name is enough. Add their number too, and Kitty can open WhatsApp or SMS with their share ready to send.";
+  const perm = document.querySelector(".scene.s1 .perm");
+  if (perm) perm.hidden = true;
+}
+applyContactSupport();
 async function pickContacts() {
   const picked = await navigator.contacts.select(["name", "tel"], { multiple: true });
   const fresh = picked.map((c) => ({ name: ((c.name || [])[0] || "").trim().replace(/\s+/g, " "), tel: (c.tel || [])[0] || "" })).filter((c) => c.name);
@@ -1153,8 +1403,8 @@ async function pickContacts() {
 }
 let contactsMode = "app";
 const CONTACT_TEXT = {
-  app: { title: "Now give your contacts access", body: "Kitty uses your friends' names to match who you mean when you speak. They stay on this phone: nothing from your contacts is uploaded or saved on a server.", later: "Not now", allow: "Allow contacts" },
-  friends: { title: "Add friends from your contacts", body: "Your phone opens its contact list and you choose who to add. Only the names and numbers you pick are saved, and only on this phone. Nothing from your contacts is uploaded to a server.", later: "Not now", allow: "Choose contacts" },
+  app: { title: "Now give your contacts access", body: "Your contact list stays on this phone. When you add an expense, Kitty sends your friends' names, never phone numbers, to its server and its AI provider (Groq) to match who you mean. Kitty's server stores nothing.", later: "Not now", allow: "Allow contacts" },
+  friends: { title: "Add friends from your contacts", body: "Your phone opens its contact list and you choose who to add. Only the names and numbers you pick are saved, and only on this phone; the rest of your contact list stays here. When you add an expense, Kitty sends your friends' names, never phone numbers, to its server and its AI provider (Groq) to match who you mean. Kitty's server stores nothing.", later: "Not now", allow: "Choose contacts" },
 };
 function openContactsAsk(mode) {
   contactsMode = mode === "friends" ? "friends" : "app";

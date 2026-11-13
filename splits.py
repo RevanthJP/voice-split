@@ -118,15 +118,27 @@ def splitwise_shares(expense):
     return rows
 
 
+def part(expense, owed, person, other=None):
+    """How one expense moves a balance, in signed paise. Every balance in the app is a sum of these.
+
+    Without `other`: `person`'s net in the group, what they paid minus their share.
+    With `other`: only the debt between the two, positive when `other` owes `person`."""
+    if other is None:
+        return (to_paise(expense.total) if expense.payer == person else 0) - owed.get(person, 0)
+    if expense.payer == person and other != person:
+        return owed.get(other, 0)
+    if expense.payer == other and other != person:
+        return -owed.get(person, 0)
+    return 0
+
+
 def balances(expenses):
     """Net paise per person across expenses: positive means they get money back."""
     net = {}
     for e in expenses:
         owed = owed_shares(e)
-        total = to_paise(e.total)
-        net[e.payer] = net.get(e.payer, 0) + total
-        for p, amount in owed.items():
-            net[p] = net.get(p, 0) - amount
+        for p in dict.fromkeys([e.payer, *owed]):
+            net[p] = net.get(p, 0) + part(e, owed, p)
     return net
 
 
@@ -137,12 +149,42 @@ def with_person(expenses, me=ME):
     for e in expenses:
         owed = owed_shares(e)
         if e.payer == me:
-            for p, amount in owed.items():
-                if p != me:
-                    out[p] = out.get(p, 0) + amount
-        elif owed.get(me):
-            out[e.payer] = out.get(e.payer, 0) - owed[me]
+            others = [p for p in owed if p != me]
+        else:
+            others = [e.payer] if owed.get(me) else []
+        for p in others:
+            out[p] = out.get(p, 0) + part(e, owed, me, p)
     return out
+
+
+def pairwise(expenses):
+    """What each person owes each other person directly, in paise: one row per pair, debtor to creditor,
+    with pairs that come to zero left out. Built from part(), like with_person, so the rows involving
+    a person match that person's balances with everyone else."""
+    net = {}  # (a, b) with a < b -> paise b owes a (negative: a owes b)
+    for e in expenses:
+        owed = owed_shares(e)
+        for p in owed:
+            if p == e.payer:
+                continue
+            a, b = sorted((e.payer, p))
+            amount = part(e, owed, a, b)
+            if amount:
+                net[(a, b)] = net.get((a, b), 0) + amount
+    rows = [{"from": b, "to": a, "paise": v} if v > 0 else {"from": a, "to": b, "paise": -v}
+            for (a, b), v in net.items() if v]
+    return sorted(rows, key=lambda r: (-r["paise"], r["from"], r["to"]))
+
+
+def explain(expenses, me=ME, other=None):
+    """The expenses behind one balance: [(index, signed paise)] for each expense that moves it, and
+    their sum. Without `other` the sum is balances(expenses)[me]; with it, with_person(expenses)[other]."""
+    lines = []
+    for i, e in enumerate(expenses):
+        amount = part(e, owed_shares(e), me, other)
+        if amount:
+            lines.append((i, amount))
+    return lines, sum(amount for _, amount in lines)
 
 
 def settle_up(net):

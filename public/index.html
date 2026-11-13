@@ -13,7 +13,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Kitty">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="/static/style.css?v=27">
+<link rel="stylesheet" href="/static/style.css?v=41">
 </head>
 <body>
 <div class="app">
@@ -70,9 +70,10 @@
         <button id="friendByNumber" class="primaryBtn ghost" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.2 15.2 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg>By number</button>
       </div>
       <label class="searchBox"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4a6 6 0 1 0 3.7 10.7l4.8 4.8 1.4-1.4-4.8-4.8A6 6 0 0 0 10 4Zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"/></svg><input id="friendSearch" type="search" placeholder="Search friends by name or number" autocomplete="off" enterkeyhint="search" aria-label="Search friends"></label>
+      <p id="friendsProblem" class="problem" role="alert" hidden></p>
       <ul id="friends" class="list"></ul>
       <div id="friendsNoMatch" class="emptyCard" hidden><p><b id="noMatchText">No one found</b><br><button type="button" class="link" id="addSearched">Add them by number</button></p></div>
-      <div id="friendsEmpty" class="emptyCard"><span class="emptyIcon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5Z"/></svg></span><p><b>No friends yet</b><br>Add them from your contacts or by number, so Kitty can send each person their share on WhatsApp.</p></div>
+      <div id="friendsEmpty" class="emptyCard"><span class="emptyIcon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5Z"/></svg></span><p id="friendsEmptyText"><b>No friends yet</b><br>Add them from your contacts or by number, so Kitty can send each person their share on WhatsApp.</p></div>
       <div class="chartCard" id="friendsCard">
         <div class="chartHead"><h3>Who owes whom</h3><span class="muted">Across all groups</span></div>
         <div id="friendsChart" class="chart"></div>
@@ -81,7 +82,7 @@
       <div class="tipsCard" id="friendsTips">
         <h3>How friends work</h3>
         <ol>
-          <li><b>Add them with their number</b><span>Kitty opens WhatsApp or SMS with their share ready to send.</span></li>
+          <li><b id="tipAddTitle">Add them with their number</b><span id="tipAddText">Kitty opens WhatsApp or SMS with their share ready to send.</span></li>
           <li><b>Or just say their name</b><span>New names you say are added for you. Kitty asks for a number the first time you remind them.</span></li>
           <li><b>Remind in one tap</b><span>When someone owes you, a reminder button shows next to their name. Kitty remembers whether you used WhatsApp or SMS.</span></li>
         </ol>
@@ -104,7 +105,7 @@
         <ol>
           <li><b>Add people once</b><span>Everyone in the group is ready for every expense.</span></li>
           <li><b>Say the expense</b><span>It's saved to the group you're in, like Goa trip.</span></li>
-          <li><b>Settle up</b><span>Kitty works out who pays whom in the fewest payments, and you can export it.</span></li>
+          <li><b>Settle up</b><span>Kitty shows who owes whom, person by person, so the amount you see is the amount you send.</span></li>
         </ol>
       </div>
     </section>
@@ -112,8 +113,11 @@
     <!-- One group -->
     <section class="view" id="view-group" data-title="Group" hidden>
       <div class="groupHead">
-        <div class="totals single"><div><span id="gBalLabel">Your balance</span><strong id="gBal">₹0</strong></div></div>
-        <button id="gAdd" class="primaryBtn" type="button">Add expense here</button>
+        <div class="totals single"><button type="button" id="gBalBtn" aria-haspopup="dialog"><span id="gBalLabel">Your balance</span><strong id="gBal">₹0</strong></button></div>
+        <div class="gAddRow">
+          <button id="gAdd" class="primaryBtn" type="button">Add expense here</button>
+          <button id="gMic" class="primaryBtn ghostMic gMic" type="button" data-listen aria-label="Add an expense here by voice"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-2.07A7 7 0 0 0 19 12h-2Z"/></svg></button>
+        </div>
       </div>
       <div class="chartCard" id="gShareCard" hidden>
         <div class="chartHead"><h3>Each person's share</h3><span class="muted" id="gShareNote"></span></div>
@@ -122,6 +126,9 @@
       <h2>Settle up</h2>
       <ul id="gSettle" class="list"></ul>
       <p id="gSettleEmpty" class="muted small">Nothing to settle yet.</p>
+      <h2 id="gOthersHead" hidden>Between others</h2>
+      <ul id="gOthers" class="list"></ul>
+      <button id="gOthersMore" class="link" type="button" hidden>Show more</button>
       <h2>Expenses</h2>
       <ul id="gExpenses" class="list"></ul>
       <p id="gExpensesEmpty" class="muted small">No expenses in this group yet.</p>
@@ -181,7 +188,7 @@
         <li><span>Automatic payment reminders</span><em>Coming soon</em></li>
       </ul>
       <h2>About</h2>
-      <p class="muted small">Your data stays on this phone. Speech and text are sent to Groq's AI to be read, and this app doesn't store them. The AI reads the expense, and plain code does the maths, so shares always add up exactly.</p>
+      <p class="muted small">Your data is saved on this phone, and your contact list stays here. Speech and text are sent to Groq's AI to be read. When you add an expense, Kitty also sends your friends' names, never phone numbers, to its server and its AI provider (Groq) to match who you mean. Kitty's server stores nothing. The AI reads the expense, and plain code does the maths, so shares always add up exactly.</p>
       <button id="reset" class="danger" type="button">Delete all my data</button>
     </section>
   </main>
@@ -219,7 +226,11 @@
       <input id="desc" class="desc" aria-label="What it was for" maxlength="60">
       <label class="amount">₹<input id="total" type="number" inputmode="decimal" min="0" step="0.01" aria-label="Amount"></label>
     </div>
-    <label class="label">Group <select id="sheetGroup" class="field"></select></label>
+    <label class="label" id="sheetGroupRow">Group <select id="sheetGroup" class="field"></select></label>
+    <div class="label" id="groupPick" hidden>Group
+      <div id="groupChips" class="chips"></div>
+      <p id="groupProblem" class="problem">Add to a group?</p>
+    </div>
     <label class="label">Paid by <select id="payer" class="field"></select></label>
     <div class="label">Split between
       <div id="sharers" class="chips"></div>
@@ -271,7 +282,7 @@
         </div>
         <!-- Step 2: find your friends (contacts, matched on the phone) -->
         <div class="scene s1">
-          <div class="perm"><span class="permIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5 6h10c0-2.2-2.5-4-5-4s-5 1.8-5 4Z"/></svg></span><b>Allow Kitty to see your contacts?</b><small>Names stay on your phone</small><span class="permBtns"><i>Don't allow</i><i class="allow">Allow</i></span></div>
+          <div class="perm"><span class="permIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5 6h10c0-2.2-2.5-4-5-4s-5 1.8-5 4Z"/></svg></span><b>Allow Kitty to see your contacts?</b><small>Your contact list stays on this phone</small><span class="permBtns"><i>Don't allow</i><i class="allow">Allow</i></span></div>
           <ul class="ctList ffList"><li><span class="avatar">R</span><span class="ffName">Ravi</span><span class="ffChip"><i class="add">Add</i><i class="added">✓ Added</i></span></li><li><span class="avatar">S</span><span class="ffName">Suresh</span><span class="ffChip"><i class="add">Add</i><i class="added">✓ Added</i></span></li><li><span class="avatar">A</span><span class="ffName">Akash</span><span class="ffChip"><i class="add">Add</i><i class="added">✓ Added</i></span></li><li><span class="avatar">A</span><span class="ffName">Arun</span><span class="ffChip"><i class="add">Add</i><i class="added">✓ Added</i></span></li><li class="ffNew"><span class="avatar">P</span><span class="ffName">Priya</span><span class="ffChip"><i class="added">✓ Added</i></span></li></ul>
           <div class="ffSheet">
             <b>Add by number</b>
@@ -317,11 +328,11 @@
             <p><span class="avatar">R</span><span>Cab<small>Ravi paid</small></span><b>₹2,000</b></p>
           </div>
           <div class="settle">
-            <small>Settle up in 4 payments</small>
-            <p><span>Suresh → You</span><b>₹4,125</b></p>
-            <p><span>Akash → You</span><b>₹1,750</b></p>
-            <p><span>Akash → Arun</span><b>₹1,750</b></p>
-            <p><span>Ravi → Arun</span><b>₹2,125</b></p>
+            <small>Who pays you, person by person</small>
+            <p><span>Suresh → You</span><b>₹2,000</b></p>
+            <p><span>Akash → You</span><b>₹2,000</b></p>
+            <p><span>Ravi → You</span><b>₹1,600</b></p>
+            <p><span>Arun → You</span><b>₹400</b></p>
           </div>
           </div>
         </div>
@@ -369,7 +380,7 @@
     <div class="grab" aria-hidden="true"></div>
     <span class="permIcon big"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5 6h10c0-2.2-2.5-4-5-4s-5 1.8-5 4Z"/></svg></span>
     <h3 class="sheetTitle" id="contactsTitle">Now give your contacts access</h3>
-    <p class="muted" id="contactsBody">Kitty uses your friends' names to match who you mean when you speak. They stay on this phone: nothing from your contacts is uploaded or saved on a server.</p>
+    <p class="muted" id="contactsBody">Your contact list stays on this phone. When you add an expense, Kitty sends your friends' names, never phone numbers, to its server and its AI provider (Groq) to match who you mean. Kitty's server stores nothing.</p>
     <p id="contactsNote" class="note" hidden></p>
     <div class="actions">
       <button id="contactsLater" type="button">Not now</button>
@@ -382,7 +393,7 @@
     <h3 class="sheetTitle" id="apTitle">Add a friend</h3>
     <form id="addPersonForm">
       <label class="label">Name<input id="apName" class="field" maxlength="30" placeholder="Their name" autocomplete="off"></label>
-      <label class="label">Mobile number<input id="apPhone" class="field" inputmode="tel" maxlength="15" placeholder="10-digit mobile number" autocomplete="off"></label>
+      <label class="label"><span id="apPhoneLabel">Mobile number</span><input id="apPhone" class="field" inputmode="tel" maxlength="15" placeholder="10-digit mobile number" autocomplete="off"></label>
       <p class="note">Saved only on this phone. Kitty uses it to open WhatsApp or SMS with their share ready to send.</p>
       <p id="apError" class="error" hidden></p>
       <div class="actions">
@@ -420,9 +431,22 @@
     </div>
   </section>
 
+  <!-- The expenses behind a balance. Uses the reminder sheet's styles. -->
+  <section id="explain" class="sheet remindSheet" hidden role="dialog" aria-modal="true" aria-labelledby="explainTitle">
+    <div class="grab" aria-hidden="true"></div>
+    <h3 class="sheetTitle" id="explainTitle">How this adds up</h3>
+    <p class="note" id="explainNote"></p>
+    <ul id="explainList" class="list"></ul>
+    <p id="explainProblem" class="problem" hidden></p>
+    <div class="actions" id="explainActions">
+      <button id="explainClose" type="button">Close</button>
+      <button id="explainRemind" class="primary" type="button" hidden>Send reminder</button>
+    </div>
+  </section>
+
   <div id="toast" class="toast" role="status" hidden></div>
 </div>
 <div id="print" class="print" aria-hidden="true"></div>
-<script src="/static/app.js?v=28"></script>
+<script src="/static/app.js?v=46"></script>
 </body>
 </html>

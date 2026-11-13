@@ -10,9 +10,9 @@ A working prototype of voice input for splitting shared expenses with friends, b
 
 1. **Speech to text:** Whisper large-v3 on Groq. The language is detected automatically. If Tamil or Hindi speech comes back translated into English, it listens again in that language.
 2. **Reading the expense:** one call to gpt-oss-20b on Groq returns structured JSON: who paid, the amount, who shares, and any parts only some people share ("Arun didn't have drinks, that was 300"). It turns Tamil and Hindi number words into digits (aayiram → 1000, dedh hazaar → 1500).
-3. **The maths is plain code, not AI:** `splits.py` works in paise, so shares always add up to the exact total. It supports equal, exact, shares and percent splits, items only some people share, and simplified settle-up.
+3. **The maths is plain code, not AI:** `splits.py` works in paise, so shares always add up to the exact total. It supports equal, exact, shares and percent splits, items only some people share, and direct balances between each pair of people.
 4. **You confirm:** nothing is saved until you check the card. You can change the amount, the payer or who shares.
-5. **Settle up:** balances are reduced to the fewest payments, with a WhatsApp reminder for each, including your UPI ID if you add one.
+5. **Settle up:** Kitty shows who owes whom, person by person, so the amount you see is the amount you send. A group shows the same amount as the Friends tab for its expenses, with a WhatsApp reminder for each, including your UPI ID if you add one.
 
 **Screens:** Home (speak or type an expense, totals, recent expenses), Friends (each person's balance with you across all groups), Groups (separate groups such as a trip or a flat, each with its own settle-up), and Account (your details, Excel and PDF export by month or range, and features marked as coming soon). It can be installed from the browser as a phone app.
 

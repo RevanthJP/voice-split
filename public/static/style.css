@@ -251,17 +251,28 @@ h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.07em;color:var(--mut
 .fab svg{width:28px;height:28px;fill:#fff}
 .fab:active span{transform:scale(.93)}
 
-/* Listening screen */
-.listen{position:absolute;inset:0;z-index:30;background:rgba(245,245,247,.97);-webkit-backdrop-filter:saturate(180%) blur(24px);backdrop-filter:saturate(180%) blur(24px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:calc(var(--safe-t) + 20px) 24px calc(var(--safe-b) + 30px);opacity:0;transform:translateY(24px);transition:opacity .35s var(--ease),transform .45s var(--ease)}
+/* Listening panel: a short panel along the bottom, so the screen behind stays visible.
+   Rows: label and close, then the mic (the stop control) with the wave beside it, then the hint and error. */
+.listen{position:absolute;left:0;right:0;bottom:0;z-index:30;min-height:max(25%,13.5rem);box-sizing:border-box;background:var(--card);border-radius:26px 26px 0 0;box-shadow:0 -12px 40px -20px rgba(0,0,0,.35);display:grid;grid-template-columns:1fr auto;grid-template-areas:"label close" "stage stage" "hint hint" "error error";align-content:start;align-items:center;padding:14px 18px calc(var(--safe-b) + 18px);opacity:0;transform:translateY(100%);transition:opacity .3s var(--ease),transform .4s var(--ease)}
 .listen-open .listen{opacity:1;transform:none}
-.listenClose{position:absolute;top:calc(var(--safe-t) + 14px);right:16px;width:40px;height:40px;border-radius:50%;border:0;background:rgba(0,0,0,.06);display:grid;place-items:center}
-.listenClose svg{width:22px;height:22px;fill:var(--ink)}
-.listenGroup{position:absolute;top:calc(var(--safe-t) + 22px);left:20px;margin:0;font-size:.9rem;color:var(--muted);font-weight:500}
-.listenStage{position:relative;width:100%;display:grid;place-items:center}
-.listen .wave{left:-24px;right:-24px;top:50%}
-.listen .hint{margin:.6rem 0 .4rem;font-size:1.25rem}
-.listenTip{margin:0;color:var(--muted);font-size:.95rem;text-align:center;font-style:italic;max-width:300px}
-.listen .error{text-align:center}
+/* Covers the screen above the panel: still visible, but a tap there cancels, like the close button */
+.listen::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:100vh;background:rgba(0,0,0,.12)}
+.listenClose{grid-area:close;width:36px;height:36px;border-radius:50%;border:0;background:rgba(0,0,0,.06);display:grid;place-items:center}
+.listenClose svg{width:20px;height:20px;fill:var(--ink)}
+.listenGroup{grid-area:label;margin:0;font-size:.9rem;color:var(--muted);font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.listenStage{grid-area:stage;display:flex;align-items:center;gap:12px;margin-top:8px}
+.listen .mic{order:-1;flex:none;width:4.6rem;height:4.6rem}
+.listen .mic::before{inset:.3rem;filter:blur(10px)}
+.listen .mic-core{width:3.7rem;height:3.7rem;box-shadow:0 6px 18px rgba(31,79,181,.25)}
+.listen .mic svg{width:1.8rem;height:1.8rem}
+.listen .spinner{width:1.7rem;height:1.7rem;border-width:3px}
+.listen .wave{position:relative;left:auto;right:auto;top:auto;transform:none;flex:1;min-width:0;height:3.6rem;padding:0;overflow:hidden}
+.listen .hint{grid-area:hint;margin:.5rem 0 0;font-size:1.05rem;text-align:center}
+.listen .error{grid-area:error;margin:.35rem 0 0;text-align:center;font-size:.92rem}
+/* Waiting for the microphone permission, or refused: everything stays still */
+.micAsk .listen .wave,.micDenied .listen .wave{opacity:0}
+.micAsk .listen .mic::before,.micDenied .listen .mic::before{animation:none;opacity:.2}
+.micDenied .listen .mic-core{background:var(--muted)}
 
 /* ---- Kitty: mobile app colours. Same blue and orange brand, set on an iOS-style grouped
    background with a deep navy balance card, which reads better on a phone than the web's bright blue. ---- */
@@ -679,3 +690,16 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 .addLabel{margin:14px 0 6px;color:var(--muted);font-size:.85rem}
 .addChip{background:var(--blue-soft);color:var(--blue-deep);font-weight:600}
 .gAddBtns{margin-top:10px}
+/* Where contacts can't be shared, one "Add friends by name" button takes the whole row */
+.noContacts .addFriendBtns{grid-template-columns:1fr}
+/* iPhone Safari zooms in on any field under 16px and stays zoomed, which clips the left edge. iOS only; bigger fields keep their size. */
+@supports (-webkit-touch-callout: none) { input, select, textarea, textarea.field { font-size: max(16px, 1em); } }
+/* Group screen: "Add expense here" with a round mic button to its right, the same height */
+.gAddRow{display:flex;gap:10px}
+.gAddRow #gAdd{flex:1;width:auto;height:52px;padding:0 14px}
+.gMic{flex:none;width:52px;height:52px;padding:0;border-radius:50%;display:grid;place-items:center}
+.gMic svg{width:24px;height:24px;fill:currentColor}
+/* Phones: the page behind the app is the app's own grey, so no darker band shows above or below it in
+   Safari, and the bottom tabs use the same grey (still translucent over it). Wider screens keep the
+   darker surround around the 480px app. */
+@media screen and (max-width:480px){html,body{background:#F2F2F7}.tabs{background:rgba(242,242,247,.86)}}
