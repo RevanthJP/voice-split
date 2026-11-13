@@ -52,7 +52,10 @@ const allExpenses = () => [...state.groups.flatMap((g) => g.expenses.map((e) => 
   ...oneOffs().map((e) => ({ ...e, _group: NO_GROUP_LABEL, _gid: NO_GROUP }))];
 // Payments live in their group, like expenses. Saved data from before payments has no list: read it as empty.
 const payments = (g) => (g && Array.isArray(g.payments) ? g.payments : []);
-const allPayments = () => state.groups.flatMap((g) => payments(g).map((p) => ({ ...p, _group: g.name, _gid: g.id })));
+// Payments for debts with no group (one-offs) are never stored in a group: they have their own list.
+const oneOffPayments = () => (Array.isArray(state.oneOffPayments) ? state.oneOffPayments : []);
+const allPayments = () => [...state.groups.flatMap((g) => payments(g).map((p) => ({ ...p, _group: g.name, _gid: g.id }))),
+  ...oneOffPayments().map((p) => ({ ...p, _group: NO_GROUP_LABEL, _gid: NO_GROUP }))];
 const allPeople = () => [...new Set([...state.groups.flatMap((g) => g.people), ...(state.friends || []),
   ...oneOffs().flatMap((e) => [e.payer, ...e.participants])])];
 
@@ -103,7 +106,7 @@ async function post(url, body, isForm, raw) {
 }
 const plainPayment = (p) => ({ from: p.from, to: p.to, amount: p.amount });
 // What a person has paid me in one group, or in all groups, in rupees: used by the reminder text.
-const paidToMe = (name, gid) => (gid ? payments(group(gid)) : allPayments()).filter((p) => p.from === name && p.to === ME).reduce((a, p) => a + p.amount, 0) / 100;
+const paidToMe = (name, gid) => (gid === NO_GROUP ? oneOffPayments() : gid ? payments(group(gid)) : allPayments()).filter((p) => p.from === name && p.to === ME).reduce((a, p) => a + p.amount, 0) / 100;
 const plainExpense = (e) => ({ description: e.description, total: e.total, payer: e.payer, participants: e.participants, mode: e.mode, values: e.values || {}, items: e.items || [] });
 
 // ---------- navigation ----------
@@ -715,15 +718,26 @@ function payLink(name, gid) {
   return b;
 }
 let payFor = null, payGroup = null, payDir = "in", payRows = {}, payTyped = false;
+// A payment settles one scope: a group, or No group (the one-offs and the payments made for them).
+const NO_GROUP_SCOPE = { id: NO_GROUP, name: NO_GROUP_LABEL };
+const scopeName = (id) => (id === NO_GROUP ? NO_GROUP_LABEL : group(id).name);
+const scopeData = (id) => (id === NO_GROUP ? { expenses: oneOffs(), payments: oneOffPayments() } : { expenses: group(id).expenses, payments: payments(group(id)) });
 async function rowsWith(name) {
-  // This person's direct amount in each group we share: + they owe me, − I owe them.
-  const shared = state.groups.filter((g) => g.people.includes(name) && g.people.includes(ME));
+  // This person's direct amount in each scope: + they owe me, − I owe them. Every group we both belong to,
+  // and No group when there's a one-off balance with them or a payment for one.
+  const groups = state.groups.filter((g) => g.people.includes(name) && g.people.includes(ME));
+  const paidNone = oneOffPayments().some((p) => p.from === name || p.to === name);
+  const inNone = paidNone || oneOffs().some((e) => e.payer === name || e.participants.includes(name));
+  const all = [...groups, ...(inNone ? [NO_GROUP_SCOPE] : [])];
   const out = {};
-  await Promise.all(shared.map(async (g) => {
-    if (!g.expenses.length && !payments(g).length) { out[g.id] = 0; return; }
-    const b = await post("/api/balances", { expenses: g.expenses.map(plainExpense), payments: payments(g).map(plainPayment) });
-    out[g.id] = b.payments.reduce((a, p) => a + (p.from === name && p.to === ME ? p.amount : p.from === ME && p.to === name ? -p.amount : 0), 0);
+  await Promise.all(all.map(async (s) => {
+    const d = scopeData(s.id);
+    if (!d.expenses.length && !d.payments.length) { out[s.id] = 0; return; }
+    const b = await post("/api/balances", { expenses: d.expenses.map(plainExpense), payments: d.payments.map(plainPayment) });
+    out[s.id] = b.payments.reduce((a, p) => a + (p.from === name && p.to === ME ? p.amount : p.from === ME && p.to === name ? -p.amount : 0), 0);
   }));
+  // No group is offered only when there is something in it with this person
+  const shared = all.filter((s) => s.id !== NO_GROUP || out[NO_GROUP] || paidNone);
   return { shared, out };
 }
 async function openPayment(name, gid) {
@@ -744,7 +758,7 @@ async function openPayment(name, gid) {
     const v = payRows[g.id];
     const b = el("button", "chip" + (g.id === payGroup ? " on" : ""), `${g.name} · ${v ? (v > 0 ? `owes you ${rupees(v)}` : `you owe ${rupees(-v)}`) : "settled"}`);
     b.type = "button"; b.dataset.gid = g.id; b.setAttribute("aria-pressed", g.id === payGroup);
-    b.onclick = () => { payGroup = g.id; payTyped = false; paintPayment(); };
+    b.onclick = () => { payGroup = g.id; payTyped = false; if (payRows[g.id]) payDir = payRows[g.id] < 0 ? "out" : "in"; paintPayment(); };
     return b;
   }));
   const start = payGroup ? payRows[payGroup] : Object.values(payRows).reduce((a, v) => a + v, 0);
@@ -765,13 +779,13 @@ function paintPayment() {
   if (payGroup && ok) {
     const owed = Math.round(row * 100); // + they owe me, − I owe them, in paise
     const after = owed + (payDir === "in" ? -paise : paise);
-    const gname = group(payGroup).name;
+    const gname = scopeName(payGroup), where = payGroup === NO_GROUP ? "outside groups" : `in ${gname}`;
     // Paying more than is owed is allowed: the extra shows as the other person owing.
     const room = payDir === "in" ? Math.max(owed, 0) : Math.max(-owed, 0);
     const extra = paise - room;
     const over = extra > 0 ? `That's ${rupees(extra / 100)} more than ${payDir === "in" ? (room ? `${name} owes you` : `${name} owes you here`) : (room ? `you owe ${name}` : `you owe ${name} here`)}. ` : "";
     const left = after > 0 ? `${name} will owe you ${rupees(after / 100)}` : after < 0 ? `you will owe ${name} ${rupees(-after / 100)}` : `you and ${name} will be settled up`;
-    note = `${over}After this, ${left} in ${gname}.`;
+    note = `${over}After this, ${left} ${where}.`;
   }
   $("payNote").textContent = note;
   $("paySave").disabled = !(payGroup && ok);
@@ -785,13 +799,16 @@ function closePayment() {
 }
 $("payCancel").addEventListener("click", closePayment);
 $("paySave").addEventListener("click", () => {
-  const g = group(payGroup);
+  const none = payGroup === NO_GROUP; // a payment for one-off debts: kept in its own list, never in a group
+  const g = none ? null : group(payGroup);
   const amount = Math.round(parseFloat($("payAmount").value) * 100);
-  if (!g || !(amount > 0 && amount <= 1e9) || !g.people.includes(payFor)) return;
+  if (!(amount > 0 && amount <= 1e9) || (!none && (!g || !g.people.includes(payFor)))) return;
   const [from, to] = payDir === "in" ? [payFor, ME] : [ME, payFor];
-  g.payments = [...payments(g), { id: newId(), from, to, amount, at: new Date().toISOString() }];
+  const rec = { id: newId(), from, to, amount, at: new Date().toISOString() };
+  if (none) state.oneOffPayments = [...oneOffPayments(), rec];
+  else g.payments = [...payments(g), rec];
   persist(); closePayment(); renderAll();
-  toast(`Recorded ${rupees(amount / 100)} ${payDir === "in" ? `from ${payFor}` : `to ${payFor}`} in ${g.name}`);
+  toast(`Recorded ${rupees(amount / 100)} ${payDir === "in" ? `from ${payFor}` : `to ${payFor}`} ${none ? "with no group" : `in ${g.name}`}`);
 });
 
 // ---------- the expenses behind a balance ----------
@@ -834,6 +851,11 @@ async function openExplain(friend, gid) {
       if (l.kind === "payment") {
         const what = e.from === ME ? `You paid ${e.to}` : e.to === ME ? `${e.from} paid you` : `${e.from} paid ${e.to}`;
         li.append(who("Payment", `${manyGroups ? e._group + " · " : ""}${what} · ${shortDate(e.at)}`, "cat"), amt);
+        if (e._gid === NO_GROUP) { // group payments are deleted on their group screen; these have none
+          const right = el("div", "right"), del = el("button", "link", "Delete"); del.type = "button";
+          del.onclick = () => { $("explain").hidden = true; document.body.classList.remove("remind-open"); openOneOffPayment(e.id); };
+          right.append(amt, del); li.append(right);
+        }
       } else {
         li.append(who(e.description, `${manyGroups ? e._group + " · " : ""}${e.payer === ME ? "You paid" : e.payer + " paid"} ${rupees(e.total)} · ${shortDate(e.at)}`, "cat"), amt);
       }
@@ -952,7 +974,7 @@ function renderFriends(friends, problem) {
     if (v > 0 && !problem) li.append(remindLink(n, v));
     const acts = el("div", "friendActions");
     if (!phone) { const a = el("button", "link", "Add number"); a.type = "button"; a.onclick = () => openAddPerson(n, true); acts.append(a); }
-    if (!problem && state.groups.some((g) => g.people.includes(n) && g.people.includes(ME))) acts.append(payLink(n));
+    if (!problem && (v !== 0 || state.groups.some((g) => g.people.includes(n) && g.people.includes(ME)))) acts.append(payLink(n));
     const inv = el("button", "link", "Invite to Kitty"); inv.type = "button"; inv.onclick = () => openInvite(n); acts.append(inv);
     const used = allExpenses().some((e) => e.payer === n || e.participants.includes(n)) || allPayments().some((x) => x.from === n || x.to === n);
     if (!used && (state.friends || []).includes(n)) {
@@ -992,16 +1014,35 @@ async function renderGroups() {
 
 // ---------- a one-off from Home: see it, and delete it if it was wrong ----------
 // Group expenses are deleted on their group screen; a one-off has none, so this sheet does it.
-let oneOffFor = null;
+let oneOffFor = null, oneOffKind = "expense";
+const OO_EXPENSE_NOTE = "It has no group, so it's only in Home and Friends. Deleting it takes it out of every balance.";
+function showOneOffSheet() {
+  $("scrim").hidden = false; $("oneOff").hidden = false;
+  requestAnimationFrame(() => document.body.classList.add("remind-open"));
+}
+// A payment for one-off debts, from its line in Friends → Explain: the same sheet, asking about the payment.
+function openOneOffPayment(id) {
+  const p = oneOffPayments().find((x) => x.id === id);
+  if (!p) return;
+  oneOffFor = id; oneOffKind = "payment";
+  const other = p.from === ME ? p.to : p.from;
+  $("ooTitle").textContent = "Delete this payment?";
+  $("ooDesc").textContent = p.from === ME ? `You paid ${p.to}` : `${p.from} paid you`;
+  $("ooAmount").textContent = rupees(p.amount / 100);
+  $("ooWho").textContent = `Payment · ${NO_GROUP_LABEL} · ${shortDate(p.at)}`;
+  $("ooNote").textContent = `Deleting it puts ${rupees(p.amount / 100)} back into your balance with ${other}.`;
+  showOneOffSheet();
+}
 function openOneOff(id) {
   const e = oneOffs().find((x) => x.id === id);
   if (!e) return;
-  oneOffFor = id;
+  oneOffFor = id; oneOffKind = "expense";
+  $("ooTitle").textContent = "Delete this expense?";
+  $("ooNote").textContent = OO_EXPENSE_NOTE;
   $("ooDesc").textContent = e.description;
   $("ooAmount").textContent = rupees(e.total);
   $("ooWho").textContent = `${e.payer === ME ? "You paid" : e.payer + " paid"} · split with ${e.participants.map((p) => (p === ME ? "you" : p)).join(", ")} · ${shortDate(e.at)}`;
-  $("scrim").hidden = false; $("oneOff").hidden = false;
-  requestAnimationFrame(() => document.body.classList.add("remind-open"));
+  showOneOffSheet();
 }
 function closeOneOff() {
   oneOffFor = null;
@@ -1016,8 +1057,10 @@ $("ooCancel").addEventListener("click", closeOneOff);
 $("ooDelete").addEventListener("click", () => {
   const id = oneOffFor;
   if (!id) return;
-  state.oneOffs = oneOffs().filter((x) => x.id !== id); // this one-off only; groups are untouched
-  persist(); closeOneOff(); renderAll(); toast("Deleted");
+  // This one entry only; groups and their payments are untouched
+  if (oneOffKind === "payment") state.oneOffPayments = oneOffPayments().filter((x) => x.id !== id);
+  else state.oneOffs = oneOffs().filter((x) => x.id !== id);
+  persist(); closeOneOff(); renderAll(); toast(oneOffKind === "payment" ? "Payment deleted" : "Deleted");
 });
 
 async function renderGroup() {
