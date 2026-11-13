@@ -47,7 +47,8 @@ try {
     const g = { contacts: ${visible("#gFromContacts")}, byName: $("gByNumber").textContent.trim() };
     newBlankCard("g"); await wait(700); const sheetContacts = ${visible("#pickContacts")}; closeCard(); await wait(400);
     return { supported: CONTACTS_OK, friendsContacts: ${visible("#friendFromContacts")}, byName: btn.textContent.trim(), fullWidth: Math.round(w) === Math.round(row), g, sheetContacts,
-      empty: $("friendsEmptyText").textContent, how: HOW[1].text, perm: document.querySelector(".scene.s1 .perm").hidden }`);
+      empty: $("friendsEmptyText").textContent, how: HOW[1].text, perm: document.querySelector(".scene.s1 .perm").hidden,
+      tip: $("tipAddTitle").textContent + " | " + $("tipAddText").textContent }`);
   check("unsupported: the check says no contacts here", no.supported === false, no);
   check("unsupported: Friends hides 'From contacts' and shows one full-width 'Add friends by name'", !no.friendsContacts && no.byName === "Add friends by name" && no.fullWidth, no);
   check("unsupported: the group screen hides 'From contacts' and shows 'Add friends by name'", !no.g.contacts && no.g.byName === "Add friends by name", no.g);
@@ -57,6 +58,7 @@ try {
     const label = $("apPhoneLabel").textContent; $("apName").value = "Kavya"; $("addPersonForm").requestSubmit(); await wait(600);
     const s = JSON.parse(localStorage.getItem("voice-split-v2"));
     return { label, saved: (s.friends || []).includes("Kavya"), phone: (s.phones || {}).Kavya || null, error: $("apError").hidden ? "" : $("apError").textContent }`);
+  check("unsupported: 'How friends work' step 1 no longer needs a number", no.tip === "Add them by name | A name is enough. Add their number too, and Kitty can open WhatsApp or SMS with their share ready to send.", no.tip);
   check("unsupported: 'Add friends by name' saves a friend with no number", add.label === "Mobile number (optional)" && add.saved && add.phone === null && !add.error, add);
   const bad = await run(`$("friendByNumber").click(); await wait(500); $("apName").value = "Ravi"; $("apPhone").value = "12"; $("addPersonForm").requestSubmit(); await wait(300);
     const r = { error: $("apError").textContent, saved: (JSON.parse(localStorage.getItem("voice-split-v2")).friends || []).includes("Ravi") }; closeAddPerson(); await wait(400); return r`);
@@ -68,11 +70,12 @@ try {
   // ---------- 1b. a browser that can share contacts: unchanged ----------
   const fake = await send("Page.addScriptToEvaluateOnNewDocument", { source: `window.ContactsManager = function () {}; Object.defineProperty(navigator, "contacts", { value: { select: async () => [] } });` });
   await run(`localStorage.setItem("voice-split-v2", ${JSON.stringify(SEED(true))}); return true`); await open("friends");
-  const yes = await run(`go("friends"); await wait(300); const f = { supported: CONTACTS_OK, contacts: ${visible("#friendFromContacts")}, byNumber: $("friendByNumber").textContent.trim(), empty: $("friendsEmptyText").textContent, how: HOW[1].text };
+  const yes = await run(`go("friends"); await wait(300); const f = { supported: CONTACTS_OK, contacts: ${visible("#friendFromContacts")}, byNumber: $("friendByNumber").textContent.trim(), empty: $("friendsEmptyText").textContent, how: HOW[1].text, tip: $("tipAddTitle").textContent + " | " + $("tipAddText").textContent };
     $("friendByNumber").click(); await wait(500); f.label = $("apPhoneLabel").textContent; $("apName").value = "Kavya"; $("addPersonForm").requestSubmit(); await wait(300);
     f.required = !$("apError").hidden; closeAddPerson(); await wait(400); return f`);
   check("supported: 'From contacts' and 'By number' are unchanged", yes.supported && yes.contacts && yes.byNumber === "By number" && /contacts/.test(yes.empty), yes);
   check("supported: the number is still required", yes.label === "Mobile number" && yes.required, yes);
+  check("supported: 'How friends work' step 1 is unchanged", yes.tip === "Add them with their number | Kitty opens WhatsApp or SMS with their share ready to send.", yes.tip);
   check("supported: the onboarding slide text is exactly as before", yes.how === "Pick them from your contacts, or add someone by name and mobile number. Your contact list stays on this phone; Kitty sends friends' names, never numbers, to its server and its AI provider (Groq) to match who you mean.", yes.how);
   await run(`localStorage.setItem("voice-split-v2", ${JSON.stringify(SEED(false))}); return true`); await open("home");
   const firstYes = await run(`$("oName").value = "Asha"; finishOnboarding(); await wait(1900); const r = !$("contactsAsk").hidden; closeContactsAsk(); return r`);
@@ -97,7 +100,7 @@ try {
       ring: getComputedStyle(document.querySelector("#listen .mic"), "::before").animationName, recording: document.body.classList.contains("recording") };
     $("listenClose").click(); await wait(500);
     return { asking, granted, denied, cleared: !document.body.classList.contains("micDenied") && !document.body.classList.contains("micAsk") }`);
-  check("waiting for the permission: still panel, no wave, no moving ring, 'Allow the microphone to start'", mic.asking.cls && mic.asking.wave === "0" && mic.asking.ring === "none" && mic.asking.hint === "Allow the microphone to start" && !mic.asking.recording, mic.asking);
+  check("waiting for the permission: still panel, no wave, no moving ring, and no words", mic.asking.cls && mic.asking.wave === "0" && mic.asking.ring === "none" && mic.asking.hint === "" && !mic.asking.recording, mic.asking);
   check("granted: recording starts, the wave shows, 'Listening…'", !mic.granted.cls && mic.granted.recording && mic.granted.hint.startsWith("Listening") && mic.granted.wave !== "0", mic.granted);
   check("refused: a clear message, no wave, no moving ring, not recording", mic.denied.cls && mic.denied.wave === "0" && mic.denied.ring === "none" && !mic.denied.recording && /can't use the microphone/.test(mic.denied.error) && mic.denied.hint === "The microphone is off", mic.denied);
   check("closing the panel clears those states", mic.cleared, mic);

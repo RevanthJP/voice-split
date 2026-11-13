@@ -246,18 +246,17 @@ async function startRecording() {
   if (!navigator.mediaDevices || !window.MediaRecorder) { showError("This browser can't record. Please type instead."); return; }
   // Until the microphone is granted (iOS may be showing its permission prompt), the panel stays still:
   // no wave, no moving ring. The request itself still comes from the same tap, which iOS requires.
+  // No words either: the iOS prompt says enough.
   document.body.classList.remove("micDenied");
   document.body.classList.add("micAsk");
-  const askHint = setTimeout(() => { if (document.body.classList.contains("micAsk")) $("micHint").textContent = "Allow the microphone to start"; }, 250);
+  $("micHint").textContent = "";
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
   catch (_) {
-    clearTimeout(askHint);
     document.body.classList.remove("micAsk"); document.body.classList.add("micDenied");
     $("micHint").textContent = "The microphone is off";
     showError("Kitty can't use the microphone. Allow it in your browser's settings for this site (on iPhone: aA in the address bar, then Website Settings), or type instead.");
     return;
   }
-  clearTimeout(askHint);
   document.body.classList.remove("micAsk");
   const mime = pickMime();
   rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
@@ -1339,6 +1338,8 @@ function applyContactSupport() {
     b.lastChild.textContent = "Add friends by name";
   }
   $("friendsEmptyText").replaceChildren(el("b", null, "No friends yet"), el("br"), "Add them by name, or just say their names when you add an expense.");
+  $("tipAddTitle").textContent = "Add them by name";
+  $("tipAddText").textContent = "A name is enough. Add their number too, and Kitty can open WhatsApp or SMS with their share ready to send.";
   const perm = document.querySelector(".scene.s1 .perm");
   if (perm) perm.hidden = true;
 }
