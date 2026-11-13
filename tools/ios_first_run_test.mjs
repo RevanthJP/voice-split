@@ -118,6 +118,18 @@ try {
   const desk = await run(`$("gAdd").click(); await wait(300); const early = document.activeElement === $("desc"); await wait(400);
     const out = { early, focused: document.activeElement === $("desc"), sheetTop: Math.round($("card").getBoundingClientRect().top), scrollY }; closeCard(); await wait(400); return out`);
   check("mouse and keyboard: focus waits until the sheet has finished sliding, then lands on the description", !desk.early && desk.focused && desk.sheetTop >= 0 && desk.scrollY === 0, desk);
+
+  // ---------- 4. the page behind the app: the app's grey on phones, the darker surround on desktop ----------
+  const colours = `const c = (sel, p = "backgroundColor") => getComputedStyle(document.querySelector(sel))[p];
+    return { width: innerWidth, html: c("html"), body: c("body"), app: c(".app"), tabs: c(".tabs") }`;
+  await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 3, mobile: true });
+  await open("home"); const phone = await run(colours);
+  await send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+  await open("home"); const desktop = await run(colours);
+  console.log("     colours at 390px:  " + JSON.stringify(phone));
+  console.log("     colours at 1280px: " + JSON.stringify(desktop));
+  check("390px: page background is #F2F2F7, the same as the app, with matching tabs", phone.body === "rgb(242, 242, 247)" && phone.html === "rgb(242, 242, 247)" && phone.app === "rgb(242, 242, 247)" && phone.tabs === "rgba(242, 242, 247, 0.86)", phone);
+  check("1280px: unchanged, the darker #DCDCE2 surround and the old tabs", desktop.body === "rgb(220, 220, 226)" && desktop.html === "rgba(0, 0, 0, 0)" && desktop.app === "rgb(242, 242, 247)" && desktop.tabs === "rgba(245, 245, 247, 0.86)", desktop);
 } finally { ws.close(); chrome.kill(); await sleep(300); rmSync(profile, { recursive: true, force: true }); }
 console.log(failed ? `\n${failed} check(s) failed` : "\nAll checks passed");
 process.exit(failed ? 1 : 0);

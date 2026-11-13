@@ -699,3 +699,7 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 .gAddRow #gAdd{flex:1;width:auto;height:52px;padding:0 14px}
 .gMic{flex:none;width:52px;height:52px;padding:0;border-radius:50%;display:grid;place-items:center}
 .gMic svg{width:24px;height:24px;fill:currentColor}
+/* Phones: the page behind the app is the app's own grey, so no darker band shows above or below it in
+   Safari, and the bottom tabs use the same grey (still translucent over it). Wider screens keep the
+   darker surround around the 480px app. */
+@media screen and (max-width:480px){html,body{background:#F2F2F7}.tabs{background:rgba(242,242,247,.86)}}
