@@ -88,21 +88,21 @@ try {
     let grant; navigator.mediaDevices.getUserMedia = () => new Promise((ok) => { grant = ok; });   // the permission prompt is open
     document.querySelector(".fab").click(); await wait(500);
     const style = (sel, p) => getComputedStyle(document.querySelector(sel), sel.includes("::") ? "::before" : null)[p];
-    const asking = { cls: document.body.classList.contains("micAsk"), hint: $("micHint").textContent, wave: getComputedStyle($("wave")).opacity,
-      ring: getComputedStyle(document.querySelector("#listen .mic"), "::before").animationName, recording: document.body.classList.contains("recording") };
+    const asking = { panelHidden: $("listen").hidden, open: document.body.classList.contains("listen-open"), recording: document.body.classList.contains("recording") };
     const c = new AudioContext(), o = c.createOscillator(), d = c.createMediaStreamDestination(); o.connect(d); o.start();
     grant(d.stream); await wait(400);
     const granted = { cls: document.body.classList.contains("micAsk"), recording: document.body.classList.contains("recording"), hint: $("micHint").textContent, wave: getComputedStyle($("wave")).opacity };
     $("listenClose").click(); await wait(500);
     navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException("denied", "NotAllowedError"));
     document.querySelector(".fab").click(); await wait(500);
-    const denied = { cls: document.body.classList.contains("micDenied"), hint: $("micHint").textContent, error: $("listenError").textContent, wave: getComputedStyle($("wave")).opacity,
-      ring: getComputedStyle(document.querySelector("#listen .mic"), "::before").animationName, recording: document.body.classList.contains("recording") };
+    const denied = { cls: document.body.classList.contains("micDenied"), panelHidden: $("listen").hidden, hint: $("micHint").textContent, error: $("listenError").textContent,
+      stage: getComputedStyle(document.querySelector("#listen .listenStage")).display, recording: document.body.classList.contains("recording") };
     $("listenClose").click(); await wait(500);
     return { asking, granted, denied, cleared: !document.body.classList.contains("micDenied") && !document.body.classList.contains("micAsk") }`);
-  check("waiting for the permission: still panel, no wave, no moving ring, and no words", mic.asking.cls && mic.asking.wave === "0" && mic.asking.ring === "none" && mic.asking.hint === "" && !mic.asking.recording, mic.asking);
+  check("waiting for the permission: no panel at all, nothing listening", mic.asking.panelHidden && !mic.asking.open && !mic.asking.recording, mic.asking);
   check("granted: recording starts, the wave shows, 'Listening…'", !mic.granted.cls && mic.granted.recording && mic.granted.hint.startsWith("Listening") && mic.granted.wave !== "0", mic.granted);
-  check("refused: a clear message, no wave, no moving ring, not recording", mic.denied.cls && mic.denied.wave === "0" && mic.denied.ring === "none" && !mic.denied.recording && /can't use the microphone/.test(mic.denied.error) && mic.denied.hint === "The microphone is off", mic.denied);
+  check("refused: only the mic-off message (no mic, no wave), worded without 'aA', not recording", mic.denied.cls && !mic.denied.panelHidden && mic.denied.stage === "none" && !mic.denied.recording && mic.denied.hint === "The microphone is off"
+    && mic.denied.error === "Allow the microphone for this site in Safari: tap the icon at the left of the address bar, open Website Settings, and allow Microphone. Or type instead." && !mic.denied.error.includes("aA"), mic.denied);
   check("closing the panel clears those states", mic.cleared, mic);
 
   // ---------- 3. the add-expense sheet on a touch phone ----------

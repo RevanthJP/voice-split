@@ -273,6 +273,9 @@ h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.07em;color:var(--mut
 .micAsk .listen .wave,.micDenied .listen .wave{opacity:0}
 .micAsk .listen .mic::before,.micDenied .listen .mic::before{animation:none;opacity:.2}
 .micDenied .listen .mic-core{background:var(--muted)}
+/* Refused: only the mic-off message, no mic and no wave */
+.micDenied .listen .listenStage,.micDenied .listen .listenGroup{display:none}
+.listen .micDebug{grid-column:1/-1;margin:.4rem 0 0;text-align:center;font:12px/1.3 ui-monospace,Menlo,monospace;color:var(--muted)}
 
 /* ---- Kitty: mobile app colours. Same blue and orange brand, set on an iOS-style grouped
    background with a deep navy balance card, which reads better on a phone than the web's bright blue. ---- */

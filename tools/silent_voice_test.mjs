@@ -66,17 +66,56 @@ try {
   const short = await run(`return await say(0.05, 400)`);
   check("under 0.8 s: 'That was too short', and nothing is sent", short.sent === 0 && short.error.startsWith("That was too short"), short);
 
-  // The meter can't run (as if iOS kept it paused): never guess silence, send the recording.
-  const paused = await run(`const realWake = wakeAudio; wakeAudio = () => {}; await audioCtx.suspend();
-    const r = await say(0, 1500); await audioCtx.resume(); wakeAudio = realWake; return r`);
-  check("if the meter is paused, nothing is thrown away: the recording is sent", paused.sent === 1 && paused.peak === null, paused);
+  // The meter's audio engine won't start (as iOS can do after a lock): no silence judgement, the recording is sent.
+  const paused = await run(`const Real = window.AudioContext;
+    window.AudioContext = class extends Real { get state() { return "suspended"; } resume() { return Promise.resolve(); } };
+    const r = await say(0, 1500); window.AudioContext = Real; return r`);
+  check("a suspended audio engine fails open: even silence is sent, with no peak", paused.sent === 1 && paused.peak === null, paused);
 
-  // Bug A: close the panel while the permission prompt is up, then Allow.
+  // No panel before the permission answer; on Allow it opens and records.
+  const ask = await run(`let grant; navigator.mediaDevices.getUserMedia = () => new Promise((ok) => { grant = ok; });
+    document.querySelector(".fab").click(); await wait(500);
+    const during = { panelHidden: $("listen").hidden, open: document.body.classList.contains("listen-open"), recording: document.body.classList.contains("recording"), take: take && take.rec.state };
+    grant(mic(0.05)); await wait(600);
+    const after = { panelHidden: $("listen").hidden, recording: take.rec.state, hint: $("micHint").textContent };
+    take.rec.stop(); await wait(400); $("listenClose").click(); await wait(400); window.sent.length = 0;
+    return { during, after }`);
+  check("no panel and nothing 'listening' while the permission prompt is up", ask.during.panelHidden && !ask.during.open && !ask.during.recording && ask.during.take !== "recording", ask);
+  check("on Allow, the panel opens and recording starts", !ask.after.panelHidden && ask.after.recording === "recording" && ask.after.hint.startsWith("Listening"), ask);
+
+  // Bug A: the page goes to the background while the prompt is up, then Allow.
   const a = await run(`let grant; navigator.mediaDevices.getUserMedia = () => new Promise((ok) => { grant = ok; });
-    const before = take; document.querySelector(".fab").click(); await wait(300); $("listenClose").click(); await wait(400);
+    const before = take; document.querySelector(".fab").click(); await wait(300);
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" }); document.dispatchEvent(new Event("visibilitychange"));
     const stream = mic(0.05); grant(stream); await wait(1500);
-    return { newRecording: take !== before && !!take && take.rec.state === "recording", recordingClass: document.body.classList.contains("recording"), micReleased: stream.getTracks().every((t) => t.readyState === "ended"), sent: window.sent.length }`);
-  check("bug A: closing during the prompt starts no hidden recording, and the microphone is released", !a.newRecording && !a.recordingClass && a.micReleased && a.sent === 0, a);
+    delete document.visibilityState;
+    return { newRecording: take !== before && !!take && take.rec.state === "recording", panelHidden: $("listen").hidden, recordingClass: document.body.classList.contains("recording"), micReleased: stream.getTracks().every((t) => t.readyState === "ended"), sent: window.sent.length }`);
+  check("bug A: hidden during the prompt starts no recording, shows no panel, and releases the microphone", !a.newRecording && a.panelHidden && !a.recordingClass && a.micReleased && a.sent === 0, a);
+
+  // A stale stream after the page was hidden: the recording is thrown away with its mic and audio engine,
+  // and the next tap gets a fresh microphone.
+  const stale = await run(`let calls = 0; navigator.mediaDevices.getUserMedia = async () => { calls++; return mic(0.05); };
+    document.querySelector(".fab").click(); await wait(1200);
+    const first = take, firstStream = first.stream, firstCtx = first.ctx;
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" }); document.dispatchEvent(new Event("visibilitychange"));
+    await wait(500); delete document.visibilityState;
+    const hidden = { stopped: first.rec.state, micEnded: firstStream.getTracks().every((t) => t.readyState === "ended"), ctx: firstCtx && firstCtx.state, recordingClass: document.body.classList.contains("recording"), error: $("listenError").textContent, sent: window.sent.length };
+    $("mic").click(); await wait(1200);
+    const second = take;
+    const again = { calls, isNew: second !== first, freshStream: second.stream !== firstStream, live: second.stream.getTracks().every((t) => t.readyState === "live"), recording: second.rec.state };
+    second.rec.stop(); await wait(500);
+    const sentAfter = window.sent.length; $("listenClose").click(); await wait(400); window.sent.length = 0;
+    return { hidden, again, sentAfter }`);
+  check("hidden mid-recording: the recording is discarded; mic released, audio engine closed, nothing sent", stale.hidden.stopped === "inactive" && stale.hidden.micEnded && stale.hidden.ctx === "closed" && !stale.hidden.recordingClass && stale.hidden.sent === 0 && /background/.test(stale.hidden.error), stale.hidden);
+  check("the next tap asks for a fresh microphone and records with it", stale.again.calls === 2 && stale.again.isNew && stale.again.freshStream && stale.again.live && stale.again.recording === "recording" && stale.sentAfter === 1, stale);
+
+  // iOS hands back a stream whose track has already ended: ask again and use the live one.
+  const ended = await run(`let calls = 0; const dead = mic(0.05); dead.getTracks().forEach((t) => t.stop());
+    navigator.mediaDevices.getUserMedia = async () => (++calls === 1 ? dead : mic(0.05));
+    document.querySelector(".fab").click(); await wait(1000);
+    const r = { calls, live: take.stream.getTracks().every((t) => t.readyState === "live"), notDead: take.stream !== dead, recording: take.rec.state };
+    $("listenClose").click(); await wait(400); window.sent.length = 0; return r`);
+  check("an ended track is replaced with a new request before recording", ended.calls === 2 && ended.live && ended.notDead && ended.recording === "recording", ended);
 
   // Bug B: record, cancel, and reopen at once.
   const b = await run(`useMic(0.05); document.querySelector(".fab").click(); await wait(1300);
@@ -89,6 +128,13 @@ try {
   check("bug B: the cancelled recording is not sent", b.sent === 0 && b.firstCancelled && b.firstStopped === "inactive", b);
   check("bug B: the new recording keeps its own live microphone", b.secondIsNew && b.secondRecording === "recording" && b.secondMicLive && b.firstMicEnded, b);
   check("bug B: only the new recording is sent when it stops", b.sentAfterSecond === 1, b);
+
+  // ?debug=1 shows the last recording's peak RMS and length on screen; without it, nothing.
+  const plain = await run(`return !document.getElementById("micDebug")`);
+  await send("Page.navigate", { url: `http://localhost:8502/?debug=1&${Date.now()}#home` }); await sleep(1300);
+  const dbg = await run(`useMic(0.05); document.querySelector(".fab").click(); await wait(1500); take.rec.stop(); await wait(500);
+    const d = document.getElementById("micDebug"); const r = { text: d && d.textContent, visible: !!d && !$("listen").hidden, sent: window.sent.length }; return r`);
+  check("?debug=1 shows peak RMS and clip length on screen; absent without it", plain && /^peak RMS 0\.0\d{3} · 1\.\d\d s$/.test(dbg.text || "") && dbg.visible, { plain, dbg });
 } finally { ws.close(); chrome.kill(); await sleep(300); rmSync(profile, { recursive: true, force: true }); }
 console.log(failed ? `\n${failed} check(s) failed` : "\nAll checks passed");
 process.exit(failed ? 1 : 0);

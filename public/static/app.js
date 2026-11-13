@@ -132,30 +132,28 @@ let listenGroupId = null; // the group this recording will be added to
 // Every open and close of the panel moves this on, so a microphone that is granted after the panel
 // was closed (or reopened) can tell it is no longer wanted.
 let listenSession = 0;
-// One audio engine for the level meter. iPhone Safari only lets it run if it starts during a tap,
-// so it is created or resumed here, inside the tap that opens the panel.
-let audioCtx = null;
-function wakeAudio() {
-  try {
-    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === "suspended") audioCtx.resume();
-  } catch (_) { audioCtx = null; }
+let asking = false; // a microphone request is waiting, possibly on the iOS permission prompt
+function showListen() {
+  $("listen").hidden = false;
+  requestAnimationFrame(() => document.body.classList.add("listen-open"));
 }
+// The mic button: ask for the microphone inside this tap, as iOS requires. Nothing is shown until the
+// answer comes back, so nothing looks like it is listening behind the iOS prompt. On Allow the panel
+// opens and recording starts; on deny the panel shows only the mic-off message.
 function openListen() {
+  if (asking || recording()) return;
   clearError();
   listenSession++;
-  wakeAudio();
   // A field with the keyboard up would hide the panel at the bottom
   if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
   listenGroupId = screenGroup(); // from Home or another tab, the sheet asks which group
   $("listenGroup").textContent = listenGroupId ? "Adding to " + group(listenGroupId).name : "You'll choose the group next";
-  $("listen").hidden = false;
-  requestAnimationFrame(() => document.body.classList.add("listen-open"));
-  startRecording(); // still from the same tap, so iPhone Safari allows the microphone
+  startRecording();
 }
 function closeListen() {
   document.body.classList.remove("listen-open", "micAsk", "micDenied");
-  setTimeout(() => { $("listen").hidden = true; }, 300);
+  // Reopened within the slide-out: leave the new panel showing
+  setTimeout(() => { if (!document.body.classList.contains("listen-open")) $("listen").hidden = true; }, 300);
 }
 document.addEventListener("click", (e) => { if (e.target.closest("[data-listen]")) openListen(); });
 // The close button, and a tap on the screen behind the panel, both stop any recording and release the mic.
@@ -164,6 +162,7 @@ function cancelListen() {
   if (take) {
     take.cancelled = true;
     if (take.rec && take.rec.state === "recording") take.rec.stop();
+    release(take);
   }
   closeListen();
 }
@@ -185,13 +184,22 @@ const WAVE = 34;
     w.append(b);
   }
 })();
+// A new audio engine for each recording's meter. It is made, and asked to start, inside the tap,
+// because iPhone Safari only lets an audio engine run if it starts during a tap.
+function newMeterContext() {
+  try { const C = window.AudioContext || window.webkitAudioContext; return C ? new C() : null; } catch (_) { return null; }
+}
+function closeContext(ctx) { try { if (ctx && ctx.state !== "closed") ctx.close().catch(() => {}); } catch (_) {} }
 // Moves the wave with the voice, and records the loudest moment of this recording in t.peak, as RMS on a
-// 0 to 1 scale. If the meter can't run (no audio engine, or iOS kept it paused), t.peak stays null and the
-// silence check is skipped rather than guessed: real speech must never be thrown away.
-function meter(stream, t) {
+// 0 to 1 scale. It waits for its audio engine to start; if the engine isn't running (iOS kept it paused,
+// or there is none), the meter is unavailable, t.peak stays null and the silence check is skipped rather
+// than guessed: real speech must never be thrown away.
+async function meter(stream, t, ctx, resumed) {
+  t.ctx = ctx;
+  if (!ctx) return;
   try {
-    wakeAudio();
-    const ctx = audioCtx;
+    await Promise.race([resumed, new Promise((r) => setTimeout(r, 1000))]);
+    if (t.done || ctx.state !== "running") return;
     const src = ctx.createMediaStreamSource(stream);
     const an = ctx.createAnalyser();
     an.fftSize = 512;
@@ -217,6 +225,15 @@ function meter(stream, t) {
     tick();
     t.stopMeter = () => { cancelAnimationFrame(raf); src.disconnect(); if (take === t || !take) document.body.style.setProperty("--level", 0); };
   } catch (_) { t.peak = null; t.stopMeter = null; }
+}
+// Lets go of everything a recording holds: its microphone, its meter and its audio engine. Safe to call twice.
+function release(t) {
+  if (!t) return;
+  t.done = true;
+  t.stream.getTracks().forEach((tr) => tr.stop());
+  if (t.stopMeter) { t.stopMeter(); t.stopMeter = null; }
+  closeContext(t.ctx);
+  t.ctx = null;
 }
 const knownNames = () => [...new Set([...current().people, ...allPeople()])];
 // Silence or noise can come back as a stray word (like "E aí"). With no amount and nobody
@@ -272,48 +289,78 @@ function pickMime() {
   }
   return "";
 }
+const MIC_DENIED = "Allow the microphone for this site in Safari: tap the icon at the left of the address bar, open Website Settings, and allow Microphone. Or type instead.";
+const recording = () => !!(take && take.rec && take.rec.state === "recording");
 $("mic").addEventListener("click", () => {
-  if (take && take.rec && take.rec.state === "recording") { take.rec.stop(); return; }
-  wakeAudio();
+  if (recording()) { take.rec.stop(); return; }
   startRecording();
 });
+// A new microphone stream for every recording. If iOS hands back a stream whose track has already ended
+// (after the phone was locked, say), ask once more; null if there is still no live one.
+async function freshStream() {
+  for (let i = 0; i < 2; i++) {
+    const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const tracks = s.getAudioTracks();
+    if (tracks.length && tracks.every((tr) => tr.readyState === "live")) return s;
+    s.getTracks().forEach((tr) => tr.stop());
+  }
+  return null;
+}
 async function startRecording() {
-  if (take && take.rec && take.rec.state === "recording") return;
+  if (asking || recording()) return;
   clearError();
   const session = listenSession;
   if (!navigator.mediaDevices || !window.MediaRecorder) { showError("This browser can't record. Please type instead."); return; }
-  // Until the microphone is granted (iOS may be showing its permission prompt), the panel stays still:
-  // no wave, no moving ring. The request itself still comes from the same tap, which iOS requires.
-  // No words either: the iOS prompt says enough.
+  // Still inside the tap: start the meter's audio engine and ask for the microphone.
+  const ctx = newMeterContext();
+  const resumed = ctx ? ctx.resume().catch(() => {}) : Promise.resolve();
   document.body.classList.remove("micDenied");
-  document.body.classList.add("micAsk");
-  $("micHint").textContent = "";
+  // If the panel is already open (a second recording), it stays still and wordless until the answer.
+  if (!$("listen").hidden) { document.body.classList.add("micAsk"); $("micHint").textContent = ""; }
+  asking = true;
   let stream;
-  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  try { stream = await freshStream(); }
   catch (_) {
+    asking = false;
+    closeContext(ctx);
     if (session !== listenSession) return;
     document.body.classList.remove("micAsk"); document.body.classList.add("micDenied");
+    showListen(); // only the mic-off message: no mic, no wave
     $("micHint").textContent = "The microphone is off";
-    showError("Kitty can't use the microphone. Allow it in your browser's settings for this site (on iPhone: aA in the address bar, then Website Settings), or type instead.");
+    showError(MIC_DENIED);
     return;
   }
-  // The panel was closed (or opened again) while the permission prompt was up: don't record, let go of the mic.
-  if (session !== listenSession || $("listen").hidden) { stream.getTracks().forEach((tr) => tr.stop()); return; }
+  asking = false;
+  // Closed, reopened, or sent to the background while the prompt was up: don't record, let go of the mic.
+  if (!stream || session !== listenSession || document.visibilityState === "hidden") {
+    if (stream) stream.getTracks().forEach((tr) => tr.stop());
+    closeContext(ctx);
+    if (!stream && session === listenSession) {
+      document.body.classList.remove("micAsk");
+      showListen();
+      showError("The microphone didn't start. Tap the mic to try again.");
+    }
+    return;
+  }
   document.body.classList.remove("micAsk");
+  showListen();
   const mime = pickMime();
-  const t = { cancelled: false, stream, chunks: [], peak: null, stopMeter: null, timer: null, started: Date.now() };
+  const t = { cancelled: false, stream, chunks: [], peak: null, stopMeter: null, timer: null, started: Date.now(), ctx: null, done: false };
   t.rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
   take = t;
   t.rec.ondataavailable = (e) => { if (e.data.size) t.chunks.push(e.data); };
+  // If iOS ends the microphone mid-recording (a call, the lock screen), throw this recording away.
+  stream.getAudioTracks().forEach((tr) => tr.addEventListener("ended", () => { if (take === t && recording()) discardTake("ended"); }));
   t.rec.onstop = () => {
     clearTimeout(t.timer);
-    t.stream.getTracks().forEach((tr) => tr.stop()); // only this recording's microphone
-    if (t.stopMeter) t.stopMeter();
+    const ms = Date.now() - t.started;
+    release(t); // only this recording's microphone, meter and audio engine
     const latest = take === t;
     if (latest) document.body.classList.remove("recording");
     if (t.cancelled || !latest) { if (latest) busy(false); return; }
+    showDebug(t.peak, ms);
     const type = t.rec.mimeType || "audio/webm";
-    if (Date.now() - t.started < MIN_CLIP_MS) { showError("That was too short. Tap, speak, then tap again."); busy(false); return; }
+    if (ms < MIN_CLIP_MS) { showError("That was too short. Tap, speak, then tap again."); busy(false); return; }
     // Nothing above a whisper the whole time: say so here, and send nothing.
     if (t.peak !== null && t.peak < SILENCE_PEAK_RMS) {
       showError("I didn't hear anything. Tap the mic and say the expense.");
@@ -326,10 +373,32 @@ async function startRecording() {
   };
   t.rec.start();
   document.body.classList.add("recording");
-  meter(stream, t);
+  meter(stream, t, ctx, resumed);
   $("micHint").textContent = "Listening… tap when done";
   if (navigator.vibrate) navigator.vibrate(10);
   t.timer = setTimeout(() => t.rec.state === "recording" && t.rec.stop(), 45000);
+}
+// Locking the phone or switching apps: stop the recording and throw it away, with its microphone and
+// audio engine. The next tap starts from a fresh microphone.
+function discardTake(why) {
+  const t = take;
+  if (!t || !t.rec || t.rec.state !== "recording") return;
+  t.cancelled = true;
+  t.rec.stop();
+  release(t);
+  document.body.classList.remove("recording");
+  busy(false);
+  showError(why === "ended" ? "The microphone stopped. Tap the mic to try again." : "Recording stopped when Kitty went to the background. Tap the mic to try again.");
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") discardTake("hidden"); });
+window.addEventListener("pagehide", () => discardTake("hidden"));
+// Developers only: ?debug=1 shows the last recording's loudest moment and length on screen. Nothing is sent.
+const DEBUG = new URLSearchParams(location.search).get("debug") === "1";
+function showDebug(peak, ms) {
+  if (!DEBUG) return;
+  let d = $("micDebug");
+  if (!d) { d = el("p", "micDebug"); d.id = "micDebug"; $("listen").append(d); }
+  d.textContent = `peak RMS ${peak === null ? "n/a (meter off)" : peak.toFixed(4)} · ${(ms / 1000).toFixed(2)} s`;
 }
 
 // ---------- confirmation sheet ----------

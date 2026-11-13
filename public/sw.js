@@ -1,6 +1,6 @@
 // Keeps the app shell available so it opens like an app. API calls always go to the network.
-const CACHE = "kitty-v51";
-const SHELL = ["/", "/static/style.css?v=38", "/static/app.js?v=41", "/manifest.webmanifest", "/icons/icon-192.png"];
+const CACHE = "kitty-v53";
+const SHELL = ["/", "/static/style.css?v=43", "/static/app.js?v=48", "/manifest.webmanifest", "/icons/icon-192.png"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", (e) => {
   e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))));
