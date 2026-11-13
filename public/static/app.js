@@ -1607,6 +1607,14 @@ const BARS_NARROW = window.matchMedia("(max-width:480px)");
 const SCRIM_OPEN = ["sheet-open", "remind-open", "contactsAsk-open", "addPerson-open"]; // these show #scrim
 const themeMeta = document.querySelector('meta[name="theme-color"]');
 const themeDefault = themeMeta ? themeMeta.getAttribute("content") : null;
+// Developers only, read once from the address: ?bars= picks how the bars are tinted, to find out what
+// makes iPhone Safari's top bar flicker. Nothing about it is shown to anyone.
+//   off  no tint at all (as before the tint existed)
+//   bg   the page background only, faded with the dim layer's own duration and easing
+//   meta theme-color only
+//   late both, one frame after opening and only after the fade on closing, faded the same way
+// No flag (or anything else): both at once, as it is now.
+const BARS_MODE = (() => { const m = new URLSearchParams(location.search).get("bars"); return ["off", "bg", "meta", "late"].includes(m) ? m : "now"; })();
 function rgba(css) {
   const m = (css || "").match(/rgba?\(([^)]+)\)/);
   if (!m) return null;
@@ -1616,32 +1624,75 @@ function rgba(css) {
 const hex = ({ r, g, b }) => "#" + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, "0")).join("").toUpperCase();
 // A layer of colour c with alpha a over an opaque colour under: c·a + under·(1−a), per channel.
 const over = (c, under) => ({ r: c.r * c.a + under.r * (1 - c.a), g: c.g * c.a + under.g * (1 - c.a), b: c.b * c.a + under.b * (1 - c.a), a: 1 });
+const listenShowing = () => document.body.classList.contains("listen-open") && !$("listen").hidden;
 function dimLayers() {
   const cls = document.body.classList, layers = [];
   // A class alone isn't enough: one can be added a frame after its sheet was already closed, so the dim
   // layer itself must be showing too.
   if (SCRIM_OPEN.some((c) => cls.contains(c)) && !$("scrim").hidden) layers.push(rgba(getComputedStyle($("scrim")).backgroundColor));
-  if (cls.contains("listen-open") && !$("listen").hidden) layers.push(rgba(getComputedStyle($("listen"), "::before").backgroundColor));
+  if (listenShowing()) layers.push(rgba(getComputedStyle($("listen"), "::before").backgroundColor));
   return layers.filter((l) => l && l.a > 0);
 }
+// How a dim layer fades in and out: the duration and easing of its opacity transition, from its computed
+// style. The scrim fades itself; the listening panel's dim layer fades with the panel.
+const splitTop = (s) => s.split(/,(?![^(]*\))/).map((x) => x.trim());
+function fadeOf(node) {
+  const cs = getComputedStyle(node), props = splitTop(cs.transitionProperty);
+  let i = props.indexOf("opacity");
+  if (i < 0) i = props.indexOf("all");
+  if (i < 0) return { ms: 0, ease: "linear" };
+  const durs = splitTop(cs.transitionDuration), eases = splitTop(cs.transitionTimingFunction);
+  const d = durs[i % durs.length];
+  return { ms: parseFloat(d) * (d.endsWith("ms") ? 1 : 1000), ease: eases[i % eases.length] };
+}
+function barsTarget() {
+  const layers = BARS_NARROW.matches && BARS_MODE !== "off" ? dimLayers() : [];
+  if (!layers.length) return null;
+  const page = rgba(getComputedStyle(document.querySelector(".app")).backgroundColor);
+  const listen = listenShowing() && $("scrim").hidden;
+  return {
+    dimmed: hex(layers.reduce((under, l) => over(l, under), page)),
+    sheet: hex(rgba(getComputedStyle(listenShowing() ? $("listen") : $("card")).backgroundColor)),
+    fade: fadeOf(listen ? $("listen") : $("scrim")),
+  };
+}
+const barRoots = () => [document.documentElement, document.body];
+let barsKey, barsSeq = 0, barsTimer = null, barsFade = null;
 function paintBars() {
-  const layers = BARS_NARROW.matches ? dimLayers() : [];
-  const roots = [document.documentElement, document.body];
-  if (!layers.length) {
-    roots.forEach((n) => { n.style.removeProperty("background-color"); n.style.removeProperty("background-image"); });
-    if (themeMeta) themeMeta.setAttribute("content", themeDefault);
-    delete document.body.dataset.bars;
+  const t = barsTarget();
+  const key = t ? t.dimmed + t.sheet : "none";
+  if (key === barsKey) return; // only a change of what should show starts anything new
+  barsKey = key;
+  const seq = ++barsSeq;
+  clearTimeout(barsTimer);
+  const faded = BARS_MODE === "bg" || BARS_MODE === "late";
+  const setBg = BARS_MODE !== "meta", setMeta = BARS_MODE !== "bg";
+  if (t) {
+    barsFade = t.fade;
+    const apply = () => {
+      if (seq !== barsSeq) return;
+      if (setBg) barRoots().forEach((n) => {
+        if (faded) n.style.setProperty("transition", `background-color ${t.fade.ms}ms ${t.fade.ease}`);
+        n.style.setProperty("background-color", t.dimmed);
+        n.style.setProperty("background-image", `linear-gradient(to bottom, transparent 50%, ${t.sheet} 50%)`);
+      });
+      if (setMeta && themeMeta) themeMeta.setAttribute("content", t.dimmed);
+      document.body.dataset.bars = t.dimmed;
+    };
+    if (BARS_MODE === "late") requestAnimationFrame(apply); else apply();
     return;
   }
-  const page = rgba(getComputedStyle(document.querySelector(".app")).backgroundColor);
-  const dimmed = hex(layers.reduce((under, l) => over(l, under), page));
-  const sheet = hex(rgba(getComputedStyle(document.body.classList.contains("listen-open") && !$("listen").hidden ? $("listen") : $("card")).backgroundColor));
-  roots.forEach((n) => {
-    n.style.setProperty("background-color", dimmed);
-    n.style.setProperty("background-image", `linear-gradient(to bottom, transparent 50%, ${sheet} 50%)`);
-  });
-  if (themeMeta) themeMeta.setAttribute("content", dimmed);
-  document.body.dataset.bars = dimmed;
+  const fade = barsFade || { ms: 0 };
+  const restore = () => {
+    if (seq !== barsSeq) return;
+    barRoots().forEach((n) => { n.style.removeProperty("background-color"); n.style.removeProperty("background-image"); });
+    if (themeMeta) themeMeta.setAttribute("content", themeDefault);
+    delete document.body.dataset.bars;
+    // A faded colour change needs its transition until it has finished; then nothing is left behind.
+    const clear = () => { if (seq === barsSeq) barRoots().forEach((n) => n.style.removeProperty("transition")); };
+    if (faded && fade.ms) barsTimer = setTimeout(clear, fade.ms + 50); else clear();
+  };
+  if (BARS_MODE === "late" && document.body.dataset.bars && fade.ms) barsTimer = setTimeout(restore, fade.ms); else restore();
 }
 const barsWatch = new MutationObserver(paintBars);
 barsWatch.observe(document.body, { attributes: true, attributeFilter: ["class"] });

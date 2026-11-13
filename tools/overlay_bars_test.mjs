@@ -28,7 +28,8 @@ const HELPERS = `
   // What the page is telling Safari right now
   const bars = () => ({ theme: document.querySelector('meta[name="theme-color"]').getAttribute("content"),
     html: document.documentElement.style.backgroundColor, body: document.body.style.backgroundColor,
-    image: document.documentElement.style.backgroundImage, flag: document.body.dataset.bars || "" });
+    image: document.documentElement.style.backgroundImage, flag: document.body.dataset.bars || "",
+    tr: document.documentElement.style.transition + document.body.style.transition });
   // The expected colour, worked out here on its own from the CSS: layer (with alpha) over the app background
   const parse = (css) => { const [r, g, b, a = 1] = css.match(/\\(([^)]+)\\)/)[1].split(/[ ,/]+/).filter(Boolean).map(Number); return { r, g, b, a }; };
   const mix = (top, under) => ["r", "g", "b"].map((k) => Math.round(top[k] * top.a + under[k] * (1 - top.a)));
@@ -43,7 +44,7 @@ const run = async (expression) => {
   if (r.result.exceptionDetails) throw new Error(JSON.stringify(r.result.exceptionDetails).slice(0, 500));
   return r.result.result.value;
 };
-const open = async () => { await send("Page.navigate", { url: `http://localhost:8502/?${Date.now()}#group/g` }); await sleep(1300); };
+const open = async (q = "") => { await send("Page.navigate", { url: `http://localhost:8502/?${q}${Date.now()}#group/g` }); await sleep(1300); };
 let failed = 0;
 const check = (name, ok, got) => { console.log((ok ? "PASS " : "FAIL ") + name + (ok ? "" : " | got: " + JSON.stringify(got))); if (!ok) failed++; };
 const SEED = JSON.stringify({ profile: { name: "Asha", phone: "", upi: "", lang: "" }, friends: [], onboarded: 6, contactsAsked: true, current: "g",
@@ -99,11 +100,52 @@ try {
     $("listenClose").click(); await wait(500); return { locked, off: bars() }`);
   check("hidden during a recording, then closed: restored", lock.locked.theme === "#D5D5D9" && lock.off.theme === "#F2F2F7" && !lock.off.html, lock);
 
+  // The developer switch ?bars= (phones only): each variant sets what it should and fully restores.
+  const clean = (b) => b.theme === "#F2F2F7" && !b.html && !b.body && !b.image && !b.flag && !b.tr;
+  for (const mode of ["off", "bg", "meta", "late"]) {
+    await open(`bars=${mode}&`);
+    const r = await run(`
+      const ease = getComputedStyle($("scrim")).transitionTimingFunction, dur = getComputedStyle($("scrim")).transitionDuration;
+      const sameFrame = {};
+      if (${JSON.stringify(mode)} === "late") {
+        $("scrim").hidden = false; document.body.classList.add("sheet-open"); await Promise.resolve(); await Promise.resolve(); sameFrame.flag = bars().flag;
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); sameFrame.next = bars().flag;
+        document.body.classList.remove("sheet-open"); $("scrim").hidden = true; await wait(1000); sameFrame.after = bars();
+      }
+      await openCard(); await wait(100); const opened = bars();
+      closeCard(); await wait(50); const closing = bars(); await wait(1000); const after = bars();
+      newBlankCard("g"); await wait(10); closeCard(); await wait(1000); const fastOff = bars();
+      await openCard(); closeCard(); await wait(30); await openCard(); await wait(700); const reopened = { ...bars(), shown: !$("card").hidden };
+      closeCard(); await wait(1000); const final = bars();
+      fakeMic(); document.querySelector(".fab").click(); await wait(800); const listenOn = bars();
+      take.cancelled = true; $("listenClose").click(); await wait(1000); const listenOff = bars();
+      return { ease, dur, sameFrame, opened, closing, after, fastOff, reopened, final, listenOn, listenOff }`);
+    const fadeTr = `background-color 300ms ${r.ease}`.replace(/ /g, "");
+    const trOk = (b) => b.tr.replace(/ /g, "").includes(fadeTr) || b.tr.replace(/ /g, "").includes(`background-color0.3s${r.ease.replace(/ /g, "")}`);
+    const tinted = (b, hexv) => ({
+      off: clean(b),
+      bg: b.html === rgb(hexv) && b.body === rgb(hexv) && b.theme === "#F2F2F7" && trOk(b),
+      meta: b.theme === hexv && !b.html && !b.body && !b.tr,
+      late: b.html === rgb(hexv) && b.theme === hexv && trOk(b),
+    })[mode];
+    check(`?bars=${mode}: sheet open sets ${({ off: "nothing", bg: "the background only, faded like the scrim (" + r.dur + ")", meta: "theme-color only", late: "both, faded" })[mode]}`, r.dur === "0.3s" && tinted(r.opened, "#AEAEB2"), r.opened);
+    check(`?bars=${mode}: listening panel open ${mode === "off" ? "sets nothing either" : "sets the same, in its own colour"}`, tinted(r.listenOn, "#D5D5D9"), r.listenOn);
+    if (mode === "late") {
+      check("?bars=late: not in the frame the sheet opens, but in the next one", r.sameFrame.flag === "" && r.sameFrame.next === "#AEAEB2" && clean(r.sameFrame.after), r.sameFrame);
+      check("?bars=late: still tinted just after closing, until the fade ends", r.closing.theme === "#AEAEB2" && r.closing.html === rgb("#AEAEB2"), r.closing);
+    }
+    check(`?bars=${mode}: fully restored after closing, with no transition left behind`, clean(r.after) && clean(r.listenOff), { after: r.after, listenOff: r.listenOff });
+    check(`?bars=${mode}: nothing stuck after open-then-close or close-then-reopen`, clean(r.fastOff) && r.reopened.shown && tinted(r.reopened, "#AEAEB2") && clean(r.final), r);
+  }
+
   // Desktop width: no visible change
   await send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
   await open();
   const desk = await run(`await openCard(); const b = bars(); closeCard(); await wait(400); return b`);
   check("desktop: a sheet changes neither theme-color nor the page background", desk.theme === "#F2F2F7" && !desk.html && !desk.body && !desk.image, desk);
+  await open("bars=late&");
+  const deskLate = await run(`await openCard(); await wait(100); const b = bars(); closeCard(); await wait(400); return b`);
+  check("desktop with ?bars=late: still no change", clean(deskLate), deskLate);
 } finally { ws.close(); chrome.kill(); await sleep(300); rmSync(profile, { recursive: true, force: true }); }
 console.log(failed ? `\n${failed} check(s) failed` : "\nAll checks passed");
 process.exit(failed ? 1 : 0);
