@@ -129,8 +129,22 @@ function busy(on, label) {
 // The group whose screen is open, if any. A voice expense started there goes to that group.
 const screenGroup = () => (!$("view-group").hidden && group(openGroupId) ? openGroupId : null);
 let listenGroupId = null; // the group this recording will be added to
+// Every open and close of the panel moves this on, so a microphone that is granted after the panel
+// was closed (or reopened) can tell it is no longer wanted.
+let listenSession = 0;
+// One audio engine for the level meter. iPhone Safari only lets it run if it starts during a tap,
+// so it is created or resumed here, inside the tap that opens the panel.
+let audioCtx = null;
+function wakeAudio() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+  } catch (_) { audioCtx = null; }
+}
 function openListen() {
   clearError();
+  listenSession++;
+  wakeAudio();
   // A field with the keyboard up would hide the panel at the bottom
   if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
   listenGroupId = screenGroup(); // from Home or another tab, the sheet asks which group
@@ -146,7 +160,11 @@ function closeListen() {
 document.addEventListener("click", (e) => { if (e.target.closest("[data-listen]")) openListen(); });
 // The close button, and a tap on the screen behind the panel, both stop any recording and release the mic.
 function cancelListen() {
-  if (rec && rec.state === "recording") { cancelled = true; rec.stop(); }
+  listenSession++; // a microphone still being asked for will be released when it arrives
+  if (take) {
+    take.cancelled = true;
+    if (take.rec && take.rec.state === "recording") take.rec.stop();
+  }
   closeListen();
 }
 $("listenClose").addEventListener("click", cancelListen);
@@ -167,26 +185,38 @@ const WAVE = 34;
     w.append(b);
   }
 })();
-let meterStop = null;
-function meter(stream) {
+// Moves the wave with the voice, and records the loudest moment of this recording in t.peak, as RMS on a
+// 0 to 1 scale. If the meter can't run (no audio engine, or iOS kept it paused), t.peak stays null and the
+// silence check is skipped rather than guessed: real speech must never be thrown away.
+function meter(stream, t) {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    wakeAudio();
+    const ctx = audioCtx;
+    const src = ctx.createMediaStreamSource(stream);
     const an = ctx.createAnalyser();
     an.fftSize = 512;
-    ctx.createMediaStreamSource(stream).connect(an);
-    const data = new Uint8Array(an.fftSize);
-    let raf = 0;
+    src.connect(an);
+    const data = new Uint8Array(an.fftSize), fine = new Float32Array(an.fftSize);
+    let raf = 0, ticks = 0, loudest = 0;
     const tick = () => {
       an.getByteTimeDomainData(data);
       let sum = 0;
       for (const v of data) sum += (v - 128) ** 2;
       const level = Math.min(1, Math.sqrt(sum / data.length) / 40);
       document.body.style.setProperty("--level", level.toFixed(3));
+      if (ctx.state === "running") {
+        an.getFloatTimeDomainData(fine);
+        let f = 0;
+        for (const v of fine) f += v * v;
+        loudest = Math.max(loudest, Math.sqrt(f / fine.length));
+        ticks++;
+      }
+      t.peak = ticks >= 5 ? loudest : null; // a handful of real readings, or no judgement at all
       raf = requestAnimationFrame(tick);
     };
     tick();
-    meterStop = () => { cancelAnimationFrame(raf); ctx.close(); document.body.style.setProperty("--level", 0); };
-  } catch (_) { meterStop = null; }
+    t.stopMeter = () => { cancelAnimationFrame(raf); src.disconnect(); if (take === t || !take) document.body.style.setProperty("--level", 0); };
+  } catch (_) { t.peak = null; t.stopMeter = null; }
 }
 const knownNames = () => [...new Set([...current().people, ...allPeople()])];
 // Silence or noise can come back as a stray word (like "E aí"). With no amount and nobody
@@ -228,7 +258,14 @@ $("typeForm").addEventListener("submit", (e) => {
 function paintLangs() { state.profile.lang = ""; } // the language is always detected automatically
 
 // ---------- recording ----------
-let rec = null, chunks = [], stream = null, stopTimer = null, cancelled = false;
+// Each recording is its own object with its own cancelled flag, stream, recorder, chunks, timer and meter,
+// so a recording that was cancelled can never be sent, and can never stop a newer one.
+let take = null;
+const MIN_CLIP_MS = 800;
+// The quietest peak that still counts as someone speaking: RMS 0.005 on a 0 to 1 scale, about −46 dBFS.
+// Quiet speech at arm's length peaks far above this; a silent room with the phone's noise suppression
+// sits well below it. Set low on purpose, so a soft voice is never rejected.
+const SILENCE_PEAK_RMS = 0.005;
 function pickMime() {
   for (const m of ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"]) {
     if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
@@ -236,13 +273,14 @@ function pickMime() {
   return "";
 }
 $("mic").addEventListener("click", () => {
-  if (rec && rec.state === "recording") { rec.stop(); return; }
+  if (take && take.rec && take.rec.state === "recording") { take.rec.stop(); return; }
+  wakeAudio();
   startRecording();
 });
 async function startRecording() {
-  if (rec && rec.state === "recording") return;
+  if (take && take.rec && take.rec.state === "recording") return;
   clearError();
-  cancelled = false;
+  const session = listenSession;
   if (!navigator.mediaDevices || !window.MediaRecorder) { showError("This browser can't record. Please type instead."); return; }
   // Until the microphone is granted (iOS may be showing its permission prompt), the panel stays still:
   // no wave, no moving ring. The request itself still comes from the same tap, which iOS requires.
@@ -250,36 +288,48 @@ async function startRecording() {
   document.body.classList.remove("micDenied");
   document.body.classList.add("micAsk");
   $("micHint").textContent = "";
+  let stream;
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
   catch (_) {
+    if (session !== listenSession) return;
     document.body.classList.remove("micAsk"); document.body.classList.add("micDenied");
     $("micHint").textContent = "The microphone is off";
     showError("Kitty can't use the microphone. Allow it in your browser's settings for this site (on iPhone: aA in the address bar, then Website Settings), or type instead.");
     return;
   }
+  // The panel was closed (or opened again) while the permission prompt was up: don't record, let go of the mic.
+  if (session !== listenSession || $("listen").hidden) { stream.getTracks().forEach((tr) => tr.stop()); return; }
   document.body.classList.remove("micAsk");
   const mime = pickMime();
-  rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
-  chunks = [];
-  const started = Date.now();
-  rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
-  rec.onstop = () => {
-    clearTimeout(stopTimer);
-    stream.getTracks().forEach((t) => t.stop());
-    if (meterStop) meterStop();
-    document.body.classList.remove("recording");
-    if (cancelled) { busy(false); return; }
-    const type = rec.mimeType || "audio/webm";
-    if (Date.now() - started < 800) { showError("That was too short. Tap, speak, then tap again."); busy(false); return; }
+  const t = { cancelled: false, stream, chunks: [], peak: null, stopMeter: null, timer: null, started: Date.now() };
+  t.rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+  take = t;
+  t.rec.ondataavailable = (e) => { if (e.data.size) t.chunks.push(e.data); };
+  t.rec.onstop = () => {
+    clearTimeout(t.timer);
+    t.stream.getTracks().forEach((tr) => tr.stop()); // only this recording's microphone
+    if (t.stopMeter) t.stopMeter();
+    const latest = take === t;
+    if (latest) document.body.classList.remove("recording");
+    if (t.cancelled || !latest) { if (latest) busy(false); return; }
+    const type = t.rec.mimeType || "audio/webm";
+    if (Date.now() - t.started < MIN_CLIP_MS) { showError("That was too short. Tap, speak, then tap again."); busy(false); return; }
+    // Nothing above a whisper the whole time: say so here, and send nothing.
+    if (t.peak !== null && t.peak < SILENCE_PEAK_RMS) {
+      showError("I didn't hear anything. Tap the mic and say the expense.");
+      $("micHint").textContent = "Tap the mic and say the expense";
+      busy(false);
+      return;
+    }
     const ext = type.includes("mp4") ? "m4a" : type.includes("ogg") ? "ogg" : "webm";
-    readAudio(new Blob(chunks, { type }), "expense." + ext);
+    readAudio(new Blob(t.chunks, { type }), "expense." + ext);
   };
-  rec.start();
+  t.rec.start();
   document.body.classList.add("recording");
-  meter(stream);
+  meter(stream, t);
   $("micHint").textContent = "Listening… tap when done";
   if (navigator.vibrate) navigator.vibrate(10);
-  stopTimer = setTimeout(() => rec.state === "recording" && rec.stop(), 45000);
+  t.timer = setTimeout(() => t.rec.state === "recording" && t.rec.stop(), 45000);
 }
 
 // ---------- confirmation sheet ----------

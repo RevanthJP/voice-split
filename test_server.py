@@ -82,6 +82,29 @@ class OneAmount(unittest.TestCase):
         self.assertEqual(client.post("/api/balances", json={"expenses": [bad]}).status_code, 400)
 
 
+class SilentAudio(unittest.TestCase):
+    """A silent clip whose transcript is the hint echoed back never reaches the reader. Speech call faked."""
+
+    def test_echo_of_the_hint_from_silence_is_refused(self):
+        import io, types, wave
+        import reader
+        buf = io.BytesIO()
+        with wave.open(buf, "wb") as w:
+            w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000); w.writeframes(b"\x00\x00" * 16000)
+        real_speech, real_read = reader._speech, reader.read_expense
+        reads = []
+        reader._speech = lambda audio, filename, language=None: types.SimpleNamespace(
+            text=" I paid 1,200 rupees.", language="english", segments=[{"no_speech_prob": 0.4}])
+        reader.read_expense = lambda text, known=(): reads.append(text) or {}
+        try:
+            r = client.post("/api/read-audio", files={"file": ("clip.wav", buf.getvalue(), "audio/wav")}, data={"people": "", "language": ""})
+        finally:
+            reader._speech, reader.read_expense = real_speech, real_read
+        self.assertEqual(r.status_code, 422)
+        self.assertIn("couldn't hear", r.json()["detail"])
+        self.assertEqual(reads, [])  # the reader never saw "I paid 1,200 rupees."
+
+
 class OneWayToSave(unittest.TestCase):
     def test_only_the_save_button_adds_an_expense(self):
         js = (Path(__file__).parent / "public" / "static" / "app.js").read_text(encoding="utf-8")

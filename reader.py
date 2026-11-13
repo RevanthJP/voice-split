@@ -5,6 +5,7 @@ The model never does maths. It returns a structured description, and splits.py w
 import json
 import os
 import re
+import unicodedata
 
 from dotenv import load_dotenv
 
@@ -74,14 +75,43 @@ def _speech(audio, filename, language=None):
     return _client().audio.transcriptions.create(**kwargs)
 
 
-def _is_silence(resp, text):
-    cleaned = re.sub(r"[^\w\s]", "", text).strip().lower()
-    if not cleaned or cleaned in _SILENCE:
-        return True
+# The speech model's own judgement that a clip has no speech, averaged over its segments.
+SILENCE_NO_SPEECH = 0.6  # above this, the clip is silence whatever the text says (unchanged)
+# On silence the model can echo its hint back ("I paid 1,200 rupees."). Text that is only a piece of the
+# hint is treated as silence when no_speech_prob is above this lower bar. Across 168 benchmark recordings
+# of real speech, the mean was at most 0.20 (median 0.0075), so 0.3 keeps a margin above real speech.
+ECHO_NO_SPEECH = 0.3
+
+
+def _no_speech(resp):
     segs = getattr(resp, "segments", None) or []
     probs = [s.get("no_speech_prob") if isinstance(s, dict) else getattr(s, "no_speech_prob", None) for s in segs]
     probs = [p for p in probs if p is not None]
-    return bool(probs) and sum(probs) / len(probs) > 0.6
+    return sum(probs) / len(probs) if probs else None
+
+
+def _words(text):
+    """Lower case, digit groups joined (1,200 -> 1200), punctuation in any script turned into spaces."""
+    text = re.sub(r"(?<=\d)[,.](?=\d{3}\b)", "", text.lower())
+    return " ".join("".join(" " if unicodedata.category(c)[0] in "PZ" else c for c in text).split())
+
+
+def _echoes_hint(text, hint):
+    """True when the text is nothing but a run of whole words taken from the hint."""
+    piece = _words(text)
+    return bool(piece) and f" {piece} " in f" {_words(hint)} "
+
+
+def _is_silence(resp, text, hint=None):
+    cleaned = re.sub(r"[^\w\s]", "", text).strip().lower()
+    if not cleaned or cleaned in _SILENCE:
+        return True
+    p = _no_speech(resp)
+    if p is None:
+        return False  # without the model's own signal, text alone never makes it silence
+    if p > SILENCE_NO_SPEECH:
+        return True
+    return hint is not None and _echoes_hint(text, hint) and p > ECHO_NO_SPEECH
 
 
 def transcribe(audio, filename="clip.webm", language=None):
@@ -89,18 +119,19 @@ def transcribe(audio, filename="clip.webm", language=None):
     Otherwise detect it, and if Tamil or Hindi speech comes back with no Tamil or Hindi script,
     the model has likely translated it, so it listens once more in that language."""
     if language in ("ta", "hi", "en"):
-        resp = _speech(audio, filename, language=language if language != "en" else None)
+        lang = language if language != "en" else None
+        resp = _speech(audio, filename, language=lang)
         text = (resp.text or "").strip()
-        return "" if _is_silence(resp, text) else text
+        return "" if _is_silence(resp, text, _SPEECH_HINT[lang]) else text
     resp = _speech(audio, filename)
     text = (resp.text or "").strip()
-    if _is_silence(resp, text):
+    if _is_silence(resp, text, _SPEECH_HINT[None]):
         return ""
     code = _LANG_CODE.get((getattr(resp, "language", "") or "").lower())
     if code and not _NATIVE_SCRIPT[code].search(text):
         again = _speech(audio, filename, language=code)
         retry = (again.text or "").strip()
-        if retry and not _is_silence(again, retry):
+        if retry and not _is_silence(again, retry, _SPEECH_HINT[code]):
             text = retry
     return text
 
