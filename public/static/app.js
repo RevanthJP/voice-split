@@ -239,13 +239,21 @@ const knownNames = () => [...new Set([...current().people, ...allPeople()])];
 // Silence or noise can come back as a stray word (like "E aí"). With no amount and nobody
 // but you, there's nothing to check, so stay on this screen instead of opening the sheet.
 const heardNothing = (res) => { const e = res.expense || {}; return !e.total && !(e.participants || []).some((p) => p !== ME) && (!e.payer || e.payer === ME); };
+// From Home, the sheet asks which group. With exactly one group there is nothing to choose, so it opens as
+// if that group's chip had been tapped: the same group, the Group menu instead of the chips, and the same
+// recalculation. With two or more groups nothing is chosen for the person.
+function showCardFromHome(res) {
+  const only = state.groups.length === 1 ? state.groups[0].id : null;
+  showCard(res, only);
+  if (only) recheck(); // what a tap on the chip does next
+}
 async function readText(text) {
   clearError();
   busy(true, "Reading…");
   try {
     const res = await post("/api/read-text", { text, people: knownNames() });
     if (heardNothing(res)) showError("That doesn't look like an expense. Say what it was, the amount and who it's with.");
-    else showCard(res, null); // the type box is on Home, so ask which group
+    else showCardFromHome(res); // the type box is on Home, so ask which group (unless there is only one)
   }
   catch (e) { showError(e.message); }
   finally { busy(false); }
@@ -261,7 +269,7 @@ async function readAudio(blob, name) {
     const res = await post("/api/read-audio", form, true);
     if (heardNothing(res)) { showError("I couldn't hear an expense. Tap the mic and say the amount and who it's with."); return; }
     closeListen();
-    showCard(res, group(listenGroupId) ? listenGroupId : null);
+    if (group(listenGroupId)) showCard(res, listenGroupId); else showCardFromHome(res);
   }
   catch (e) { showError(e.message); $("micHint").textContent = "Tap the mic to try again"; }
   finally { busy(false); if (!$("listen").hidden && $("listenError").hidden) $("micHint").textContent = "Tap the mic and say the expense"; }
