@@ -17,7 +17,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Kitty">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="/static/style.css?v=47">
+<link rel="stylesheet" href="/static/style.css?v=48">
 </head>
 <body>
 <div class="app">
@@ -108,7 +108,7 @@
         <h3>How groups work</h3>
         <ol>
           <li><b>Add people once</b><span>Everyone in the group is ready for every expense.</span></li>
-          <li><b>Say the expense</b><span>It's saved to the group you're in, like Goa trip.</span></li>
+          <li><b>Say the expense</b><span>Say it on a group's screen, like Goa trip, and it's saved there. From Home you can also save it without a group.</span></li>
           <li><b>Settle up</b><span>Kitty shows who owes whom, person by person, so the amount you see is the amount you send.</span></li>
         </ol>
       </div>
@@ -435,6 +435,19 @@
     </div>
   </section>
 
+  <!-- A one-off from Home: what it was, and Delete. Uses the reminder sheet's styles. -->
+  <section id="oneOff" class="sheet remindSheet" hidden role="dialog" aria-modal="true" aria-labelledby="ooTitle">
+    <div class="grab" aria-hidden="true"></div>
+    <h3 class="sheetTitle" id="ooTitle">Delete this expense?</h3>
+    <p class="ooLine"><b id="ooDesc"></b><strong id="ooAmount"></strong></p>
+    <p class="note" id="ooWho"></p>
+    <p class="note">It has no group, so it's only in Home and Friends. Deleting it takes it out of every balance.</p>
+    <div class="actions">
+      <button id="ooCancel" type="button">Cancel</button>
+      <button id="ooDelete" class="delete" type="button">Delete</button>
+    </div>
+  </section>
+
   <!-- The expenses behind a balance. Uses the reminder sheet's styles. -->
   <section id="explain" class="sheet remindSheet" hidden role="dialog" aria-modal="true" aria-labelledby="explainTitle">
     <div class="grab" aria-hidden="true"></div>
@@ -451,6 +464,6 @@
   <div id="toast" class="toast" role="status" hidden></div>
 </div>
 <div id="print" class="print" aria-hidden="true"></div>
-<script src="/static/app.js?v=55"></script>
+<script src="/static/app.js?v=56"></script>
 </body>
 </html>

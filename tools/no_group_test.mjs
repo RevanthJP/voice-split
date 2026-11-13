@@ -81,7 +81,7 @@ try {
   // c) The one-offs show in Friends, Home, Explain and export, labelled "No group"
   const seen = await run(`go("friends"); await wait(1200); const meena = friendRow("Meena");
     go("home"); await wait(1000); const row = [...document.querySelectorAll("#recent li")][0];
-    const home = { text: row.textContent, tap: row.classList.contains("tap") }; row.click(); await wait(300); home.stayed = !$("view-home").hidden;
+    const home = { text: row.textContent, tap: row.classList.contains("tap") }; row.click(); await wait(500); home.stayed = !$("view-home").hidden; home.sheet = !$("oneOff").hidden; closeOneOff(); await wait(400);
     go("friends"); await wait(300); openExplain("Meena"); await wait(1200);
     const rows = [...document.querySelectorAll("#explainList li")].map((l) => l.textContent);
     const explain = { lines: rows.slice(0, -1), total: rows[rows.length - 1] || "" }; // the last row is the total
@@ -91,7 +91,7 @@ try {
     const all = exportRows(); $("xGroup").value = "none"; $("xGroup").dispatchEvent(new Event("change")); await wait(200); const only = exportRows();
     return { meena, home, explain, options, allGroups: all.rows.map((e) => e._group), onlyCount: only.rows.length, onlyTitle: only.title }`);
   check("c) Friends: Meena owes you ₹900 from the two one-offs, with Send reminder", seen.meena && seen.meena.amount === "₹900" && seen.meena.label === "owes you" && seen.meena.remind, seen.meena);
-  check("c) Home: the row says 'No group' (never 'undefined') and isn't a link", seen.home.text.includes("No group") && !seen.home.text.includes("undefined") && !seen.home.tap && seen.home.stayed, seen.home);
+  check("c) Home: the row says 'No group' (never 'undefined'), and tapping it opens the delete sheet instead of a group", seen.home.text.includes("No group") && !seen.home.text.includes("undefined") && seen.home.tap && seen.home.stayed && seen.home.sheet, seen.home);
   check("c) Explain for Meena lists both one-offs and adds up to ₹900", seen.explain.lines.length === 2 && seen.explain.lines.every((l) => l.includes("Dinner")) && seen.explain.total.includes("2 expenses") && seen.explain.total.includes("₹900"), seen.explain);
     check("c) export: rows say 'No group', and the filter can pick 'No group'", seen.allGroups.length === 2 && seen.allGroups.every((g) => g === "No group") && seen.options.includes("No group")
     && seen.onlyCount === 2 && seen.onlyTitle === "Kitty: No group, All time", seen);
@@ -143,6 +143,48 @@ try {
   check("g) Friends counts both: Arun owes you ₹800 (₹500 group + ₹300 one-off)", bal.arun && bal.arun.amount === "₹800", bal.arun);
   check("g) Explain for Arun labels each expense: 'Goa trip' for the group one, 'No group' for the one-off", bal.lines.some((l) => l.includes("Hotel") && l.includes("Goa trip ·")) && bal.lines.some((l) => l.includes("Cab") && l.includes("No group ·")), bal.lines);
   console.log("INFO Friends row for a person owing you via a one-off offers: " + JSON.stringify(bal.arun && bal.arun.buttons));
+
+  // h) A one-off on Home opens a sheet where it can be deleted; Cancel keeps it, Delete removes only it
+  const CAB = { id: "o1", at: "2026-11-05T10:00:00.000Z", description: "Cab", total: 780, payer: "You", participants: ["You", "Aro"], mode: "equal", values: {}, items: [] };
+  const SNACKS = { id: "o2", at: "2026-11-04T10:00:00.000Z", description: "Snacks", total: 200, payer: "You", participants: ["You", "Arun"], mode: "equal", values: {}, items: [] };
+  const GOA = { id: "g", name: "Goa trip", people: ["You", "Arun"], expenses: [GROUP_EXP] };
+  await setState(base({ groups: [GOA], oneOffs: [CAB, SNACKS], current: "g" }));
+  const homeRow = `const homeRow = (d) => [...document.querySelectorAll("#recent li")].find((l) => l.textContent.includes(d));`;
+  const sheetOpen = `const ooOpen = () => !$("oneOff").hidden && document.body.classList.contains("remind-open");`;
+  const tapped = await run(`${homeRow} ${sheetOpen} go("home"); await wait(1000); homeRow("Cab").click(); await wait(500);
+    const opened = { open: ooOpen(), title: $("ooTitle").textContent, desc: $("ooDesc").textContent, amount: $("ooAmount").textContent, who: $("ooWho").textContent,
+      buttons: [...document.querySelectorAll("#oneOff .actions button")].map((b) => b.textContent) };
+    $("ooCancel").click(); await wait(500);
+    const cancelled = { open: ooOpen(), oneOffs: saved().oneOffs.map((e) => e.id), cabOnHome: !!homeRow("Cab") };
+    homeRow("Cab").click(); await wait(500); $("scrim").click(); await wait(500);
+    const scrim = { open: ooOpen(), oneOffs: saved().oneOffs.length };
+    go("group", "g"); await wait(300); go("home"); await wait(600); homeRow("Hotel").click(); await wait(500);
+    const groupRow = { onGroup: !$("view-group").hidden, sheet: !$("oneOff").hidden };
+    return { opened, cancelled, scrim, groupRow }`);
+  check("h) tapping a one-off on Home opens 'Delete this expense?' with what, amount, who paid and who shares, and Cancel / Delete",
+    tapped.opened.open && tapped.opened.title === "Delete this expense?" && tapped.opened.desc === "Cab" && tapped.opened.amount === "₹780"
+    && tapped.opened.who.startsWith("You paid · split with you, Aro") && JSON.stringify(tapped.opened.buttons) === JSON.stringify(["Cancel", "Delete"]), tapped.opened);
+  check("h) Cancel (and a tap outside) changes nothing", !tapped.cancelled.open && JSON.stringify(tapped.cancelled.oneOffs) === JSON.stringify(["o1", "o2"]) && tapped.cancelled.cabOnHome
+    && !tapped.scrim.open && tapped.scrim.oneOffs === 2, tapped);
+  check("h) a group expense on Home still opens its group, not the sheet", tapped.groupRow.onGroup && !tapped.groupRow.sheet, tapped.groupRow);
+  const deleted = await run(`${homeRow} go("home"); await wait(800); homeRow("Cab").click(); await wait(500); $("ooDelete").click(); await wait(1200);
+    const s = saved(); const home = [...document.querySelectorAll("#recent li")].map((l) => l.textContent);
+    go("friends"); await wait(1200); const aro = friendRow("Aro"), arun = friendRow("Arun");
+    openExplain("Arun"); await wait(1200); const lines = [...document.querySelectorAll("#explainList li")].map((l) => l.textContent); closeExplain(); await wait(400);
+    go("groups"); await wait(1000); const groupsRow = document.querySelector("#groups li .amt strong").textContent;
+    return { oneOffs: s.oneOffs.map((e) => e.id), group: JSON.stringify(s.groups[0]), toast: $("toast").textContent, cabOnHome: home.some((t) => t.includes("Cab")), home, aro, arun, lines, groupsRow }`);
+  check("h) Delete removes that one-off only: gone from Home, the other one-off and the group are untouched",
+    JSON.stringify(deleted.oneOffs) === JSON.stringify(["o2"]) && !deleted.cabOnHome && deleted.home.some((t) => t.includes("Snacks")) && deleted.group === JSON.stringify(GOA) && deleted.toast === "Deleted", deleted);
+  check("h) balances go back as if it was never added: Aro is gone from Friends, Arun owes ₹600 (₹500 group + ₹100 one-off), the group still ₹500",
+    !deleted.aro && deleted.arun && deleted.arun.amount === "₹600" && deleted.groupsRow === "₹500", deleted);
+  check("h) Explain for Arun no longer has the deleted one-off", deleted.lines.some((l) => l.includes("Hotel")) && deleted.lines.some((l) => l.includes("Snacks")) && !deleted.lines.some((l) => l.includes("Cab")), deleted.lines);
+  const last = await run(`${homeRow} go("home"); await wait(800); homeRow("Snacks").click(); await wait(500); $("ooDelete").click(); await wait(1200);
+    const s = saved(); const home = [...document.querySelectorAll("#recent li")].map((l) => l.textContent);
+    go("friends"); await wait(1200); const arun = friendRow("Arun");
+    await typeIt(); $("sheetGroup").value = "none"; $("sheetGroup").dispatchEvent(new Event("change")); await wait(800); const save = !$("save").disabled; $("save").click(); await wait(900);
+    return { oneOffs: s.oneOffs.length, groups: s.groups.length, home, arun, save, after: saved().oneOffs.length }`);
+  check("h) deleting the last one-off leaves the app working: Home shows the group expense, Arun owes ₹500, and a new one-off still saves",
+    last.oneOffs === 0 && last.groups === 1 && last.home.length === 1 && last.home[0].includes("Hotel") && last.arun && last.arun.amount === "₹500" && last.save && last.after === 1, last);
 } finally { ws.close(); chrome.kill(); await sleep(300); rmSync(profile, { recursive: true, force: true }); }
 console.log(failed ? `\n${failed} check(s) failed` : "\nAll checks passed");
 process.exit(failed ? 1 : 0);

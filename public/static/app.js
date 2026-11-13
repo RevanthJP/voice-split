@@ -440,7 +440,7 @@ function closeCard() {
   clearTimeout(sheetTimer);
   sheetTimer = setTimeout(() => { $("scrim").hidden = true; $("card").hidden = true; }, 260);
 }
-$("scrim").addEventListener("click", () => { if (!$("explain").hidden) closeExplain(); else if (!$("shareTo").hidden) closeShareTo(); else if (!$("addPerson").hidden) closeAddPerson(); else if (!$("contactsAsk").hidden) closeContactsAsk(); else if (!$("remind").hidden) closeRemind(); else closeCard(); });
+$("scrim").addEventListener("click", () => { if (!$("oneOff").hidden) closeOneOff(); else if (!$("explain").hidden) closeExplain(); else if (!$("shareTo").hidden) closeShareTo(); else if (!$("addPerson").hidden) closeAddPerson(); else if (!$("contactsAsk").hidden) closeContactsAsk(); else if (!$("remind").hidden) closeRemind(); else closeCard(); });
 $("discard").addEventListener("click", closeCard);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && draft) closeCard(); });
 
@@ -790,10 +790,10 @@ async function renderHome(friends, problem) {
   }
   const recent = allExpenses().sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 5);
   $("recent").replaceChildren(...recent.map((e) => {
-    const inGroup = e._gid !== NO_GROUP; // a one-off has no group screen to open, so its row isn't a link
-    const li = el("li", inGroup ? "tap" : "");
+    const li = el("li", "tap");
     li.append(who(e.description, `${e._group} · ${e.payer === ME ? "you paid" : e.payer + " paid"} · ${shortDate(e.at)}`, "cat"), el("strong", null, rupees(e.total)));
-    if (inGroup) li.onclick = () => go("group", e._gid);
+    // A group expense opens its group. A one-off has no group screen, so it opens a sheet where it can be deleted.
+    li.onclick = () => (e._gid === NO_GROUP ? openOneOff(e.id) : go("group", e._gid));
     return li;
   }));
   $("recentEmpty").hidden = recent.length > 0;
@@ -881,6 +881,36 @@ async function renderGroups() {
   $("groupIdeas").replaceChildren(...ideas.map((n) => { const b = el("button", "chip", "+ " + n); b.type = "button"; b.onclick = () => createGroup(n); return b; }));
   $("groupsTips").hidden = state.groups.some((g) => g.expenses.length);
 }
+
+// ---------- a one-off from Home: see it, and delete it if it was wrong ----------
+// Group expenses are deleted on their group screen; a one-off has none, so this sheet does it.
+let oneOffFor = null;
+function openOneOff(id) {
+  const e = oneOffs().find((x) => x.id === id);
+  if (!e) return;
+  oneOffFor = id;
+  $("ooDesc").textContent = e.description;
+  $("ooAmount").textContent = rupees(e.total);
+  $("ooWho").textContent = `${e.payer === ME ? "You paid" : e.payer + " paid"} · split with ${e.participants.map((p) => (p === ME ? "you" : p)).join(", ")} · ${shortDate(e.at)}`;
+  $("scrim").hidden = false; $("oneOff").hidden = false;
+  requestAnimationFrame(() => document.body.classList.add("remind-open"));
+}
+function closeOneOff() {
+  oneOffFor = null;
+  document.body.classList.remove("remind-open");
+  setTimeout(() => {
+    if (document.body.classList.contains("remind-open")) return; // opened again meanwhile
+    $("oneOff").hidden = true;
+    if ($("card").hidden && $("remind").hidden && $("explain").hidden) $("scrim").hidden = true;
+  }, 300);
+}
+$("ooCancel").addEventListener("click", closeOneOff);
+$("ooDelete").addEventListener("click", () => {
+  const id = oneOffFor;
+  if (!id) return;
+  state.oneOffs = oneOffs().filter((x) => x.id !== id); // this one-off only; groups are untouched
+  persist(); closeOneOff(); renderAll(); toast("Deleted");
+});
 
 async function renderGroup() {
   const g = group(openGroupId);
