@@ -19,29 +19,39 @@ let openGroupId = null;
 const titleName = (raw) => (raw || "").trim().replace(/\s+/g, " ").split(" ").map((w) => w ? w[0].toUpperCase() + w.slice(1) : w).join(" ");
 function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 function blankGroup(name) { return { id: newId(), name, people: [ME], expenses: [] }; }
+// No group exists until the person makes one. Expenses saved without a group are one-offs.
 function load() {
   try {
     const s = JSON.parse(localStorage.getItem(KEY));
-    if (s && Array.isArray(s.groups) && s.groups.length) return s;
+    if (s && Array.isArray(s.groups)) {
+      if (!Array.isArray(s.oneOffs)) s.oneOffs = []; // saved before one-offs existed
+      return s;
+    }
   } catch (_) {}
-  const fresh = { profile: { name: "", phone: "", upi: "", lang: "" }, friends: [], groups: [blankGroup("Friends")], current: null };
-  try { // bring over data from the first version
+  const fresh = { profile: { name: "", phone: "", upi: "", lang: "" }, friends: [], groups: [], oneOffs: [], current: null };
+  try { // bring over data from the first version: the person's own expenses, into a Friends group as before
     const old = JSON.parse(localStorage.getItem(OLD_KEY));
     if (old && Array.isArray(old.expenses)) {
+      fresh.groups.push(blankGroup("Friends"));
       fresh.groups[0].people = old.people && old.people.length ? old.people : [ME];
       fresh.groups[0].expenses = old.expenses;
       fresh.profile.upi = old.upi || "";
       fresh.profile.lang = old.lang || "";
     }
   } catch (_) {}
-  fresh.current = fresh.groups[0].id;
+  fresh.current = fresh.groups.length ? fresh.groups[0].id : null;
   return fresh;
 }
 function persist() { localStorage.setItem(KEY, JSON.stringify(state)); }
 const group = (id) => state.groups.find((g) => g.id === id);
-const current = () => group(state.current) || state.groups[0];
-const allExpenses = () => state.groups.flatMap((g) => g.expenses.map((e) => ({ ...e, _group: g.name, _gid: g.id })));
-const allPeople = () => [...new Set([...state.groups.flatMap((g) => g.people), ...(state.friends || [])])];
+const current = () => group(state.current) || null; // the last group saved to, if any
+// The sheet's choice for an expense saved without a group, and how it is labelled everywhere
+const NO_GROUP = "none", NO_GROUP_LABEL = "No group";
+const oneOffs = () => state.oneOffs || [];
+const allExpenses = () => [...state.groups.flatMap((g) => g.expenses.map((e) => ({ ...e, _group: g.name, _gid: g.id }))),
+  ...oneOffs().map((e) => ({ ...e, _group: NO_GROUP_LABEL, _gid: NO_GROUP }))];
+const allPeople = () => [...new Set([...state.groups.flatMap((g) => g.people), ...(state.friends || []),
+  ...oneOffs().flatMap((e) => [e.payer, ...e.participants])])];
 
 // ---------- helpers ----------
 const rupees = (n) => "₹" + Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: Number(n) % 1 ? 2 : 0 });
@@ -147,7 +157,7 @@ function openListen() {
   // A field with the keyboard up would hide the panel at the bottom
   if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
   listenGroupId = screenGroup(); // from Home or another tab, the sheet asks which group
-  $("listenGroup").textContent = listenGroupId ? "Adding to " + group(listenGroupId).name : "You'll choose the group next";
+  $("listenGroup").textContent = listenGroupId ? "Adding to " + group(listenGroupId).name : state.groups.length ? "You'll choose the group next" : "";
   startRecording();
 }
 function closeListen() {
@@ -235,14 +245,16 @@ function release(t) {
   closeContext(t.ctx);
   t.ctx = null;
 }
-const knownNames = () => [...new Set([...current().people, ...allPeople()])];
+const knownNames = () => [...new Set([...(current() ? current().people : [ME]), ...allPeople()])];
 // Silence or noise can come back as a stray word (like "E aí"). With no amount and nobody
 // but you, there's nothing to check, so stay on this screen instead of opening the sheet.
 const heardNothing = (res) => { const e = res.expense || {}; return !e.total && !(e.participants || []).some((p) => p !== ME) && (!e.payer || e.payer === ME); };
-// From Home, the sheet asks which group. With exactly one group there is nothing to choose, so it opens as
-// if that group's chip had been tapped: the same group, the Group menu instead of the chips, and the same
-// recalculation. With two or more groups nothing is chosen for the person.
+// From Home, the sheet asks which group. With no groups there is no group step: it saves as a one-off.
+// With exactly one group there is nothing to choose, so it opens as if that group's chip had been tapped:
+// the same group, the Group menu (which also offers No group) instead of the chips, and the same
+// recalculation. With two or more groups nothing is chosen for the person: a group or No group is tapped.
 function showCardFromHome(res) {
+  if (!state.groups.length) { showCard(res, NO_GROUP); return; }
   const only = state.groups.length === 1 ? state.groups[0].id : null;
   showCard(res, only);
   if (only) recheck(); // what a tap on the chip does next
@@ -432,9 +444,10 @@ $("scrim").addEventListener("click", () => { if (!$("explain").hidden) closeExpl
 $("discard").addEventListener("click", closeCard);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && draft) closeCard(); });
 
-function fillGroupSelect(sel, value, withAll) {
+function fillGroupSelect(sel, value, withAll, withNone) {
   sel.replaceChildren(...(withAll ? [Object.assign(el("option", null, "All groups"), { value: "" })] : []),
-    ...state.groups.map((g) => Object.assign(el("option", null, g.name), { value: g.id })));
+    ...state.groups.map((g) => Object.assign(el("option", null, g.name), { value: g.id })),
+    ...(withNone ? [Object.assign(el("option", null, NO_GROUP_LABEL), { value: NO_GROUP })] : []));
   sel.value = value;
 }
 
@@ -443,7 +456,7 @@ function showCard(res, gid) {
   checkSeq++;
   draft = res.expense;
   draftGroup = gid || null;
-  fillGroupSelect($("sheetGroup"), gid || "");
+  fillGroupSelect($("sheetGroup"), gid || "", false, true);
   $("heard").hidden = !res.transcript;
   $("heard").textContent = res.transcript ? "“" + res.transcript + "”" : "";
   $("desc").value = draft.description || "";
@@ -455,7 +468,7 @@ function showCard(res, gid) {
   if (matched) recheck(); // names changed to the contact's full name, so work the shares out again
 }
 function newBlankCard(gid) {
-  showCard({ expense: { description: "", total: null, payer: ME, participants: [...group(gid).people], mode: "equal", values: {}, items: [] }, missing: ["amount"], transcript: null }, gid);
+  showCard({ expense: { description: "", total: null, payer: ME, participants: group(gid) ? [...group(gid).people] : [ME], mode: "equal", values: {}, items: [] }, missing: ["amount"], transcript: null }, gid);
   // On a touch phone, focusing the description opened the keyboard while the sheet was still sliding up,
   // and iOS scrolled the page to an in-between spot, clipping the top. There, the person taps the field
   // themselves once the sheet is in place. With a mouse and keyboard, focus it after the slide ends.
@@ -474,21 +487,26 @@ function groupChoices() {
   return [...suggested.map((g) => ({ g, suggested: true })), ...state.groups.filter((g) => !suggested.includes(g)).map((g) => ({ g, suggested: false }))];
 }
 function paintGroupPick() {
-  $("groupPick").hidden = !!draftGroup;
-  $("sheetGroupRow").hidden = !draftGroup;
+  const noGroups = !state.groups.length; // no group step at all: it saves as a one-off
+  $("groupPick").hidden = !!draftGroup || noGroups;
+  $("sheetGroupRow").hidden = !draftGroup || noGroups;
   if (draftGroup) return;
+  const pick = (id) => () => { draftGroup = id; $("sheetGroup").value = id; recheck(); };
+  const none = el("button", "chip", NO_GROUP_LABEL);
+  none.type = "button"; none.setAttribute("aria-pressed", "false"); none.onclick = pick(NO_GROUP);
   $("groupChips").replaceChildren(...groupChoices().map(({ g, suggested }) => {
     const b = el("button", "chip", g.name);
     b.type = "button";
     b.setAttribute("aria-pressed", "false");
     if (suggested) { b.append(el("small", null, " · Suggested")); b.setAttribute("aria-label", g.name + ", suggested"); }
-    b.onclick = () => { draftGroup = g.id; $("sheetGroup").value = g.id; recheck(); };
+    b.onclick = pick(g.id);
     return b;
-  }));
+  }), none);
 }
 
+const draftMembers = () => (group(draftGroup) ? group(draftGroup).people : []); // none for a one-off
 function cardPeople() {
-  return [...new Set([ME, ...(draftGroup ? group(draftGroup).people : []), draft.payer, ...draft.participants, ...draft.items.flatMap((i) => [...i.only, ...i.excluded])])].filter(Boolean);
+  return [...new Set([ME, ...draftMembers(), draft.payer, ...draft.participants, ...draft.items.flatMap((i) => [...i.only, ...i.excluded])])].filter(Boolean);
 }
 function paintCard(res) {
   paintGroupPick();
@@ -546,7 +564,7 @@ function recheck() {
   clearTimeout(checkTimer);
   checkTimer = setTimeout(async () => {
     try {
-      const res = await post("/api/check", { expense: draft, people: draftGroup ? group(draftGroup).people : [] });
+      const res = await post("/api/check", { expense: draft, people: draftMembers() });
       if (seq === checkSeq) paintCard(res);
     } catch (e) {
       if (seq !== checkSeq) return;
@@ -568,17 +586,23 @@ $("addSharer").addEventListener("submit", (e) => {
   recheck();
 });
 $("save").addEventListener("click", () => {
-  if (!draft || $("save").disabled || !group(draftGroup)) return;
-  const g = group(draftGroup);
-  for (const p of cardPeople()) if (!g.people.includes(p) && (p === draft.payer || draft.participants.includes(p))) g.people.push(p);
-  g.expenses.unshift({ ...plainExpense(draft), id: newId(), at: new Date().toISOString() });
-  state.current = g.id;
+  if (!draft || $("save").disabled) return;
+  const oneOff = draftGroup === NO_GROUP; // saved on its own: no group is made or changed
+  const g = oneOff ? null : group(draftGroup);
+  if (!oneOff && !g) return;
+  const entry = { ...plainExpense(draft), id: newId(), at: new Date().toISOString() };
+  if (oneOff) state.oneOffs = [entry, ...oneOffs()];
+  else {
+    for (const p of cardPeople()) if (!g.people.includes(p) && (p === draft.payer || draft.participants.includes(p))) g.people.push(p);
+    g.expenses.unshift(entry);
+    state.current = g.id;
+  }
   persist();
   const what = draft.description;
   closeCard();
   $("typed").value = "";
   renderAll();
-  toast(`Saved ${what} in ${g.name}`);
+  toast(oneOff ? `Saved ${what}` : `Saved ${what} in ${g.name}`);
   if (navigator.vibrate) navigator.vibrate(15);
 });
 
@@ -766,9 +790,10 @@ async function renderHome(friends, problem) {
   }
   const recent = allExpenses().sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 5);
   $("recent").replaceChildren(...recent.map((e) => {
-    const li = el("li", "tap");
+    const inGroup = e._gid !== NO_GROUP; // a one-off has no group screen to open, so its row isn't a link
+    const li = el("li", inGroup ? "tap" : "");
     li.append(who(e.description, `${e._group} · ${e.payer === ME ? "you paid" : e.payer + " paid"} · ${shortDate(e.at)}`, "cat"), el("strong", null, rupees(e.total)));
-    li.onclick = () => go("group", e._gid);
+    if (inGroup) li.onclick = () => go("group", e._gid);
     return li;
   }));
   $("recentEmpty").hidden = recent.length > 0;
@@ -821,7 +846,7 @@ function renderFriends(friends, problem) {
     const acts = el("div", "friendActions");
     if (!phone) { const a = el("button", "link", "Add number"); a.type = "button"; a.onclick = () => openAddPerson(n, true); acts.append(a); }
     const inv = el("button", "link", "Invite to Kitty"); inv.type = "button"; inv.onclick = () => openInvite(n); acts.append(inv);
-    const used = state.groups.some((g) => g.expenses.some((e) => e.payer === n || e.participants.includes(n)));
+    const used = allExpenses().some((e) => e.payer === n || e.participants.includes(n));
     if (!used && (state.friends || []).includes(n)) {
       const x = el("button", "link removeFriend", "Remove"); x.type = "button";
       x.onclick = () => { state.friends = state.friends.filter((f) => f !== n); persist(); renderAll(); toast(`Removed ${n}`); };
@@ -947,10 +972,9 @@ $("gByNumber").addEventListener("click", () => { addToGroup = openGroupId; openA
 $("gDelete").addEventListener("click", () => {
   const g = group(openGroupId);
   if (!g) return;
-  if (state.groups.length === 1) { toast("You need at least one group"); return; }
   if (!confirm(`Delete "${g.name}" and its ${g.expenses.length} expenses?`)) return;
   state.groups = state.groups.filter((x) => x.id !== g.id);
-  if (state.current === g.id) state.current = state.groups[0].id;
+  if (state.current === g.id) state.current = state.groups.length ? state.groups[0].id : null;
   persist(); go("groups"); renderAll(); toast("Group deleted");
 });
 $("friendFromContacts").addEventListener("click", () => openContactsAsk("friends"));
@@ -1020,7 +1044,8 @@ function renderAccount() {
   $("meAvatar").textContent = (p.name || "You").slice(0, 1).toUpperCase();
   $("meSub").textContent = p.phone ? p.phone + " · saved on this phone" : "Saved on this phone";
   const keep = $("xGroup").value;
-  fillGroupSelect($("xGroup"), state.groups.some((g) => g.id === keep) ? keep : "", true);
+  const withNone = oneOffs().length > 0;
+  fillGroupSelect($("xGroup"), state.groups.some((g) => g.id === keep) || (withNone && keep === NO_GROUP) ? keep : "", true, withNone);
   renderExportCount();
 }
 for (const [id, key] of [["pName", "name"], ["pPhone", "phone"], ["pUpi", "upi"]]) {
@@ -1049,7 +1074,7 @@ function exportRows() {
   const rows = allExpenses()
     .filter((e) => (!gid || e._gid === gid) && (!from || new Date(e.at) >= from) && (!to || new Date(e.at) < to))
     .sort((a, b) => (a.at < b.at ? -1 : 1));
-  const gname = gid ? group(gid).name : "All groups";
+  const gname = gid === NO_GROUP ? NO_GROUP_LABEL : gid ? group(gid).name : "All groups";
   return { rows, title: `Kitty: ${gname}, ${label}`, file: `kitty-${gname}-${label}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+$/, "") };
 }
 function renderExportCount() {
@@ -1293,7 +1318,7 @@ async function renderGroupChart() {
   let data;
   try { data = await myShares(); } catch (_) { data = { exps: [], list: [] }; }
   const totals = {};
-  data.exps.forEach((e, i) => { totals[e._group] = (totals[e._group] || 0) + (data.list[i][ME] || 0); });
+  data.exps.forEach((e, i) => { if (e._gid !== NO_GROUP) totals[e._group] = (totals[e._group] || 0) + (data.list[i][ME] || 0); }); // per group: one-offs aren't a group
   const rows = Object.entries(totals).filter(([, v]) => v).sort((a, b) => b[1] - a[1]).slice(0, 5);
   if (!rows.length) { box.replaceChildren(placeholderRows(3, "Your share in each group will show here")); $("groupNote").textContent = "Your share"; return; }
   const W = 320, row = 34, H = rows.length * row + 4, labelW = 96, span = W - labelW - 64;
