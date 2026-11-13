@@ -5,6 +5,9 @@ const KEY = "voice-split-v2";
 const ASKED_FOR_TOUR = location.hash === "#welcome"; // read before the app changes the address
 const OLD_KEY = "voice-split-v1";
 const $ = (id) => document.getElementById(id);
+// Only some browsers (Chrome on Android) let a web page open the phone's contact list. Elsewhere,
+// including iPhone Safari, Kitty never offers contacts, and friends are added by name instead.
+const CONTACTS_OK = "contacts" in navigator && "ContactsManager" in window;
 let state = load();
 let draft = null;      // the expense on the confirmation sheet
 let draftGroup = null; // which group it will be saved to
@@ -137,7 +140,7 @@ function openListen() {
   startRecording(); // still from the same tap, so iPhone Safari allows the microphone
 }
 function closeListen() {
-  document.body.classList.remove("listen-open");
+  document.body.classList.remove("listen-open", "micAsk", "micDenied");
   setTimeout(() => { $("listen").hidden = true; }, 300);
 }
 document.addEventListener("click", (e) => { if (e.target.closest("[data-listen]")) openListen(); });
@@ -241,8 +244,21 @@ async function startRecording() {
   clearError();
   cancelled = false;
   if (!navigator.mediaDevices || !window.MediaRecorder) { showError("This browser can't record. Please type instead."); return; }
+  // Until the microphone is granted (iOS may be showing its permission prompt), the panel stays still:
+  // no wave, no moving ring. The request itself still comes from the same tap, which iOS requires.
+  document.body.classList.remove("micDenied");
+  document.body.classList.add("micAsk");
+  const askHint = setTimeout(() => { if (document.body.classList.contains("micAsk")) $("micHint").textContent = "Allow the microphone to start"; }, 250);
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-  catch (_) { showError("Microphone access was blocked. Allow it in your settings, or type instead."); return; }
+  catch (_) {
+    clearTimeout(askHint);
+    document.body.classList.remove("micAsk"); document.body.classList.add("micDenied");
+    $("micHint").textContent = "The microphone is off";
+    showError("Kitty can't use the microphone. Allow it in your browser's settings for this site (on iPhone: aA in the address bar, then Website Settings), or type instead.");
+    return;
+  }
+  clearTimeout(askHint);
+  document.body.classList.remove("micAsk");
   const mime = pickMime();
   rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
   chunks = [];
@@ -307,7 +323,10 @@ function showCard(res, gid) {
 }
 function newBlankCard(gid) {
   showCard({ expense: { description: "", total: null, payer: ME, participants: [...group(gid).people], mode: "equal", values: {}, items: [] }, missing: ["amount"], transcript: null }, gid);
-  setTimeout(() => $("desc").focus(), 320);
+  // On a touch phone, focusing the description opened the keyboard while the sheet was still sliding up,
+  // and iOS scrolled the page to an in-between spot, clipping the top. There, the person taps the field
+  // themselves once the sheet is in place. With a mouse and keyboard, focus it after the slide ends.
+  if (matchMedia("(pointer: fine)").matches) setTimeout(() => { if (draft) $("desc").focus({ preventScroll: true }); }, 480);
 }
 $("sheetGroup").addEventListener("change", () => { draftGroup = $("sheetGroup").value; recheck(); });
 
@@ -811,6 +830,7 @@ function openAddPerson(name, editing) {
   apEditing = editing ? name : null;
   $("apTitle").textContent = editing ? `Add ${name}'s number` : "Add a friend";
   $("apSubmit").textContent = editing ? "Save number" : "Add friend";
+  $("apPhoneLabel").textContent = !CONTACTS_OK && !editing ? "Mobile number (optional)" : "Mobile number";
   $("apName").readOnly = !!editing;
   $("apName").value = typeof name === "string" ? (editing ? name : titleName(name)) : ""; $("apPhone").value = ""; $("apError").hidden = true;
   $("scrim").hidden = false; $("addPerson").hidden = false;
@@ -830,14 +850,15 @@ $("addPersonForm").addEventListener("submit", (e) => {
   const raw = $("apPhone").value.trim();
   const bad = (msg, field) => { $("apError").textContent = msg; $("apError").hidden = false; $(field).focus(); };
   if (!name) return bad("Add their name.", "apName");
-  if (!waNumber(raw)) return bad("Add their mobile number: 10 digits, or with the country code.", "apPhone");
+  const optional = !CONTACTS_OK && !apEditing; // adding by name: a number helps reminders but isn't needed
+  if (!(optional && !raw) && !waNumber(raw)) return bad(optional ? "That number doesn't look right. Use 10 digits, or add the country code, or leave it empty." : "Add their mobile number: 10 digits, or with the country code.", "apPhone");
   if (apEditing) {
     state.phones = state.phones || {}; state.phones[apEditing] = raw;
     persist(); closeAddPerson(); renderAll(); toast(`Saved ${apEditing}'s number`); return;
   }
   if (name.toLowerCase() === "you" || allPeople().some((p) => p.toLowerCase() === name.toLowerCase())) return bad(`${name} is already a friend.`, "apName");
   state.friends = [...(state.friends || []), name];
-  state.phones = state.phones || {}; state.phones[name] = raw;
+  state.phones = state.phones || {}; if (raw) state.phones[name] = raw;
   $("friendSearch").value = "";
   const g = addToGroup && group(addToGroup);
   if (g) joinGroup(g.id, [name]);
@@ -1197,7 +1218,7 @@ function finishOnboarding() {
   go("home");
   renderAll();
   toast(`Welcome, ${state.profile.name.split(" ")[0]}`);
-  if (!state.contactsAsked) setTimeout(openContactsAsk, 1400);
+  if (!state.contactsAsked && CONTACTS_OK) setTimeout(openContactsAsk, 1400); // never a dead end where contacts can't be shared
 }
 $("introNext").addEventListener("click", openHow);
 $("introSkip").addEventListener("click", openSetup);
@@ -1216,7 +1237,9 @@ $("setupDone").addEventListener("click", () => {
 // Its numbers come from the app's own split maths (splits.py).
 const HOW = [
   { title: "Just say it", text: "Tap the mic and say the expense the way you'd tell a friend, in English, Tamil, Hindi or a mix." },
-  { title: "Find your friends", text: "Pick them from your contacts, or add someone by name and mobile number. Your contact list stays on this phone; Kitty sends friends' names, never numbers, to its server and its AI provider (Groq) to match who you mean." },
+  { title: "Find your friends", text: CONTACTS_OK
+    ? "Pick them from your contacts, or add someone by name and mobile number. Your contact list stays on this phone; Kitty sends friends' names, never numbers, to its server and its AI provider (Groq) to match who you mean."
+    : "Add someone by name, or just say their names when you add an expense. Kitty sends friends' names, never numbers, to its server and its AI provider (Groq) to match who you mean." },
   { title: "Kitty finds the people", text: "The names you said show up, ready to check. Tap Next when it looks right." },
   { title: "Check it, then save", text: "Akash skipped drinks, so he pays only for food. Fix anything with a tap, then save." },
   { title: "Groups keep the tally", text: "Make a group for a trip or your flat. Every expense adds up, and Kitty shows who owes whom, person by person, so the amount you see is the amount you send." },
@@ -1302,7 +1325,24 @@ if (state.onboarded !== TOUR_VERSION || ASKED_FOR_TOUR) openIntro();
 // Contacts are held in this variable for this visit only. They are never written to storage
 // and never sent to the server; matching spoken names to them happens here in the browser.
 let phoneContacts = [];
-const canPickContacts = () => "contacts" in navigator && "ContactsManager" in window;
+const canPickContacts = () => CONTACTS_OK;
+// Where contacts can't be shared: hide every contacts button and the onboarding sample, and turn
+// "By number" into "Add friends by name" (the number becomes optional on that sheet).
+const PERSON_ICON = '<path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5Z"/>';
+function applyContactSupport() {
+  document.body.classList.toggle("noContacts", !CONTACTS_OK);
+  if (CONTACTS_OK) return;
+  for (const id of ["friendFromContacts", "gFromContacts", "pickContacts"]) $(id).hidden = true;
+  for (const id of ["friendByNumber", "gByNumber"]) {
+    const b = $(id);
+    b.querySelector("svg").innerHTML = PERSON_ICON;
+    b.lastChild.textContent = "Add friends by name";
+  }
+  $("friendsEmptyText").replaceChildren(el("b", null, "No friends yet"), el("br"), "Add them by name, or just say their names when you add an expense.");
+  const perm = document.querySelector(".scene.s1 .perm");
+  if (perm) perm.hidden = true;
+}
+applyContactSupport();
 async function pickContacts() {
   const picked = await navigator.contacts.select(["name", "tel"], { multiple: true });
   const fresh = picked.map((c) => ({ name: ((c.name || [])[0] || "").trim().replace(/\s+/g, " "), tel: (c.tel || [])[0] || "" })).filter((c) => c.name);

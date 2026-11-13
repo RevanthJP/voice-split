@@ -269,6 +269,10 @@ h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.07em;color:var(--mut
 .listen .wave{position:relative;left:auto;right:auto;top:auto;transform:none;flex:1;min-width:0;height:3.6rem;padding:0;overflow:hidden}
 .listen .hint{grid-area:hint;margin:.5rem 0 0;font-size:1.05rem;text-align:center}
 .listen .error{grid-area:error;margin:.35rem 0 0;text-align:center;font-size:.92rem}
+/* Waiting for the microphone permission, or refused: everything stays still */
+.micAsk .listen .wave,.micDenied .listen .wave{opacity:0}
+.micAsk .listen .mic::before,.micDenied .listen .mic::before{animation:none;opacity:.2}
+.micDenied .listen .mic-core{background:var(--muted)}
 
 /* ---- Kitty: mobile app colours. Same blue and orange brand, set on an iOS-style grouped
    background with a deep navy balance card, which reads better on a phone than the web's bright blue. ---- */
@@ -686,6 +690,8 @@ textarea.field{resize:none;line-height:1.4;font:inherit}
 .addLabel{margin:14px 0 6px;color:var(--muted);font-size:.85rem}
 .addChip{background:var(--blue-soft);color:var(--blue-deep);font-weight:600}
 .gAddBtns{margin-top:10px}
+/* Where contacts can't be shared, one "Add friends by name" button takes the whole row */
+.noContacts .addFriendBtns{grid-template-columns:1fr}
 /* iPhone Safari zooms in on any field under 16px and stays zoomed, which clips the left edge. iOS only; bigger fields keep their size. */
 @supports (-webkit-touch-callout: none) { input, select, textarea, textarea.field { font-size: max(16px, 1em); } }
 /* Group screen: "Add expense here" with a round mic button to its right, the same height */
