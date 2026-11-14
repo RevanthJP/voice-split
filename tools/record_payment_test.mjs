@@ -101,7 +101,7 @@ try {
   const s2 = await run(`await friendsTab(); button(friendRow("Meena"), "Record payment").click(); await wait(1200); const s = sheet();
     [...document.querySelectorAll("#payGroupChips .chip")].find((c) => c.textContent.startsWith("Flat")).click(); await wait(100);
     const picked = sheet(); typeAmount("33.33"); await wait(100); const typed = sheet(); $("paySave").click(); await wait(1200); return { s, picked, typed }`);
-  check("Friends: asks which group, with each group's amount, none chosen yet", s2.s.chooser && s2.s.chips.join("|") === "Test group · owes you ₹900|Flat · owes you ₹500" && !s2.s.save && s2.s.pick, s2.s);
+  check("Friends: two groups with a balance: Everything is offered and chosen, and each group is still listed with its own amount", s2.s.chooser && s2.s.chips.join("|") === "Everything · owes you ₹1,400 [on]|Test group · owes you ₹900|Flat · owes you ₹500" && s2.s.save && !s2.s.pick, s2.s);
   check("Friends: picking Flat fills in ₹500 and turns Save on", s2.picked.amount === "500" && s2.picked.save && !s2.picked.pick, s2.picked);
   const odd = await run(`return { flat: await groupScreen("fl"), f: await friendsTab() }`);
   check("an odd amount, ₹33.33, leaves Flat at ₹466.67 and Friends at ₹1,366.67", odd.flat.rows["Meena pays you"] === 466.67 && odd.f.Meena === 1366.67, odd);

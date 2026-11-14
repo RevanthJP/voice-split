@@ -83,7 +83,7 @@ try {
     await openPayFor("Arun"); const s2 = sheet(); chip("Goa trip").click(); await wait(300); typeAmount("200"); await wait(200); await savePay();
     const afterGroup = { friends: await friendsTab(), settle: await settle("g") };
     return { s, none, afterNone, s2, afterGroup, groupPays: saved().groups[0].payments.length, oneOffPays: saved().oneOffPayments.length }`);
-  check("b) Arun: both scopes shown with their own amounts, none chosen", JSON.stringify(b.s.chips) === JSON.stringify(["Goa trip · owes you ₹500", "No group · owes you ₹100"]) && !b.s.save, b.s);
+  check("b) Arun: both scopes shown with their own amounts, with Everything offered and chosen", JSON.stringify(b.s.chips) === JSON.stringify(["Everything · owes you ₹600 [on]", "Goa trip · owes you ₹500", "No group · owes you ₹100"]), b.s);
   check("b) paying 'No group' fills ₹100 and changes only the one-off part: Friends ₹600 → ₹500, the group still ₹500",
     b.none.amount === "100" && b.none.dirIn && b.afterNone.friends.Arun === 500 && b.afterNone.settle["Arun pays you"] === 500, b);
   check("b) next time No group shows as settled (it has a payment) and Goa trip, the only balance, is chosen; paying ₹200 there changes only that group: group ₹300, Friends ₹300 (the sum of both scopes)",
@@ -96,8 +96,8 @@ try {
     chip("Goa trip").click(); await wait(300); const g = sheet(); chip("No group").click(); await wait(300); const n = sheet(); chip("Goa trip").click(); await wait(300); const back = sheet();
     closePayment(); await wait(400); return { f, s, g, n, back }`);
   check("c) Friends: you owe Arun ₹400", c.f.Arun === -400, c.f);
-  check("c) the sheet lists Goa trip (owes you ₹100) and No group (you owe ₹500), none chosen and no amount filled in",
-    JSON.stringify(c.s.chips) === JSON.stringify(["Goa trip · owes you ₹100", "No group · you owe ₹500"]) && c.s.amount === "" && !c.s.save, c.s);
+  check("c) the sheet lists Goa trip (owes you ₹100) and No group (you owe ₹500), and Everything (you owe ₹400) is chosen with the net ₹400",
+    JSON.stringify(c.s.chips) === JSON.stringify(["Everything · you owe ₹400 [on]", "Goa trip · owes you ₹100", "No group · you owe ₹500"]) && c.s.amount === "400" && c.s.dirOut, c.s);
   check("c) each scope points the right way: Goa trip → 'Arun paid you' ₹100; No group → 'You paid Arun' ₹500; and back again",
     c.g.dirIn && c.g.amount === "100" && c.n.dirOut && c.n.amount === "500" && c.back.dirIn && c.back.amount === "100", c);
 
@@ -105,9 +105,9 @@ try {
   const d = await run(`await openPayFor("Arun"); chip("No group").click(); await wait(300); typeAmount("700"); await wait(200); const s = sheet(); await savePay();
     await openPayFor("Arun"); const after = sheet(); closePayment(); await wait(400); return { s, after, friends: await friendsTab(), settle: await settle("g") }`);
   check("d) paying Arun ₹700 against ₹500 says ₹200 more, and that Arun will owe you ₹200 outside groups",
-    d.s.note === "That's ₹200 more than you owe Arun. After this, Arun will owe you ₹200 outside groups.", d.s);
+    d.s.note === "That's ₹200 more than you owe Arun outside groups. Choose Everything to settle all balances. After this, Arun will owe you ₹200 outside groups.", d.s);
   check("d) only No group flips (Arun now owes you ₹200 there); Goa trip is still ₹100; Friends ₹300",
-    JSON.stringify(d.after.chips) === JSON.stringify(["Goa trip · owes you ₹100", "No group · owes you ₹200"]) && d.settle["Arun pays you"] === 100 && d.friends.Arun === 300, d);
+    JSON.stringify(d.after.chips) === JSON.stringify(["Everything · owes you ₹300 [on]", "Goa trip · owes you ₹100", "No group · owes you ₹200"]) && d.settle["Arun pays you"] === 100 && d.friends.Arun === 300, d);
 
   // e) Deleting a one-off payment restores the balance; deleting the expense it paid doesn't break anything
   const e = await run(`go("friends"); await wait(800); openExplain("Arun"); await wait(1200);
@@ -131,7 +131,7 @@ try {
     e.kept === 1 && e.afterPay.left === 0 && e.afterPay.friends.Arun === -400 && e.afterPay.settle["Arun pays you"] === 100, e);
   check("e) deleting the one-off expense a payment settled: nothing breaks; the payment stays and now counts the other way",
     e.afterExp.oneOffs === 0 && e.afterExp.pays === 1 && e.afterExp.friends.Arun === 600 && e.afterExp.getBack === 600
-    && JSON.stringify(e.s.chips) === JSON.stringify(["Goa trip · owes you ₹100", "No group · owes you ₹500"]) && e.lines.some((l) => l.includes("Payment")) && !e.errs.length, e);
+    && JSON.stringify(e.s.chips) === JSON.stringify(["Everything · owes you ₹600 [on]", "Goa trip · owes you ₹100", "No group · owes you ₹500"]) && e.lines.some((l) => l.includes("Payment")) && !e.errs.length, e);
 
   // g) Export lists one-off payments as "No group", and they never reach a group's export
   const g = await run(`go("account"); await wait(500); $("xRange").value = "all"; $("xGroup").dispatchEvent(new Event("change")); await wait(200);

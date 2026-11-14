@@ -718,6 +718,12 @@ function payLink(name, gid) {
   return b;
 }
 let payFor = null, payGroup = null, payDir = "in", payRows = {}, payTyped = false;
+// "Everything" settles every scope with this person at once: one payment per scope with a balance.
+const EVERYTHING = "all";
+let payScopes = [], payCanAll = false;
+const paiseOf = (rupeesAmount) => Math.round((rupeesAmount || 0) * 100);
+const openScopes = () => payScopes.filter((s) => paiseOf(payRows[s.id]));
+const netPaise = () => openScopes().reduce((a, s) => a + paiseOf(payRows[s.id]), 0);
 // A payment settles one scope: a group, or No group (the one-offs and the payments made for them).
 const NO_GROUP_SCOPE = { id: NO_GROUP, name: NO_GROUP_LABEL };
 const scopeName = (id) => (id === NO_GROUP ? NO_GROUP_LABEL : group(id).name);
@@ -749,28 +755,51 @@ async function openPayment(name, gid) {
   requestAnimationFrame(() => document.body.classList.add("remind-open"));
   let found;
   try { found = await rowsWith(name); } catch (e) { $("payProblem").textContent = e.message; $("payProblem").hidden = false; return; }
-  payRows = found.out;
-  // From a group row the group is known. From Friends, ask, unless only one group has a balance with them.
-  const open = found.shared.filter((g) => payRows[g.id]);
-  payGroup = gid || (open.length === 1 ? open[0].id : null);
+  payRows = found.out; payScopes = found.shared;
+  // From a group row the group is known. From Friends: with two or more scopes holding a balance, Everything
+  // is offered and chosen; with one, that one is chosen; otherwise the person picks.
+  const open = openScopes();
+  payCanAll = !gid && open.length >= 2;
+  payGroup = gid || (payCanAll ? EVERYTHING : open.length === 1 ? open[0].id : null);
   $("payGroupPick").hidden = !!gid;
-  $("payGroupChips").replaceChildren(...found.shared.map((g) => {
+  const net = netPaise() / 100;
+  const all = el("button", "chip", `Everything · ${net > 0 ? `owes you ${rupees(net)}` : net < 0 ? `you owe ${rupees(-net)}` : "evens out"}`);
+  all.type = "button"; all.dataset.gid = EVERYTHING; all.onclick = () => { payGroup = EVERYTHING; payTyped = false; paintPayment(); };
+  $("payGroupChips").replaceChildren(...(payCanAll ? [all] : []), ...found.shared.map((g) => {
     const v = payRows[g.id];
     const b = el("button", "chip" + (g.id === payGroup ? " on" : ""), `${g.name} · ${v ? (v > 0 ? `owes you ${rupees(v)}` : `you owe ${rupees(-v)}`) : "settled"}`);
     b.type = "button"; b.dataset.gid = g.id; b.setAttribute("aria-pressed", g.id === payGroup);
     b.onclick = () => { payGroup = g.id; payTyped = false; if (payRows[g.id]) payDir = payRows[g.id] < 0 ? "out" : "in"; paintPayment(); };
     return b;
   }));
-  const start = payGroup ? payRows[payGroup] : Object.values(payRows).reduce((a, v) => a + v, 0);
+  const start = payGroup === EVERYTHING ? net : payGroup ? payRows[payGroup] : Object.values(payRows).reduce((a, v) => a + v, 0);
   payDir = start < 0 ? "out" : "in";
   paintPayment();
 }
+// What Everything clears, scope by scope. When all point the same way, the amounts are enough.
+function everythingNote(name) {
+  const open = openScopes(), net = netPaise();
+  const same = net !== 0 && open.every((s) => Math.sign(paiseOf(payRows[s.id])) === Math.sign(net));
+  const parts = open.map((s) => { const v = payRows[s.id];
+    return same ? `${s.name} ${rupees(Math.abs(v))}` : `${s.name} (${v > 0 ? `${name} owes you` : `you owe ${name}`} ${rupees(Math.abs(v))})`; });
+  const list = parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}` : parts[0];
+  return net === 0 ? `These balances cancel out, so no money changes hands. Saving clears ${list}.` : `Clears ${list}.`;
+}
 function paintPayment() {
-  const name = payFor, row = payGroup ? payRows[payGroup] || 0 : 0;
+  const name = payFor, all = payGroup === EVERYTHING, row = payGroup && !all ? payRows[payGroup] || 0 : 0;
+  if (all) payDir = netPaise() < 0 ? "out" : "in"; // Everything: the direction follows the net
+  $("payIn").disabled = $("payOut").disabled = all;
+  $("payAmount").readOnly = all;
   $("payIn").textContent = `${name} paid you`; $("payOut").textContent = `You paid ${name}`;
   for (const [id, dir] of [["payIn", "in"], ["payOut", "out"]]) { $(id).classList.toggle("on", payDir === dir); $(id).setAttribute("aria-pressed", payDir === dir); }
   $("payGroupChips").querySelectorAll(".chip").forEach((c) => { const on = c.dataset.gid === payGroup; c.classList.toggle("on", on); c.setAttribute("aria-pressed", on); });
   $("payGroupProblem").hidden = !!payGroup;
+  if (all) {
+    $("payAmount").value = String(Math.abs(netPaise()) / 100);
+    $("payNote").textContent = everythingNote(name);
+    $("paySave").disabled = !openScopes().length;
+    return;
+  }
   // Fill in what's open in this group, in the direction that settles it, until the person types their own amount
   if (!payTyped && payGroup) $("payAmount").value = (payDir === "in" ? row > 0 : row < 0) ? String(Math.abs(row)) : "";
   const paise = Math.round(parseFloat($("payAmount").value) * 100);
@@ -783,7 +812,11 @@ function paintPayment() {
     // Paying more than is owed is allowed: the extra shows as the other person owing.
     const room = payDir === "in" ? Math.max(owed, 0) : Math.max(-owed, 0);
     const extra = paise - room;
-    const over = extra > 0 ? `That's ${rupees(extra / 100)} more than ${payDir === "in" ? (room ? `${name} owes you` : `${name} owes you here`) : (room ? `you owe ${name}` : `you owe ${name} here`)}. ` : "";
+    // With balances in other scopes too, more than this scope's balance is likely meant for all of them
+    const others = openScopes().some((s) => s.id !== payGroup);
+    const over = extra <= 0 ? "" : others
+      ? `That's ${rupees(extra / 100)} more than ${payDir === "in" ? `${name} owes you` : `you owe ${name}`} ${where}. ${payCanAll ? "Choose Everything to settle all balances." : "To settle all balances, record it from Friends and choose Everything."} `
+      : `That's ${rupees(extra / 100)} more than ${payDir === "in" ? (room ? `${name} owes you` : `${name} owes you here`) : (room ? `you owe ${name}` : `you owe ${name} here`)}. `;
     const left = after > 0 ? `${name} will owe you ${rupees(after / 100)}` : after < 0 ? `you will owe ${name} ${rupees(-after / 100)}` : `you and ${name} will be settled up`;
     note = `${over}After this, ${left} ${where}.`;
   }
@@ -799,6 +832,22 @@ function closePayment() {
 }
 $("payCancel").addEventListener("click", closePayment);
 $("paySave").addEventListener("click", () => {
+  if (payGroup === EVERYTHING) {
+    // One payment per scope with a balance, each for exactly that balance, in the direction that clears it.
+    const at = new Date().toISOString();
+    let made = 0;
+    for (const s of openScopes()) {
+      const v = paiseOf(payRows[s.id]);
+      const rec = { id: newId(), from: v > 0 ? payFor : ME, to: v > 0 ? ME : payFor, amount: Math.abs(v), at };
+      if (s.id === NO_GROUP) state.oneOffPayments = [...oneOffPayments(), rec];
+      else { const g = group(s.id); if (!g || !g.people.includes(payFor)) continue; g.payments = [...payments(g), rec]; }
+      made++;
+    }
+    if (!made) return;
+    persist(); closePayment(); renderAll();
+    toast(`Recorded ${made} payments with ${payFor}. You're settled up.`);
+    return;
+  }
   const none = payGroup === NO_GROUP; // a payment for one-off debts: kept in its own list, never in a group
   const g = none ? null : group(payGroup);
   const amount = Math.round(parseFloat($("payAmount").value) * 100);
@@ -1015,7 +1064,7 @@ async function renderGroups() {
 // ---------- a one-off from Home: see it, and delete it if it was wrong ----------
 // Group expenses are deleted on their group screen; a one-off has none, so this sheet does it.
 let oneOffFor = null, oneOffKind = "expense";
-const OO_EXPENSE_NOTE = "It has no group, so it's only in Home and Friends. Deleting it takes it out of every balance.";
+const OO_EXPENSE_NOTE = "This expense isn't in a group. Deleting it removes it from all balances.";
 function showOneOffSheet() {
   $("scrim").hidden = false; $("oneOff").hidden = false;
   requestAnimationFrame(() => document.body.classList.add("remind-open"));
@@ -1030,7 +1079,7 @@ function openOneOffPayment(id) {
   $("ooDesc").textContent = p.from === ME ? `You paid ${p.to}` : `${p.from} paid you`;
   $("ooAmount").textContent = rupees(p.amount / 100);
   $("ooWho").textContent = `Payment · ${NO_GROUP_LABEL} · ${shortDate(p.at)}`;
-  $("ooNote").textContent = `Deleting it puts ${rupees(p.amount / 100)} back into your balance with ${other}.`;
+  $("ooNote").textContent = `This payment isn't in a group. Deleting it puts ${rupees(p.amount / 100)} back into your balance with ${other}.`;
   showOneOffSheet();
 }
 function openOneOff(id) {
@@ -1384,7 +1433,6 @@ function svg(tag, attrs, text) {
   if (text != null) n.textContent = text;
   return n;
 }
-const shortRupees = (n) => n >= 100000 ? "₹" + (n / 100000).toFixed(n >= 1000000 ? 0 : 1) + "L" : n >= 1000 ? "₹" + (n / 1000).toFixed(n >= 10000 ? 0 : 1) + "k" : "₹" + Math.round(n);
 // A bar with a 4px rounded end and a square base.
 function barPath(x, y, w, h, dir) {
   const r = Math.min(4, Math.abs(dir === "up" ? h : w) / 2);
@@ -1450,7 +1498,9 @@ function renderFriendsChart(friends) {
   if (!rows.length) { box.replaceChildren(placeholderRows(3, "Who owes you, and whom you owe, shows here")); return; }
   const W = 320, row = 34, H = rows.length * row + 6, mid = W / 2, nameW = 0;
   const max = Math.max(...rows.map(([, v]) => Math.abs(v)), 1);
-  const span = mid - 52;
+  // Amounts are shown exactly as everywhere else (paise when not zero); the bars leave room for the longest one.
+  const longest = Math.max(...rows.map(([, v]) => rupees(Math.abs(v)).length));
+  const span = mid - 14 - longest * 7;
   const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": rows.map(([n, v]) => v > 0 ? `${n} owes you ${rupees(v)}` : `you owe ${n} ${rupees(-v)}`).join(", ") });
   root.append(svg("line", { x1: mid + 0.5, x2: mid + 0.5, y1: 0, y2: H, class: "axis" }));
   rows.forEach(([n, v], i) => {
@@ -1460,7 +1510,7 @@ function renderFriendsChart(friends) {
     root.append(svg("path", { d: barPath(x, y, w, bh, right ? "right" : "left"), class: "bar " + (right ? "green" : "orange"), style: `--d:${i * 60}ms` }));
     // Name on the empty side of the axis, amount at the end of the bar.
     root.append(svg("text", { x: right ? mid - 8 : mid + 8, y: y + 13, "text-anchor": right ? "end" : "start", class: "lbl" }, n));
-    root.append(svg("text", { x: right ? x + w + 6 : x - 6, y: y + 13, "text-anchor": right ? "start" : "end", class: "val" }, shortRupees(Math.abs(v))));
+    root.append(svg("text", { x: right ? x + w + 6 : x - 6, y: y + 13, "text-anchor": right ? "start" : "end", class: "val" }, rupees(Math.abs(v))));
   });
   void nameW;
   box.replaceChildren(root);

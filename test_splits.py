@@ -399,6 +399,28 @@ class Payments(unittest.TestCase):
         for paise in [*ODD, 123456789, 1_000_000_000]:
             self.assertEqual(owed_shares(transfer(Payment("A", "B", paise))), {"B": paise})
 
+    def test_paying_a_settle_up_row_exactly_clears_it(self):
+        """For every pair with a settle-up row, a payment of exactly that row from the debtor to the creditor
+        leaves that pair at zero and every other pair as it was. This is what 'Everything' relies on."""
+        rng = random.Random(9090)
+        checked = 0
+        for _ in range(300):
+            groups, tagged = random_setup(rng)
+            for g in range(len(groups)):
+                exps = [e for gi, e in tagged if gi == g]
+                pays = []
+                for _ in range(rng.randint(0, 3)):  # some groups already have payments, odd amounts included
+                    a, b = rng.sample(groups[g], 2)
+                    pays.append(Payment(a, b, rng.choice(ODD + [rng.randint(1, 500000)])))
+                before = rows_with(exps, pays)
+                for (debtor, creditor), paise in before.items():
+                    after = rows_with(exps, pays + [Payment(debtor, creditor, paise)])
+                    self.assertNotIn((debtor, creditor), after, (debtor, creditor, paise))
+                    self.assertNotIn((creditor, debtor), after, (debtor, creditor, paise))
+                    self.assertEqual({k: v for k, v in after.items()}, {k: v for k, v in before.items() if k != (debtor, creditor)})
+                    checked += 1
+        self.assertGreater(checked, 500)
+
     def test_random_groups_with_payments(self):
         rng = random.Random(4048)
         seen = {"odd": 0, "exact": 0, "over": 0, "mine_out": 0, "two_groups": 0}
